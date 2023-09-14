@@ -124,3 +124,13 @@ if(YACMA_COMPILER_IS_MSVC)
   endif()
   unset(_TANUKI_MSVC_SUPPORTS_STRICT_CONFORMANCE)
 endif()
+
+# Creade the tanuki header-only library.
+add_library(tanuki INTERFACE)
+
+# Ensure that C++20 is employed when both compiling and consuming tanuki.
+target_compile_features(tanuki INTERFACE cxx_std_20)
+
+target_include_directories(tanuki INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)

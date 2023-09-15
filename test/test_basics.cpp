@@ -29,4 +29,6 @@ TEST_CASE("basics")
     auto w5(std::move(w2));
 
     w1 = std::move(w3);
+
+    w3 = wrap<iface0, iface0_impl>(std::function<void()>{});
 }

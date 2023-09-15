@@ -14,6 +14,11 @@ function(ADD_TANUKI_TESTCASE arg1)
   target_compile_features(${arg1} PRIVATE cxx_std_20)
   set_property(TARGET ${arg1} PROPERTY CXX_EXTENSIONS NO)
 
+  # Optional support for clang-tidy.
+  if(TANUKI_CLANG_TIDY)
+    set_property(TARGET ${arg1} PROPERTY CXX_CLANG_TIDY "${TANUKI_CLANG_TIDY_PATH}")
+  endif()
+
   add_test(${arg1} ${arg1})
 endfunction()
 

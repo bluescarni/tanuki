@@ -108,16 +108,16 @@ using reference_semantics = detail::reference_semantics_impl;
 namespace detail
 {
 
-// Interface containing basic common methods
-// for the implementation of the wrap class.
+// Interface containing methods to interact
+// with the value in the holder class.
 template <typename IFace>
-struct TANUKI_DLL_PUBLIC_INLINE_CLASS basic_iface {
-    basic_iface() = default;
-    basic_iface(const basic_iface &) = delete;
-    basic_iface(basic_iface &&) noexcept = delete;
-    basic_iface &operator=(const basic_iface &) = delete;
-    basic_iface &operator=(basic_iface &&) noexcept = delete;
-    virtual ~basic_iface() = default;
+struct TANUKI_DLL_PUBLIC_INLINE_CLASS value_iface {
+    value_iface() = default;
+    value_iface(const value_iface &) = delete;
+    value_iface(value_iface &&) noexcept = delete;
+    value_iface &operator=(const value_iface &) = delete;
+    value_iface &operator=(value_iface &&) noexcept = delete;
+    virtual ~value_iface() = default;
 
     [[nodiscard]] virtual std::type_index type_idx() const noexcept = 0;
 
@@ -128,8 +128,8 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS basic_iface {
 };
 
 template <typename T, typename IFace, template <typename> typename IFaceImpl>
-struct TANUKI_DLL_PUBLIC_INLINE_CLASS iface_impl final : public basic_iface<IFace>,
-                                                         public IFaceImpl<iface_impl<T, IFace, IFaceImpl>> {
+struct TANUKI_DLL_PUBLIC_INLINE_CLASS holder final : public value_iface<IFace>,
+                                                     public IFaceImpl<holder<T, IFace, IFaceImpl>> {
     TANUKI_NO_UNIQUE_ADDRESS T m_value;
 
     static_assert(std::is_nothrow_destructible_v<T>);
@@ -138,14 +138,14 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS iface_impl final : public basic_iface<IFac
 
     using value_type = T;
 
-    iface_impl() = delete;
-    iface_impl(const iface_impl &) = delete;
-    iface_impl(iface_impl &&) noexcept = delete;
-    iface_impl &operator=(const iface_impl &) = delete;
-    iface_impl &operator=(iface_impl &&) noexcept = delete;
-    explicit iface_impl(const T &x) : m_value(x) {}
-    explicit iface_impl(T &&x) : m_value(std::move(x)) {}
-    ~iface_impl() final = default;
+    holder() = delete;
+    holder(const holder &) = delete;
+    holder(holder &&) noexcept = delete;
+    holder &operator=(const holder &) = delete;
+    holder &operator=(holder &&) noexcept = delete;
+    explicit holder(const T &x) : m_value(x) {}
+    explicit holder(T &&x) : m_value(std::move(x)) {}
+    ~holder() final = default;
 
     [[nodiscard]] std::type_index type_idx() const noexcept final
     {
@@ -155,24 +155,24 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS iface_impl final : public basic_iface<IFac
     IFace *clone() const final
     {
         // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-        return new iface_impl(m_value);
+        return new holder(m_value);
     }
 
     IFace *copy_init(void *ptr) const final
     {
         // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-        return ::new (ptr) iface_impl(m_value);
+        return ::new (ptr) holder(m_value);
     }
 
     IFace *move_init(void *ptr) && noexcept final
     {
         // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-        return ::new (ptr) iface_impl(std::move(m_value));
+        return ::new (ptr) holder(std::move(m_value));
     }
 
     void move_assign(void *ptr) && noexcept final
     {
-        std::launder(reinterpret_cast<iface_impl *>(ptr))->m_value = std::move(m_value);
+        std::launder(reinterpret_cast<holder *>(ptr))->m_value = std::move(m_value);
     }
 };
 
@@ -219,21 +219,21 @@ public:
     // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,cppcoreguidelines-pro-type-member-init,hicpp-member-init)
     explicit wrap_sbo(T &&x)
     {
-        using stored_t = iface_impl<std::remove_cvref_t<T>, IFace, IFaceImpl>;
-        static_assert(alignof(stored_t) <= alignof(std::max_align_t),
+        using holder_t = holder<std::remove_cvref_t<T>, IFace, IFaceImpl>;
+        static_assert(alignof(holder_t) <= alignof(std::max_align_t),
                       "Over-aligned types do not support the small buffer optimisation.");
 
         std::cout << "Size of T: " << sizeof(T) << '\n';
-        std::cout << "Size of stored: " << sizeof(stored_t) << '\n';
+        std::cout << "Size of stored: " << sizeof(holder_t) << '\n';
         std::cout << "Static size: " << static_size << "\n\n";
 
-        if constexpr (sizeof(stored_t) <= static_size) {
+        if constexpr (sizeof(holder_t) <= static_size) {
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-            auto *d_ptr = ::new (storage) stored_t(std::forward<T>(x));
+            auto *d_ptr = ::new (storage) holder_t(std::forward<T>(x));
             ::new (storage + static_size) IFace *(d_ptr);
         } else {
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-            auto d_ptr = new stored_t(std::forward<T>(x));
+            auto d_ptr = new holder_t(std::forward<T>(x));
             ::new (storage) IFace *(d_ptr);
             ::new (storage + static_size) IFace *(nullptr);
         }
@@ -244,7 +244,7 @@ public:
     {
         const auto [p, st] = other.stype();
 
-        const auto *dptr = dynamic_cast<const basic_iface<IFace> *>(p);
+        const auto *dptr = dynamic_cast<const value_iface<IFace> *>(p);
 
         assert(dptr != nullptr);
 
@@ -264,7 +264,7 @@ private:
         const auto [p, st] = other.stype();
 
         if (st) {
-            auto *dptr = dynamic_cast<basic_iface<IFace> *>(p);
+            auto *dptr = dynamic_cast<value_iface<IFace> *>(p);
             assert(dptr != nullptr);
             auto *nptr = std::move(*dptr).move_init(storage);
             ::new (storage + static_size) IFace *(nptr);
@@ -322,7 +322,7 @@ public:
         assert(st0 == st1);
 
         if (st0) {
-            auto *dptr1 = dynamic_cast<basic_iface<IFace> *>(p1);
+            auto *dptr1 = dynamic_cast<value_iface<IFace> *>(p1);
             assert(dptr1 != nullptr);
 
             std::move(*dptr1).move_assign(storage);
@@ -334,7 +334,7 @@ public:
 
     [[nodiscard]] std::type_index type_idx() const noexcept
     {
-        return dynamic_cast<const basic_iface<IFace> *>(stype().first)->type_idx();
+        return dynamic_cast<const value_iface<IFace> *>(stype().first)->type_idx();
     }
 };
 

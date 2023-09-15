@@ -9,18 +9,24 @@
 #ifndef TANUKI_TANUKI_HPP
 #define TANUKI_TANUKI_HPP
 
+#include <cassert>
 #include <concepts>
+#include <cstddef>
+#include <limits>
 #include <memory>
 #include <new>
 #include <type_traits>
+#include <typeindex>
+#include <typeinfo>
 #include <utility>
+
+#include <iostream>
 
 // Versioning.
 #define TANUKI_VERSION_STRING "1.0.0"
 #define TANUKI_VERSION_MAJOR 1
 #define TANUKI_VERSION_MINOR 0
 #define TANUKI_VERSION_PATCH 0
-#define TANUKI_ABI_VERSION 1
 
 // Visibility setup.
 #if defined(_WIN32) || defined(__CYGWIN__)
@@ -59,113 +65,308 @@
 
 #endif
 
-#define TANUKI_BEGIN_NAMESPACE(abi_version)                                                                            \
+#define TANUKI_BEGIN_NAMESPACE                                                                                         \
     namespace tanuki                                                                                                   \
     {                                                                                                                  \
-    inline namespace v##abi_version TANUKI_ABI_TAG_ATTR                                                                \
+    inline namespace v1 TANUKI_ABI_TAG_ATTR                                                                            \
     {
 
 #define TANUKI_END_NAMESPACE                                                                                           \
     }                                                                                                                  \
     }
 
-TANUKI_BEGIN_NAMESPACE(TANUKI_ABI_VERSION)
+#if defined(__GNUC__)
 
-template <typename, template <typename> typename>
-class TANUKI_DLL_PUBLIC_INLINE_CLASS wrap;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-align"
+
+#endif
+
+TANUKI_BEGIN_NAMESPACE
 
 namespace detail
 {
 
-// Interface containing basic methods
-// to manage storage in the wrap class.
+template <std::size_t StaticSize>
+struct value_semantics : std::integral_constant<std::size_t, StaticSize> {
+};
+
+struct reference_semantics_impl {
+};
+
+} // namespace detail
+
+template <std::size_t StaticSize>
+using sbo_value_semantics = detail::value_semantics<StaticSize>;
+
+using no_sbo_value_semantics = sbo_value_semantics<0>;
+
+using default_sbo_value_semantics = sbo_value_semantics<1>;
+
+using reference_semantics = detail::reference_semantics_impl;
+
+namespace detail
+{
+
+// Interface containing basic common methods
+// for the implementation of the wrap class.
 template <typename IFace>
-struct TANUKI_DLL_PUBLIC_INLINE_CLASS storage_iface {
-    storage_iface(const storage_iface &) = delete;
-    storage_iface(storage_iface &&) noexcept = delete;
-    storage_iface &operator=(const storage_iface &) = delete;
-    storage_iface &operator=(storage_iface &&) noexcept = delete;
-    virtual ~storage_iface() = default;
+struct TANUKI_DLL_PUBLIC_INLINE_CLASS basic_iface {
+    basic_iface() = default;
+    basic_iface(const basic_iface &) = delete;
+    basic_iface(basic_iface &&) noexcept = delete;
+    basic_iface &operator=(const basic_iface &) = delete;
+    basic_iface &operator=(basic_iface &&) noexcept = delete;
+    virtual ~basic_iface() = default;
+
+    [[nodiscard]] virtual std::type_index type_idx() const noexcept = 0;
 
     virtual IFace *clone() const = 0;
-    virtual IFace *copy_into(void *) const = 0;
-    virtual IFace *move_into(void *) && = 0;
+    virtual IFace *copy_init(void *) const = 0;
+    virtual IFace *move_init(void *) && noexcept = 0;
+    virtual void move_assign(void *) && noexcept = 0;
 };
 
 template <typename T, typename IFace, template <typename> typename IFaceImpl>
-struct TANUKI_DLL_PUBLIC_INLINE_CLASS iface_impl final : public storage_iface<IFace>,
+struct TANUKI_DLL_PUBLIC_INLINE_CLASS iface_impl final : public basic_iface<IFace>,
                                                          public IFaceImpl<iface_impl<T, IFace, IFaceImpl>> {
-    using value_type = T;
-
     TANUKI_NO_UNIQUE_ADDRESS T m_value;
+
+    static_assert(std::is_nothrow_destructible_v<T>);
+    static_assert(std::is_copy_constructible_v<T>);
+    static_assert(std::is_nothrow_move_constructible_v<T>);
+
+    using value_type = T;
 
     iface_impl() = delete;
     iface_impl(const iface_impl &) = delete;
-    iface_impl(iface_impl &&) = delete;
+    iface_impl(iface_impl &&) noexcept = delete;
     iface_impl &operator=(const iface_impl &) = delete;
-    iface_impl &operator=(iface_impl &&) = delete;
+    iface_impl &operator=(iface_impl &&) noexcept = delete;
     explicit iface_impl(const T &x) : m_value(x) {}
     explicit iface_impl(T &&x) : m_value(std::move(x)) {}
     ~iface_impl() final = default;
 
-    IFace *clone() const final
+    [[nodiscard]] std::type_index type_idx() const noexcept final
     {
-        return std::make_unique<iface_impl>(m_value).release();
+        return typeid(T);
     }
 
-    IFace *copy_into(void *ptr) const final
+    IFace *clone() const final
+    {
+        // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+        return new iface_impl(m_value);
+    }
+
+    IFace *copy_init(void *ptr) const final
     {
         // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
         return ::new (ptr) iface_impl(m_value);
     }
 
-    IFace *move_into(void *ptr) && final
+    IFace *move_init(void *ptr) && noexcept final
     {
         // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
         return ::new (ptr) iface_impl(std::move(m_value));
     }
+
+    void move_assign(void *ptr) && noexcept final
+    {
+        std::launder(reinterpret_cast<iface_impl *>(ptr))->m_value = std::move(m_value);
+    }
+};
+
+template <typename IFace, template <typename> typename IFaceImpl, std::size_t NSlots>
+class TANUKI_DLL_PUBLIC_INLINE_CLASS wrap_sbo
+{
+    static_assert(NSlots > 0u);
+
+    static constexpr std::size_t ptr_size = sizeof(IFace *);
+    static_assert(NSlots < std::numeric_limits<std::size_t>::max());
+    static_assert(ptr_size <= std::numeric_limits<std::size_t>::max() / (NSlots + 1u));
+    static constexpr std::size_t static_size = ptr_size * NSlots;
+    static constexpr std::size_t static_storage = static_size + ptr_size;
+
+    alignas(std::max_align_t) std::byte storage[static_storage];
+
+    std::pair<const IFace *, bool> stype() const noexcept
+    {
+        auto *p = std::launder(reinterpret_cast<IFace *const *>(storage + static_size));
+
+        if (*p == nullptr) {
+            return {*std::launder(reinterpret_cast<IFace *const *>(storage)), false};
+        } else {
+            return {*p, true};
+        }
+    }
+    std::pair<IFace *, bool> stype() noexcept
+    {
+        auto *p = std::launder(reinterpret_cast<IFace **>(storage + static_size));
+
+        if (*p == nullptr) {
+            return {*std::launder(reinterpret_cast<IFace **>(storage)), false};
+        } else {
+            return {*p, true};
+        }
+    }
+
+public:
+    wrap_sbo() = delete;
+
+    // TODO concept checks on T.
+    template <typename T>
+        requires(!std::same_as<std::remove_cvref_t<T>, wrap_sbo>)
+    // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+    explicit wrap_sbo(T &&x)
+    {
+        using stored_t = iface_impl<std::remove_cvref_t<T>, IFace, IFaceImpl>;
+        static_assert(alignof(stored_t) <= alignof(std::max_align_t),
+                      "Over-aligned types do not support the small buffer optimisation.");
+
+        std::cout << "Size of T: " << sizeof(T) << '\n';
+        std::cout << "Size of stored: " << sizeof(stored_t) << '\n';
+        std::cout << "Static size: " << static_size << "\n\n";
+
+        if constexpr (sizeof(stored_t) <= static_size) {
+            // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+            auto *d_ptr = ::new (storage) stored_t(std::forward<T>(x));
+            ::new (storage + static_size) IFace *(d_ptr);
+        } else {
+            // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+            auto d_ptr = new stored_t(std::forward<T>(x));
+            ::new (storage) IFace *(d_ptr);
+            ::new (storage + static_size) IFace *(nullptr);
+        }
+    }
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+    wrap_sbo(const wrap_sbo &other)
+    {
+        const auto [p, st] = other.stype();
+
+        const auto *dptr = dynamic_cast<const basic_iface<IFace> *>(p);
+
+        assert(dptr != nullptr);
+
+        if (st) {
+            auto *nptr = dptr->copy_init(storage);
+            ::new (storage + static_size) IFace *(nptr);
+        } else {
+            auto *nptr = dptr->clone();
+            ::new (storage) IFace *(nptr);
+            ::new (storage + static_size) IFace *(nullptr);
+        }
+    }
+
+private:
+    void move_init_from(wrap_sbo &&other) noexcept
+    {
+        const auto [p, st] = other.stype();
+
+        if (st) {
+            auto *dptr = dynamic_cast<basic_iface<IFace> *>(p);
+            assert(dptr != nullptr);
+            auto *nptr = std::move(*dptr).move_init(storage);
+            ::new (storage + static_size) IFace *(nptr);
+        } else {
+            ::new (storage) IFace *(p);
+            ::new (storage + static_size) IFace *(nullptr);
+
+            ::new (other.storage) IFace *(nullptr);
+        }
+    }
+
+public:
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+    wrap_sbo(wrap_sbo &&other) noexcept
+    {
+        move_init_from(std::move(other));
+    }
+
+private:
+    void destroy() noexcept
+    {
+        const auto [p, st] = stype();
+
+        if (st) {
+            std::cout << "static size delete\n\n";
+            p->~IFace();
+        } else {
+            std::cout << "dynamics delete\n\n";
+            // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+            delete (p);
+        }
+    }
+
+public:
+    ~wrap_sbo()
+    {
+        destroy();
+    }
+
+    wrap_sbo &operator=(wrap_sbo &&other) noexcept
+    {
+        if (this == &other) {
+            return *this;
+        }
+
+        if (type_idx() != other.type_idx()) {
+            destroy();
+            move_init_from(std::move(other));
+            return *this;
+        }
+
+        const auto [p0, st0] = stype();
+        const auto [p1, st1] = other.stype();
+
+        assert(st0 == st1);
+
+        if (st0) {
+            auto *dptr1 = dynamic_cast<basic_iface<IFace> *>(p1);
+            assert(dptr1 != nullptr);
+
+            std::move(*dptr1).move_assign(storage);
+        } else {
+        }
+
+        return *this;
+    }
+
+    [[nodiscard]] std::type_index type_idx() const noexcept
+    {
+        return dynamic_cast<const basic_iface<IFace> *>(stype().first)->type_idx();
+    }
+};
+
+template <typename IFace, template <typename> typename IFaceImpl, typename Semantics>
+struct wrap_selector {
+};
+
+template <typename IFace, template <typename> typename IFaceImpl>
+struct wrap_selector<IFace, IFaceImpl, default_sbo_value_semantics> {
+    using type = wrap_sbo<IFace, IFaceImpl, 6>;
+};
+
+template <typename IFace, template <typename> typename IFaceImpl, std::size_t StaticSize>
+    requires(StaticSize > 1u)
+struct wrap_selector<IFace, IFaceImpl, sbo_value_semantics<StaticSize>> {
+    // TODO bytes -> pointer slots conversion.
+    // NOTE: need at least 1 slot in any case, need to round up?
+    // using type = wrap_sbo<IFace, IFaceImpl, 3>;
 };
 
 } // namespace detail
 
-template <typename IFace, template <typename> typename IFaceImpl>
-class TANUKI_DLL_PUBLIC_INLINE_CLASS wrap
-{
-    IFace *m_ptr = nullptr;
-
-public:
-    template <typename T>
-        requires(!std::same_as<wrap, std::remove_cvref_t<T>>)
-    // NOLINTNEXTLINE(bugprone-forwarding-reference-overload)
-    explicit wrap(T &&x)
-    {
-        using iface_impl_t = detail::iface_impl<std::remove_cvref_t<T>, IFace, IFaceImpl>;
-        // std::cout << sizeof(iface_impl_t) << '\n';
-        m_ptr = std::make_unique<iface_impl_t>(std::forward<T>(x)).release();
-    }
-
-    IFace *operator->() noexcept
-    {
-        return m_ptr;
-    }
-
-    const IFace *operator->() const noexcept
-    {
-        return m_ptr;
-    }
-
-    IFace &operator*() noexcept
-    {
-        return *m_ptr;
-    }
-
-    const IFace &operator*() const noexcept
-    {
-        return *m_ptr;
-    }
-};
+template <typename IFace, template <typename> typename IFaceImpl, typename Semantics = default_sbo_value_semantics>
+using wrap = typename detail::wrap_selector<IFace, IFaceImpl, Semantics>::type;
 
 TANUKI_END_NAMESPACE
+
+#if defined(__GNUC__)
+
+#pragma GCC diagnostic pop
+
+#endif
 
 #undef TANUKI_ABI_TAG_ATTR
 #undef TANUKI_DLL_PUBLIC_INLINE_CLASS

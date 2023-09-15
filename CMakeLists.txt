@@ -134,3 +134,8 @@ target_compile_features(tanuki INTERFACE cxx_std_20)
 target_include_directories(tanuki INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
+
+if(TANUKI_BUILD_TESTS)
+  enable_testing()
+  add_subdirectory(test)
+endif()

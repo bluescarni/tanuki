@@ -118,13 +118,17 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS value_iface {
     value_iface &operator=(value_iface &&) noexcept = delete;
     virtual ~value_iface() = default;
 
-    [[nodiscard]] virtual std::type_index type_idx() const noexcept = 0;
+    // Access to the value and its type.
+    [[nodiscard]] virtual const void *value_ptr() const noexcept = 0;
+    [[nodiscard]] virtual void *value_ptr() noexcept = 0;
+    [[nodiscard]] virtual std::type_index value_type_index() const noexcept = 0;
 
-    // NOTE: these are meant to implement virtual copy/move primitives for the holder class.
+    // Methods to implement virtual copy/move primitives for the holder class.
     [[nodiscard]] virtual std::pair<IFace *, value_iface *> clone() const = 0;
-    virtual std::pair<IFace *, value_iface *> copy_init(void *) const = 0;
-    virtual std::pair<IFace *, value_iface *> move_init(void *) && noexcept = 0;
-    virtual void move_assign(void *) && noexcept = 0;
+    virtual std::pair<IFace *, value_iface *> copy_init_holder(void *) const = 0;
+    virtual std::pair<IFace *, value_iface *> move_init_holder(void *) && noexcept = 0;
+    virtual void copy_assign_value(void *) const = 0;
+    virtual void move_assign_value(void *) && noexcept = 0;
 };
 
 // NOTE: how to selectively hide the details of this class from IFaceImpl?
@@ -152,9 +156,18 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS holder final : public value_iface<IFace>,
     explicit holder(T &&x) : m_value(std::move(x)) {}
     ~holder() final = default;
 
-    [[nodiscard]] std::type_index type_idx() const noexcept final
+    [[nodiscard]] std::type_index value_type_index() const noexcept final
     {
         return typeid(T);
+    }
+
+    [[nodiscard]] const void *value_ptr() const noexcept final
+    {
+        return std::addressof(m_value);
+    }
+    [[nodiscard]] void *value_ptr() noexcept final
+    {
+        return std::addressof(m_value);
     }
 
     // Clone this, and cast the result to the two bases.
@@ -167,7 +180,7 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS holder final : public value_iface<IFace>,
 
     // Copy-init a new holder into the storage beginning at ptr.
     // Then cast the result to the two bases and return.
-    std::pair<IFace *, value_iface<IFace> *> copy_init(void *ptr) const final
+    std::pair<IFace *, value_iface<IFace> *> copy_init_holder(void *ptr) const final
     {
         // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
         auto *ret = ::new (ptr) holder(m_value);
@@ -176,17 +189,23 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS holder final : public value_iface<IFace>,
 
     // Move-init a new holder into the storage beginning at ptr.
     // Then cast the result to the two bases and return.
-    std::pair<IFace *, value_iface<IFace> *> move_init(void *ptr) && noexcept final
+    std::pair<IFace *, value_iface<IFace> *> move_init_holder(void *ptr) && noexcept final
     {
         // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
         auto *ret = ::new (ptr) holder(std::move(m_value));
         return {ret, ret};
     }
 
-    // Move-assign m_value into the value of the holder object assumed to be stored in ptr.
-    void move_assign(void *ptr) && noexcept final
+    // Copy-assign m_value into the object of type T assumed to be stored in ptr.
+    void copy_assign_value(void *ptr) const final
     {
-        std::launder(reinterpret_cast<holder *>(ptr))->m_value = std::move(m_value);
+        *std::launder(reinterpret_cast<T *>(ptr)) = m_value;
+    }
+
+    // Move-assign m_value into the object of type T assumed to be stored in ptr.
+    void move_assign_value(void *ptr) && noexcept final
+    {
+        *std::launder(reinterpret_cast<T *>(ptr)) = std::move(m_value);
     }
 };
 
@@ -272,7 +291,7 @@ public:
         const auto [_, pv_iface, st] = other.stype();
 
         if (st) {
-            auto [new_p_iface, new_pv_iface] = pv_iface->copy_init(storage);
+            auto [new_p_iface, new_pv_iface] = pv_iface->copy_init_holder(storage);
             ::new (storage + static_size) IFace *(new_p_iface);
             ::new (storage + static_size + ptr_size) value_iface_t *(new_pv_iface);
         } else {
@@ -289,7 +308,7 @@ private:
         const auto [p_iface, pv_iface, st] = other.stype();
 
         if (st) {
-            auto [new_p_iface, new_pv_iface] = std::move(*pv_iface).move_init(storage);
+            auto [new_p_iface, new_pv_iface] = std::move(*pv_iface).move_init_holder(storage);
             ::new (storage + static_size) IFace *(new_p_iface);
             ::new (storage + static_size + ptr_size) value_iface_t *(new_pv_iface);
         } else {
@@ -299,9 +318,6 @@ private:
 
             // Nullify the interface pointers in other, so that, on destruction,
             // we will be calling delete on a nullptr.
-            // NOTE: directly overwriting the existing pointer
-            // with new() is ok - no need to call the destructor
-            // on pointer objects.
             ::new (other.storage) IFace *(nullptr);
             ::new (other.storage + static_size + ptr_size) value_iface_t *(nullptr);
         }
@@ -340,26 +356,32 @@ public:
             return *this;
         }
 
+        // Handle invalid objects.
+        if (is_invalid()) {
+            // No need to destroy, just move init
+            // from other is sufficient.
+            move_init_from(std::move(other));
+            return *this;
+        }
+
         // Handle different internal types.
-        if (type_idx() != other.type_idx()) {
+        if (value_type_index() != other.value_type_index()) {
             destroy();
-            // NOTE: move_init_from() will re-init the interface pointers
-            // with placement new. This is ok, no need to call
-            // the destructor on pointer objects.
             move_init_from(std::move(other));
             return *this;
         }
 
         // The internal types are the same.
+        const auto [p_iface0, pv_iface0, st0] = stype();
         const auto [p_iface1, pv_iface1, st1] = other.stype();
 
         // The storage flags must match, as they depend only
         // on the internal types.
-        assert(st1 == std::get<2>(stype()));
+        assert(st0 == st1);
 
-        if (st1) {
+        if (st0) {
             // For static storage, directly move assign the internal value.
-            std::move(*pv_iface1).move_assign(storage);
+            std::move(*pv_iface1).move_assign_value(pv_iface0->value_ptr());
         } else {
             // NOTE: similar to the move ctor.
             // NOTE: no need to set null on (storage + static_size), as
@@ -374,9 +396,74 @@ public:
         return *this;
     }
 
-    [[nodiscard]] std::type_index type_idx() const noexcept
+    wrap_sbo &operator=(const wrap_sbo &other)
     {
-        return std::get<1>(stype())->type_idx();
+        // Handle self-assign.
+        if (this == &other) {
+            return *this;
+        }
+
+        // Handle invalid object or different internal types.
+        if (is_invalid() || value_type_index() != other.value_type_index()) {
+            *this = wrap_sbo(other);
+            return *this;
+        }
+
+        // The internal types are the same.
+        const auto [p_iface0, pv_iface0, st0] = stype();
+        const auto [p_iface1, pv_iface1, st1] = other.stype();
+
+        // The storage flags must match, as they depend only
+        // on the internal types.
+        assert(st0 == st1);
+
+        // Assign the internal value.
+        pv_iface1->copy_assign_value(pv_iface0->value_ptr());
+
+        return *this;
+    }
+
+    // NOTE: this object is invalid if the storage type is dynamic and
+    // it has been moved from. In such a case, the move operation
+    // will have set the interface pointers to null.
+    // The only valid operations on an invalid object are:
+    // - destruction,
+    // - revival via copy/move assignment.
+    [[nodiscard]] bool is_invalid() const noexcept
+    {
+        return std::get<0>(stype()) == nullptr;
+    }
+
+    [[nodiscard]] std::type_index value_type_index() const noexcept
+    {
+        return std::get<1>(stype())->value_type_index();
+    }
+
+    const IFace *operator->() const noexcept
+    {
+        return std::get<0>(stype());
+    }
+    IFace *operator->() noexcept
+    {
+        return std::get<0>(stype());
+    }
+
+    const IFace &operator*() const noexcept
+    {
+        return *operator->();
+    }
+    IFace &operator*() noexcept
+    {
+        return *operator->();
+    }
+
+    explicit operator const IFace *() const noexcept
+    {
+        return operator->();
+    }
+    explicit operator IFace *() noexcept
+    {
+        return operator->();
     }
 };
 

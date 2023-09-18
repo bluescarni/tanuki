@@ -199,13 +199,20 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS holder final : public value_iface<IFace>,
     // Copy-assign m_value into the object of type T assumed to be stored in ptr.
     void copy_assign_value(void *ptr) const final
     {
-        *std::launder(reinterpret_cast<T *>(ptr)) = m_value;
+        // NOTE: I don't think it is necessary to invoke launder here,
+        // as ptr is always supposed to come from an invocation of value_ptr(),
+        // which just does a static cast to void *. Since we are assuming that
+        // copy_assign_value() is called only when assigning holders containing
+        // the same T, it all should boil down to T * -> void * -> T *, which
+        // does not require laundering.
+        *static_cast<T *>(ptr) = m_value;
     }
 
     // Move-assign m_value into the object of type T assumed to be stored in ptr.
     void move_assign_value(void *ptr) && noexcept final
     {
-        *std::launder(reinterpret_cast<T *>(ptr)) = std::move(m_value);
+        // NOTE: see comments above.
+        *static_cast<T *>(ptr) = std::move(m_value);
     }
 };
 

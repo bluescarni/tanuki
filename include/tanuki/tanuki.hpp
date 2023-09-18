@@ -143,7 +143,6 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS holder final : public value_iface<IFace>,
     {
         return typeid(T);
     }
-
     [[nodiscard]] const void *value_ptr() const noexcept final
     {
         return std::addressof(m_value);
@@ -160,7 +159,6 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS holder final : public value_iface<IFace>,
         auto *ret = new holder(m_value);
         return {ret, ret};
     }
-
     // Copy-init a new holder into the storage beginning at ptr.
     // Then cast the result to the two bases and return.
     std::pair<IFace *, value_iface<IFace> *> copy_init_holder(void *ptr) const final
@@ -169,7 +167,6 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS holder final : public value_iface<IFace>,
         auto *ret = ::new (ptr) holder(m_value);
         return {ret, ret};
     }
-
     // Move-init a new holder into the storage beginning at ptr.
     // Then cast the result to the two bases and return.
     std::pair<IFace *, value_iface<IFace> *> move_init_holder(void *ptr) && noexcept final
@@ -178,7 +175,6 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS holder final : public value_iface<IFace>,
         auto *ret = ::new (ptr) holder(std::move(m_value));
         return {ret, ret};
     }
-
     // Copy-assign m_value into the object of type T assumed to be stored in ptr.
     void copy_assign_value(void *ptr) const final
     {
@@ -190,7 +186,6 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS holder final : public value_iface<IFace>,
         // does not require laundering.
         *static_cast<T *>(ptr) = m_value;
     }
-
     // Move-assign m_value into the object of type T assumed to be stored in ptr.
     void move_assign_value(void *ptr) && noexcept final
     {

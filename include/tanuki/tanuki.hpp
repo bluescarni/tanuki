@@ -199,13 +199,15 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS holder final : public value_iface<IFace>,
     }
 };
 
-template <typename IFace, template <typename> typename IFaceImpl, config Cfg>
-class TANUKI_DLL_PUBLIC_INLINE_CLASS wrap_sbo
+} // namespace detail
+
+template <typename IFace, template <typename> typename IFaceImpl, config Cfg = config{}>
+class TANUKI_DLL_PUBLIC_INLINE_CLASS wrap
 {
     // TODO concept checks on IFace.
     static_assert(Cfg.sbo_size > 0u);
 
-    using value_iface_t = value_iface<IFace>;
+    using value_iface_t = detail::value_iface<IFace>;
 
     alignas(std::max_align_t) std::byte static_storage[Cfg.sbo_size];
     IFace *m_p_iface;
@@ -242,15 +244,15 @@ class TANUKI_DLL_PUBLIC_INLINE_CLASS wrap_sbo
     }
 
 public:
-    wrap_sbo() = delete;
+    wrap() = delete;
 
     // TODO concept checks on T and IfaceImpl.
     template <typename T>
-        requires(!std::same_as<std::remove_cvref_t<T>, wrap_sbo>)
+        requires(!std::same_as<std::remove_cvref_t<T>, wrap>)
     // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-    explicit wrap_sbo(T &&x)
+    explicit wrap(T &&x)
     {
-        using holder_t = holder<std::remove_cvref_t<T>, IFace, IFaceImpl>;
+        using holder_t = detail::holder<std::remove_cvref_t<T>, IFace, IFaceImpl>;
         static_assert(alignof(holder_t) <= alignof(std::max_align_t), "Over-aligned types are not supported.");
 
         if constexpr (sizeof(holder_t) <= Cfg.sbo_size) {
@@ -270,7 +272,7 @@ public:
     }
 
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-    wrap_sbo(const wrap_sbo &other)
+    wrap(const wrap &other)
     {
         const auto [_, pv_iface, st] = other.stype();
 
@@ -289,7 +291,7 @@ public:
     }
 
 private:
-    void move_init_from(wrap_sbo &&other) noexcept
+    void move_init_from(wrap &&other) noexcept
     {
         const auto [p_iface, pv_iface, st] = other.stype();
 
@@ -316,7 +318,7 @@ private:
 
 public:
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-    wrap_sbo(wrap_sbo &&other) noexcept
+    wrap(wrap &&other) noexcept
     {
         move_init_from(std::move(other));
     }
@@ -335,12 +337,12 @@ private:
     }
 
 public:
-    ~wrap_sbo()
+    ~wrap()
     {
         destroy();
     }
 
-    wrap_sbo &operator=(wrap_sbo &&other) noexcept
+    wrap &operator=(wrap &&other) noexcept
     {
         // Handle self-assign.
         if (this == &other) {
@@ -394,7 +396,7 @@ public:
         return *this;
     }
 
-    wrap_sbo &operator=(const wrap_sbo &other)
+    wrap &operator=(const wrap &other)
     {
         // Handle self-assign.
         if (this == &other) {
@@ -403,7 +405,7 @@ public:
 
         // Handle invalid object or different internal types.
         if (is_invalid() || value_type_index() != other.value_type_index()) {
-            *this = wrap_sbo(other);
+            *this = wrap(other);
             return *this;
         }
 
@@ -464,11 +466,6 @@ public:
         return operator->();
     }
 };
-
-} // namespace detail
-
-template <typename IFace, template <typename> typename IFaceImpl, config Cfg = config{}>
-using wrap = detail::wrap_sbo<IFace, IFaceImpl, Cfg>;
 
 TANUKI_END_NAMESPACE
 

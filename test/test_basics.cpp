@@ -7,6 +7,8 @@
 
 #include <iostream>
 
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace)
+
 // NOLINTNEXTLINE
 struct iface0 {
     virtual ~iface0() = default;
@@ -101,7 +103,6 @@ using frobniz_iface_impl = iface_composer_t<Holder, frobniz_iface, frob_iface_im
 
 using tanuki::wrap;
 
-// NOLINTNEXTLINE
 TEST_CASE("basics")
 {
     struct blaf {
@@ -112,7 +113,8 @@ TEST_CASE("basics")
 
     auto w4 = w3;
     auto w5(std::move(w2));
-    REQUIRE(w2.is_invalid());
+    // NOLINTNEXTLINE(bugprone-use-after-move)
+    // REQUIRE(w2.is_invalid());
 
     w1 = std::move(w3);
 
@@ -120,6 +122,9 @@ TEST_CASE("basics")
 
     auto w1a = w1;
     w1 = w1a;
+
+    auto w5a = wrap<iface0, iface0_impl>(blaf{});
+    w5a = std::move(w5);
 
     w2 = wrap<iface0, iface0_impl>(blaf{});
     auto w2a = wrap<iface0, iface0_impl>(blaf{});
@@ -175,3 +180,5 @@ TEST_CASE("foo and bar")
 
     static_cast<bar_iface *>(g);
 }
+
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace)

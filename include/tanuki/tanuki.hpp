@@ -122,9 +122,12 @@ struct holder final : public value_iface<IFace>, public IFaceImpl<holder<T, IFac
     holder(holder &&) noexcept = delete;
     holder &operator=(const holder &) = delete;
     holder &operator=(holder &&) noexcept = delete;
+    ~holder() final = default;
+
+    // NOTE: no concept requirements on these as they are performed
+    // in the wrap constructor.
     explicit holder(const T &x) : m_value(x) {}
     explicit holder(T &&x) noexcept : m_value(std::move(x)) {}
-    ~holder() final = default;
 
     // NOTE: mark everything else as private so that it is going to be
     // unreachable from IFaceImpl.

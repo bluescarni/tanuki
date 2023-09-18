@@ -329,6 +329,7 @@ private:
             // other.static_storage contains a pointer and we can overwrite
             // it with another pointer without calling the destructor first.
             ::new (other.static_storage) IFace *(nullptr);
+            assert(other.m_p_iface == nullptr);
             other.m_pv_iface = nullptr;
         }
     }
@@ -399,14 +400,16 @@ public:
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
             delete p_iface0;
 
-            // NOTE: no need to set null on m_p_iface, as
-            // it should be already on null.
+            // NOTE: no need to set m_p_iface to null, as
+            // it should already be null.
             ::new (this->static_storage) IFace *(p_iface1);
+            assert(this->m_p_iface == nullptr);
             this->m_pv_iface = pv_iface1;
 
             // Nullify the interface pointers in other, so that, on destruction,
             // we will be calling delete on a nullptr.
             ::new (other.static_storage) IFace *(nullptr);
+            assert(other.m_p_iface == nullptr);
             other.m_pv_iface = nullptr;
         }
 

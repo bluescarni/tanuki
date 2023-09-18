@@ -86,6 +86,13 @@ TANUKI_BEGIN_NAMESPACE
 namespace detail
 {
 
+// NOTE: an argument of this tag type is appended
+// to the signature of all member functions in value_iface. The purpose
+// is to prevent the user from accidentally implementing
+// functions from value_iface in the interface implementations.
+struct TANUKI_DLL_PUBLIC_INLINE_CLASS vtag {
+};
+
 // Interface containing methods to interact
 // with the value in the holder class.
 // NOTE: templating this on IFace is not strictly necessary,
@@ -105,16 +112,16 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS value_iface {
     virtual ~value_iface() = default;
 
     // Access to the value and its type.
-    [[nodiscard]] virtual const void *value_ptr() const noexcept = 0;
-    [[nodiscard]] virtual void *value_ptr() noexcept = 0;
-    [[nodiscard]] virtual std::type_index value_type_index() const noexcept = 0;
+    [[nodiscard]] virtual const void *value_ptr(vtag) const noexcept = 0;
+    [[nodiscard]] virtual void *value_ptr(vtag) noexcept = 0;
+    [[nodiscard]] virtual std::type_index value_type_index(vtag) const noexcept = 0;
 
     // Methods to implement virtual copy/move primitives for the holder class.
-    [[nodiscard]] virtual std::pair<IFace *, value_iface *> clone() const = 0;
-    virtual std::pair<IFace *, value_iface *> copy_init_holder(void *) const = 0;
-    virtual std::pair<IFace *, value_iface *> move_init_holder(void *) && noexcept = 0;
-    virtual void copy_assign_value(void *) const = 0;
-    virtual void move_assign_value(void *) && noexcept = 0;
+    [[nodiscard]] virtual std::pair<IFace *, value_iface *> clone(vtag) const = 0;
+    virtual std::pair<IFace *, value_iface *> copy_init_holder(void *, vtag) const = 0;
+    virtual std::pair<IFace *, value_iface *> move_init_holder(void *, vtag) && noexcept = 0;
+    virtual void copy_assign_value(void *, vtag) const = 0;
+    virtual void move_assign_value(void *, vtag) && noexcept = 0;
 };
 
 // NOTE: how to selectively hide the details of this class from IFaceImpl?
@@ -142,21 +149,21 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS holder final : public value_iface<IFace>,
     explicit holder(T &&x) : m_value(std::move(x)) {}
     ~holder() final = default;
 
-    [[nodiscard]] std::type_index value_type_index() const noexcept final
+    [[nodiscard]] std::type_index value_type_index(vtag) const noexcept final
     {
         return typeid(T);
     }
-    [[nodiscard]] const void *value_ptr() const noexcept final
+    [[nodiscard]] const void *value_ptr(vtag) const noexcept final
     {
         return std::addressof(m_value);
     }
-    [[nodiscard]] void *value_ptr() noexcept final
+    [[nodiscard]] void *value_ptr(vtag) noexcept final
     {
         return std::addressof(m_value);
     }
 
     // Clone this, and cast the result to the two bases.
-    [[nodiscard]] std::pair<IFace *, value_iface<IFace> *> clone() const final
+    [[nodiscard]] std::pair<IFace *, value_iface<IFace> *> clone(vtag) const final
     {
         // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
         auto *ret = new holder(m_value);
@@ -164,7 +171,7 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS holder final : public value_iface<IFace>,
     }
     // Copy-init a new holder into the storage beginning at ptr.
     // Then cast the result to the two bases and return.
-    std::pair<IFace *, value_iface<IFace> *> copy_init_holder(void *ptr) const final
+    std::pair<IFace *, value_iface<IFace> *> copy_init_holder(void *ptr, vtag) const final
     {
         // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
         auto *ret = ::new (ptr) holder(m_value);
@@ -172,14 +179,14 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS holder final : public value_iface<IFace>,
     }
     // Move-init a new holder into the storage beginning at ptr.
     // Then cast the result to the two bases and return.
-    std::pair<IFace *, value_iface<IFace> *> move_init_holder(void *ptr) && noexcept final
+    std::pair<IFace *, value_iface<IFace> *> move_init_holder(void *ptr, vtag) && noexcept final
     {
         // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
         auto *ret = ::new (ptr) holder(std::move(m_value));
         return {ret, ret};
     }
     // Copy-assign m_value into the object of type T assumed to be stored in ptr.
-    void copy_assign_value(void *ptr) const final
+    void copy_assign_value(void *ptr, vtag) const final
     {
         // NOTE: I don't think it is necessary to invoke launder here,
         // as ptr is always supposed to come from an invocation of value_ptr(),
@@ -190,7 +197,7 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS holder final : public value_iface<IFace>,
         *static_cast<T *>(ptr) = m_value;
     }
     // Move-assign m_value into the object of type T assumed to be stored in ptr.
-    void move_assign_value(void *ptr) && noexcept final
+    void move_assign_value(void *ptr, vtag) && noexcept final
     {
         // NOTE: see comments above.
         *static_cast<T *>(ptr) = std::move(m_value);
@@ -199,7 +206,7 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS holder final : public value_iface<IFace>,
 
 } // namespace detail
 
-struct config {
+struct TANUKI_DLL_PUBLIC_INLINE_CLASS config {
     std::size_t sbo_size = 48;
 };
 
@@ -280,12 +287,12 @@ public:
 
         if (st) {
             // Other has static storage.
-            auto [new_p_iface, new_pv_iface] = pv_iface->copy_init_holder(static_storage);
+            auto [new_p_iface, new_pv_iface] = pv_iface->copy_init_holder(static_storage, detail::vtag{});
             m_p_iface = new_p_iface;
             m_pv_iface = new_pv_iface;
         } else {
             // Other has dynamic storage.
-            auto [new_p_iface, new_pv_iface] = pv_iface->clone();
+            auto [new_p_iface, new_pv_iface] = pv_iface->clone(detail::vtag{});
             ::new (static_storage) IFace *(new_p_iface);
             m_p_iface = nullptr;
             m_pv_iface = new_pv_iface;
@@ -299,7 +306,7 @@ private:
 
         if (st) {
             // Other has static storage.
-            auto [new_p_iface, new_pv_iface] = std::move(*pv_iface).move_init_holder(static_storage);
+            auto [new_p_iface, new_pv_iface] = std::move(*pv_iface).move_init_holder(static_storage, detail::vtag{});
             m_p_iface = new_p_iface;
             m_pv_iface = new_pv_iface;
         } else {
@@ -376,7 +383,7 @@ public:
 
         if (st0) {
             // For static storage, directly move assign the internal value.
-            std::move(*pv_iface1).move_assign_value(pv_iface0->value_ptr());
+            std::move(*pv_iface1).move_assign_value(pv_iface0->value_ptr(detail::vtag{}), detail::vtag{});
         } else {
             // For dynamic storage, delete the current value and
             // then shallow copy the interface pointers
@@ -420,7 +427,7 @@ public:
         assert(st0 == st1);
 
         // Assign the internal value.
-        pv_iface1->copy_assign_value(pv_iface0->value_ptr());
+        pv_iface1->copy_assign_value(pv_iface0->value_ptr(detail::vtag{}), detail::vtag{});
 
         return *this;
     }
@@ -438,7 +445,7 @@ public:
 
     [[nodiscard]] std::type_index value_type_index() const noexcept
     {
-        return std::get<1>(stype())->value_type_index();
+        return std::get<1>(stype())->value_type_index(detail::vtag{});
     }
 
     const IFace *operator->() const noexcept

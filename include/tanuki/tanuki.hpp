@@ -83,10 +83,6 @@
 
 TANUKI_BEGIN_NAMESPACE
 
-struct config {
-    std::size_t sbo_size = 48;
-};
-
 namespace detail
 {
 
@@ -202,6 +198,10 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS holder final : public value_iface<IFace>,
 };
 
 } // namespace detail
+
+struct config {
+    std::size_t sbo_size = 48;
+};
 
 template <typename IFace, template <typename> typename IFaceImpl, config Cfg = config{}>
 class TANUKI_DLL_PUBLIC_INLINE_CLASS wrap

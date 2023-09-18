@@ -130,6 +130,8 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS holder final : public value_iface<IFace>,
                                                      public IFaceImpl<holder<T, IFace, IFaceImpl>> {
     TANUKI_NO_UNIQUE_ADDRESS T m_value;
 
+    using value_type = T;
+
     // TODO: make less restrictive - allow throwing dtor and move
     // ctor/assignment for T but leave the noexcepts, so that
     // if they throw the program will terminate.
@@ -137,8 +139,6 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS holder final : public value_iface<IFace>,
     static_assert(std::is_copy_constructible_v<T>);
     static_assert(std::is_nothrow_move_constructible_v<T>);
     static_assert(std::is_nothrow_move_assignable_v<T>);
-
-    using value_type = T;
 
     holder() = delete;
     holder(const holder &) = delete;
@@ -149,6 +149,7 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS holder final : public value_iface<IFace>,
     explicit holder(T &&x) : m_value(std::move(x)) {}
     ~holder() final = default;
 
+private:
     [[nodiscard]] std::type_index value_type_index(vtag) const noexcept final
     {
         return typeid(T);

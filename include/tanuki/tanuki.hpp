@@ -27,21 +27,6 @@
 #define TANUKI_VERSION_MINOR 0
 #define TANUKI_VERSION_PATCH 0
 
-// Visibility setup.
-#if defined(_WIN32) || defined(__CYGWIN__)
-
-#define TANUKI_DLL_PUBLIC_INLINE_CLASS
-
-#elif defined(__clang__) || defined(__GNUC__) || defined(__INTEL_COMPILER)
-
-#define TANUKI_DLL_PUBLIC_INLINE_CLASS __attribute__((visibility("default")))
-
-#else
-
-#define TANUKI_DLL_PUBLIC_INLINE_CLASS
-
-#endif
-
 // No unique address setup.
 #if defined(_MSC_VER)
 
@@ -90,7 +75,7 @@ namespace detail
 // to the signature of all member functions in value_iface. The purpose
 // is to prevent the user from accidentally implementing
 // functions from value_iface in the interface implementations.
-struct TANUKI_DLL_PUBLIC_INLINE_CLASS vtag {
+struct vtag {
 };
 
 // Interface containing methods to interact
@@ -103,7 +88,7 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS vtag {
 // does enough memory shenanigans). Perhaps in the future
 // we can reconsider if we want to reduce bloat.
 template <typename IFace>
-struct TANUKI_DLL_PUBLIC_INLINE_CLASS value_iface {
+struct value_iface {
     value_iface() = default;
     value_iface(const value_iface &) = delete;
     value_iface(value_iface &&) noexcept = delete;
@@ -124,21 +109,13 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS value_iface {
     virtual void move_assign_value(void *, vtag) && noexcept = 0;
 };
 
-// NOTE: how to selectively hide the details of this class from IFaceImpl?
 template <typename T, typename IFace, template <typename> typename IFaceImpl>
-struct TANUKI_DLL_PUBLIC_INLINE_CLASS holder final : public value_iface<IFace>,
-                                                     public IFaceImpl<holder<T, IFace, IFaceImpl>> {
+struct holder final : public value_iface<IFace>, public IFaceImpl<holder<T, IFace, IFaceImpl>> {
     TANUKI_NO_UNIQUE_ADDRESS T m_value;
 
     using value_type = T;
 
-    // TODO: make less restrictive - allow throwing dtor and move
-    // ctor/assignment for T but leave the noexcepts, so that
-    // if they throw the program will terminate.
-    static_assert(std::is_nothrow_destructible_v<T>);
-    static_assert(std::is_copy_constructible_v<T>);
-    static_assert(std::is_nothrow_move_constructible_v<T>);
-    static_assert(std::is_nothrow_move_assignable_v<T>);
+    static_assert(std::destructible<T>);
 
     holder() = delete;
     holder(const holder &) = delete;
@@ -149,6 +126,8 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS holder final : public value_iface<IFace>,
     explicit holder(T &&x) : m_value(std::move(x)) {}
     ~holder() final = default;
 
+    // NOTE: mark everything else as private so that it is going to be
+    // unreachable from IFaceImpl.
 private:
     [[nodiscard]] std::type_index value_type_index(vtag) const noexcept final
     {
@@ -193,7 +172,7 @@ private:
         // as ptr is always supposed to come from an invocation of value_ptr(),
         // which just does a static cast to void *. Since we are assuming that
         // copy_assign_value() is called only when assigning holders containing
-        // the same T, it all should boil down to T * -> void * -> T *, which
+        // the same T, the conversion chain should boil down to T * -> void * -> T *, which
         // does not require laundering.
         *static_cast<T *>(ptr) = m_value;
     }
@@ -205,79 +184,106 @@ private:
     }
 };
 
+// Implementation of basic storage for the wrap class.
+template <typename IFace, std::size_t StaticStorageSize>
+struct wrap_storage {
+    static_assert(StaticStorageSize > 0u);
+
+    alignas(std::max_align_t) std::byte static_storage[StaticStorageSize];
+    IFace *m_p_iface;
+    value_iface<IFace> *m_pv_iface;
+};
+
+template <typename IFace>
+struct wrap_storage<IFace, 0> {
+    IFace *m_p_iface;
+    value_iface<IFace> *m_pv_iface;
+};
+
 } // namespace detail
 
-struct TANUKI_DLL_PUBLIC_INLINE_CLASS config {
-    std::size_t sbo_size = 48;
+// Configuration structure for the wrap class.
+struct config {
+    std::size_t static_size = 48;
+    bool implicit_iface_conversion = false;
 };
 
 template <typename IFace, template <typename> typename IFaceImpl, config Cfg = config{}>
-class TANUKI_DLL_PUBLIC_INLINE_CLASS wrap
+    requires std::is_polymorphic_v<IFace> && std::has_virtual_destructor_v<IFace>
+class wrap : private detail::wrap_storage<IFace, Cfg.static_size>
 {
-    // TODO concept checks on IFace.
-    static_assert(Cfg.sbo_size > 0u);
-
     using value_iface_t = detail::value_iface<IFace>;
-
-    alignas(std::max_align_t) std::byte static_storage[Cfg.sbo_size];
-    IFace *m_p_iface;
-    value_iface_t *m_pv_iface;
 
     // Helpers to fetch the interface pointers and the storage type.
     std::tuple<const IFace *, const value_iface_t *, bool> stype() const noexcept
+        requires(Cfg.static_size > 0u)
     {
-        if (m_p_iface == nullptr) {
+        if (this->m_p_iface == nullptr) {
             // Dynamic storage.
-            const auto *ret = *std::launder(reinterpret_cast<IFace *const *>(static_storage));
+            const auto *ret = *std::launder(reinterpret_cast<IFace *const *>(this->static_storage));
             // NOTE: if one interface pointer is null, the other must be as well, and vice-versa.
             // Null interface pointers with dynamic storage indicate that this object is in the
             // invalid state.
-            assert((ret == nullptr) == (m_pv_iface == nullptr));
-            return {ret, m_pv_iface, false};
+            assert((ret == nullptr) == (this->m_pv_iface == nullptr));
+            return {ret, this->m_pv_iface, false};
         } else {
             // Static storage.
             // NOTE: with static storage, the interface pointers cannot be null.
-            assert(m_p_iface != nullptr && m_pv_iface != nullptr);
-            return {m_p_iface, m_pv_iface, true};
+            assert(this->m_p_iface != nullptr && this->m_pv_iface != nullptr);
+            return {this->m_p_iface, this->m_pv_iface, true};
         }
     }
     std::tuple<IFace *, value_iface_t *, bool> stype() noexcept
+        requires(Cfg.static_size > 0u)
     {
-        if (m_p_iface == nullptr) {
-            auto *ret = *std::launder(reinterpret_cast<IFace **>(static_storage));
-            assert((ret == nullptr) == (m_pv_iface == nullptr));
-            return {ret, m_pv_iface, false};
+        if (this->m_p_iface == nullptr) {
+            auto *ret = *std::launder(reinterpret_cast<IFace **>(this->static_storage));
+            assert((ret == nullptr) == (this->m_pv_iface == nullptr));
+            return {ret, this->m_pv_iface, false};
         } else {
-            assert(m_p_iface != nullptr && m_pv_iface != nullptr);
-            return {m_p_iface, m_pv_iface, true};
+            assert(this->m_p_iface != nullptr && this->m_pv_iface != nullptr);
+            return {this->m_p_iface, this->m_pv_iface, true};
         }
     }
+
+    // The holder type corresponding to the type T
+    // passed to the generic ctor.
+    template <typename T>
+    using make_holder_t = detail::holder<std::remove_cvref_t<T>, IFace, IFaceImpl>;
 
 public:
     wrap() = delete;
 
-    // TODO concept checks on T and IfaceImpl.
     template <typename T>
-        requires(!std::same_as<std::remove_cvref_t<T>, wrap>)
-    // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-    explicit wrap(T &&x)
+        requires
+        // Must not compete with copy/move.
+        (!std::same_as<std::remove_cvref_t<T>, wrap>) &&
+        // T must be destructible.
+        std::destructible<std::remove_cvref_t<T>> &&
+        // These checks are for verifying that IFace is a base
+        // of the interface implementation and that all required
+        // interface requirements have been implemented.
+        std::derived_from<make_holder_t<T &&>, IFace>
+        && std::constructible_from<make_holder_t<T &&>, T &&>
+        // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,cppcoreguidelines-pro-type-member-init,hicpp-member-init)
+        explicit wrap(T &&x)
     {
-        using holder_t = detail::holder<std::remove_cvref_t<T>, IFace, IFaceImpl>;
+        using holder_t = make_holder_t<T &&>;
         static_assert(alignof(holder_t) <= alignof(std::max_align_t), "Over-aligned types are not supported.");
 
-        if constexpr (sizeof(holder_t) <= Cfg.sbo_size) {
+        if constexpr (sizeof(holder_t) <= Cfg.static_size) {
             // Static storage.
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-            auto *d_ptr = ::new (static_storage) holder_t(std::forward<T>(x));
-            m_p_iface = d_ptr;
-            m_pv_iface = d_ptr;
+            auto *d_ptr = ::new (this->static_storage) holder_t(std::forward<T>(x));
+            this->m_p_iface = d_ptr;
+            this->m_pv_iface = d_ptr;
         } else {
             // Dynamic storage.
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
             auto d_ptr = new holder_t(std::forward<T>(x));
-            ::new (static_storage) IFace *(d_ptr);
-            m_p_iface = nullptr;
-            m_pv_iface = d_ptr;
+            ::new (this->static_storage) IFace *(d_ptr);
+            this->m_p_iface = nullptr;
+            this->m_pv_iface = d_ptr;
         }
     }
 
@@ -288,15 +294,15 @@ public:
 
         if (st) {
             // Other has static storage.
-            auto [new_p_iface, new_pv_iface] = pv_iface->copy_init_holder(static_storage, detail::vtag{});
-            m_p_iface = new_p_iface;
-            m_pv_iface = new_pv_iface;
+            auto [new_p_iface, new_pv_iface] = pv_iface->copy_init_holder(this->static_storage, detail::vtag{});
+            this->m_p_iface = new_p_iface;
+            this->m_pv_iface = new_pv_iface;
         } else {
             // Other has dynamic storage.
             auto [new_p_iface, new_pv_iface] = pv_iface->clone(detail::vtag{});
-            ::new (static_storage) IFace *(new_p_iface);
-            m_p_iface = nullptr;
-            m_pv_iface = new_pv_iface;
+            ::new (this->static_storage) IFace *(new_p_iface);
+            this->m_p_iface = nullptr;
+            this->m_pv_iface = new_pv_iface;
         }
     }
 
@@ -307,14 +313,15 @@ private:
 
         if (st) {
             // Other has static storage.
-            auto [new_p_iface, new_pv_iface] = std::move(*pv_iface).move_init_holder(static_storage, detail::vtag{});
-            m_p_iface = new_p_iface;
-            m_pv_iface = new_pv_iface;
+            auto [new_p_iface, new_pv_iface]
+                = std::move(*pv_iface).move_init_holder(this->static_storage, detail::vtag{});
+            this->m_p_iface = new_p_iface;
+            this->m_pv_iface = new_pv_iface;
         } else {
             // Other has dynamic storage.
-            ::new (static_storage) IFace *(p_iface);
-            m_p_iface = nullptr;
-            m_pv_iface = pv_iface;
+            ::new (this->static_storage) IFace *(p_iface);
+            this->m_p_iface = nullptr;
+            this->m_pv_iface = pv_iface;
 
             // Nullify the interface pointers in other, so that, on destruction,
             // we will be calling delete on a nullptr.
@@ -394,8 +401,8 @@ public:
 
             // NOTE: no need to set null on m_p_iface, as
             // it should be already on null.
-            ::new (static_storage) IFace *(p_iface1);
-            m_pv_iface = pv_iface1;
+            ::new (this->static_storage) IFace *(p_iface1);
+            this->m_pv_iface = pv_iface1;
 
             // Nullify the interface pointers in other, so that, on destruction,
             // we will be calling delete on a nullptr.
@@ -467,11 +474,13 @@ public:
         return *operator->();
     }
 
-    explicit operator const IFace *() const noexcept
+    // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
+    explicit(Cfg.implicit_iface_conversion) operator const IFace *() const noexcept
     {
         return operator->();
     }
-    explicit operator IFace *() noexcept
+    // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
+    explicit(Cfg.implicit_iface_conversion) operator IFace *() noexcept
     {
         return operator->();
     }
@@ -486,7 +495,6 @@ TANUKI_END_NAMESPACE
 #endif
 
 #undef TANUKI_ABI_TAG_ATTR
-#undef TANUKI_DLL_PUBLIC_INLINE_CLASS
 #undef TANUKI_NO_UNIQUE_ADDRESS
 
 #endif

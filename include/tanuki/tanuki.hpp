@@ -92,6 +92,13 @@ namespace detail
 
 // Interface containing methods to interact
 // with the value in the holder class.
+// NOTE: templating this on IFace is not strictly necessary,
+// as we could just use void * instead of IFace * and then
+// cast back to Iface * as needed. However, templating
+// gives a higher degree of type safety as there's no risk
+// of casting to the wrong type in the wrap class (which already
+// does enough memory shenanigans). Perhaps in the future
+// we can reconsider if we want to reduce bloat.
 template <typename IFace>
 struct TANUKI_DLL_PUBLIC_INLINE_CLASS value_iface {
     value_iface() = default;

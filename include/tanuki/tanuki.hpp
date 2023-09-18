@@ -123,7 +123,7 @@ struct holder final : public value_iface<IFace>, public IFaceImpl<holder<T, IFac
     holder &operator=(const holder &) = delete;
     holder &operator=(holder &&) noexcept = delete;
     explicit holder(const T &x) : m_value(x) {}
-    explicit holder(T &&x) : m_value(std::move(x)) {}
+    explicit holder(T &&x) noexcept : m_value(std::move(x)) {}
     ~holder() final = default;
 
     // NOTE: mark everything else as private so that it is going to be

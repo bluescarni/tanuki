@@ -490,6 +490,17 @@ public:
     {
         return operator->();
     }
+
+    // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
+    explicit(Cfg.implicit_iface_conversion) operator const IFace &() const noexcept
+    {
+        return operator*();
+    }
+    // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
+    explicit(Cfg.implicit_iface_conversion) operator IFace &() noexcept
+    {
+        return operator*();
+    }
 };
 
 TANUKI_END_NAMESPACE

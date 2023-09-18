@@ -83,26 +83,9 @@
 
 TANUKI_BEGIN_NAMESPACE
 
-namespace detail
-{
-
-template <std::size_t StaticSize>
-struct value_semantics : std::integral_constant<std::size_t, StaticSize> {
+struct config {
+    std::size_t sbo_size = 48;
 };
-
-struct reference_semantics_impl {
-};
-
-} // namespace detail
-
-template <std::size_t StaticSize>
-using sbo_value_semantics = detail::value_semantics<StaticSize>;
-
-using no_sbo_value_semantics = sbo_value_semantics<0>;
-
-using default_sbo_value_semantics = sbo_value_semantics<1>;
-
-using reference_semantics = detail::reference_semantics_impl;
 
 namespace detail
 {
@@ -216,14 +199,15 @@ struct TANUKI_DLL_PUBLIC_INLINE_CLASS holder final : public value_iface<IFace>,
     }
 };
 
-template <typename IFace, template <typename> typename IFaceImpl, std::size_t StaticStorageSize>
+template <typename IFace, template <typename> typename IFaceImpl, config Cfg>
 class TANUKI_DLL_PUBLIC_INLINE_CLASS wrap_sbo
 {
-    static_assert(StaticStorageSize > 0u);
+    // TODO concept checks on IFace.
+    static_assert(Cfg.sbo_size > 0u);
 
     using value_iface_t = value_iface<IFace>;
 
-    alignas(std::max_align_t) std::byte static_storage[StaticStorageSize];
+    alignas(std::max_align_t) std::byte static_storage[Cfg.sbo_size];
     IFace *m_p_iface;
     value_iface_t *m_pv_iface;
 
@@ -260,7 +244,7 @@ class TANUKI_DLL_PUBLIC_INLINE_CLASS wrap_sbo
 public:
     wrap_sbo() = delete;
 
-    // TODO concept checks on T.
+    // TODO concept checks on T and IfaceImpl.
     template <typename T>
         requires(!std::same_as<std::remove_cvref_t<T>, wrap_sbo>)
     // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,cppcoreguidelines-pro-type-member-init,hicpp-member-init)
@@ -269,7 +253,7 @@ public:
         using holder_t = holder<std::remove_cvref_t<T>, IFace, IFaceImpl>;
         static_assert(alignof(holder_t) <= alignof(std::max_align_t), "Over-aligned types are not supported.");
 
-        if constexpr (sizeof(holder_t) <= StaticStorageSize) {
+        if constexpr (sizeof(holder_t) <= Cfg.sbo_size) {
             // Static storage.
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
             auto *d_ptr = ::new (static_storage) holder_t(std::forward<T>(x));
@@ -481,27 +465,10 @@ public:
     }
 };
 
-template <typename IFace, template <typename> typename IFaceImpl, typename Semantics>
-struct wrap_selector {
-};
-
-template <typename IFace, template <typename> typename IFaceImpl>
-struct wrap_selector<IFace, IFaceImpl, default_sbo_value_semantics> {
-    using type = wrap_sbo<IFace, IFaceImpl, 48>;
-};
-
-template <typename IFace, template <typename> typename IFaceImpl, std::size_t StaticSize>
-    requires(StaticSize > 1u)
-struct wrap_selector<IFace, IFaceImpl, sbo_value_semantics<StaticSize>> {
-    // TODO bytes -> pointer slots conversion.
-    // NOTE: need at least 1 slot in any case, need to round up?
-    // using type = wrap_sbo<IFace, IFaceImpl, 3>;
-};
-
 } // namespace detail
 
-template <typename IFace, template <typename> typename IFaceImpl, typename Semantics = default_sbo_value_semantics>
-using wrap = typename detail::wrap_selector<IFace, IFaceImpl, Semantics>::type;
+template <typename IFace, template <typename> typename IFaceImpl, config Cfg = config{}>
+using wrap = detail::wrap_sbo<IFace, IFaceImpl, Cfg>;
 
 TANUKI_END_NAMESPACE
 

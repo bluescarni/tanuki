@@ -86,7 +86,7 @@ struct vtag {
 // gives a higher degree of type safety as there's no risk
 // of casting to the wrong type in the wrap class (which already
 // does enough memory shenanigans). Perhaps in the future
-// we can reconsider if we want to reduce bloat.
+// we can reconsider if we want to reduce binary bloat.
 template <typename IFace>
 struct value_iface {
     value_iface() = default;
@@ -217,6 +217,7 @@ struct iface_composer<Holder, IFace, Impl0> {
 
 } // namespace detail
 
+// Composite interface implementation.
 template <typename Holder, typename IFace, template <typename, typename> typename... Impls>
     requires(sizeof...(Impls) > 0u)
 using composite_iface_impl = typename detail::iface_composer<Holder, IFace, Impls...>::type;
@@ -387,7 +388,7 @@ public:
             return *this;
         }
 
-        // Handle invalid objects.
+        // Handle invalid object.
         if (is_invalid()) {
             // No need to destroy, just move init
             // from other is sufficient.

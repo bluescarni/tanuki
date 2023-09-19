@@ -188,17 +188,17 @@ private:
 };
 
 // Implementation of basic storage for the wrap class.
-template <typename IFace, std::size_t StaticStorageSize>
+template <typename IFace, std::size_t StaticStorageSize, std::size_t StaticStorageAlignment>
 struct wrap_storage {
     static_assert(StaticStorageSize > 0u);
 
-    alignas(std::max_align_t) std::byte static_storage[StaticStorageSize];
+    alignas(StaticStorageAlignment) std::byte static_storage[StaticStorageSize];
     IFace *m_p_iface;
     value_iface<IFace> *m_pv_iface;
 };
 
-template <typename IFace>
-struct wrap_storage<IFace, 0> {
+template <typename IFace, std::size_t StaticStorageAlignment>
+struct wrap_storage<IFace, 0, StaticStorageAlignment> {
     IFace *m_p_iface;
     value_iface<IFace> *m_pv_iface;
 };
@@ -225,12 +225,16 @@ using composite_iface_impl = typename detail::iface_composer<Holder, IFace, Impl
 // Configuration structure for the wrap class.
 struct config {
     std::size_t static_size = 48;
+    std::size_t static_alignment = alignof(std::max_align_t);
     bool explicit_iface_conversion = true;
 };
 
-template <typename IFace, template <typename> typename IFaceImpl, config Cfg = config{}>
-    requires std::is_polymorphic_v<IFace> && std::has_virtual_destructor_v<IFace>
-class wrap : private detail::wrap_storage<IFace, Cfg.static_size>
+inline constexpr auto default_config = config{};
+
+template <typename IFace, template <typename> typename IFaceImpl, auto Cfg = default_config>
+    requires std::is_polymorphic_v<IFace> && std::has_virtual_destructor_v<IFace> && (Cfg.static_alignment > 0u)
+             && ((Cfg.static_alignment & (Cfg.static_alignment - 1u)) == 0u)
+class wrap : private detail::wrap_storage<IFace, Cfg.static_size, Cfg.static_alignment>
 {
     using value_iface_t = detail::value_iface<IFace>;
 
@@ -284,13 +288,13 @@ public:
         // These checks are for verifying that IFace is a base
         // of the interface implementation and that all
         // interface requirements have been implemented.
-        std::derived_from<make_holder_t<T &&>, IFace>
-        && std::constructible_from<make_holder_t<T &&>, T &&>
+        std::derived_from<make_holder_t<T &&>, IFace> && std::constructible_from<make_holder_t<T &&>, T &&> &&
+        // Alignment checks.
+        (sizeof(make_holder_t<T &&>) > Cfg.static_size || alignof(make_holder_t<T &&>) <= Cfg.static_alignment)
         // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,cppcoreguidelines-pro-type-member-init,hicpp-member-init)
         explicit wrap(T &&x)
     {
         using holder_t = make_holder_t<T &&>;
-        static_assert(alignof(holder_t) <= alignof(std::max_align_t), "Over-aligned types are not supported.");
 
         if constexpr (sizeof(holder_t) <= Cfg.static_size) {
             // Static storage.

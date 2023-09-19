@@ -44,25 +44,8 @@ struct bar_iface_impl : IFace {
     }
 };
 
-template <typename Holder, typename IFace, template <typename, typename> typename Impl0,
-          template <typename, typename> typename... Impls>
-struct iface_composer {
-    using type = Impl0<Holder, typename iface_composer<Holder, IFace, Impls...>::type>;
-};
-
-template <typename Holder, typename IFace, template <typename, typename> typename Impl0>
-struct iface_composer<Holder, IFace, Impl0> {
-    using type = Impl0<Holder, IFace>;
-};
-
-template <typename Holder, typename IFace, template <typename, typename> typename... Impls>
-using iface_composer_t = typename iface_composer<Holder, IFace, Impls...>::type;
-
-// template <typename Holder>
-// using foobar_iface_impl = foo_iface_impl<Holder, bar_iface_impl<Holder, bar_iface>>;
-
 template <typename Holder>
-using foobar_iface_impl = iface_composer_t<Holder, bar_iface, foo_iface_impl, bar_iface_impl>;
+using foobar_iface_impl = tanuki::composite_iface_impl<Holder, bar_iface, foo_iface_impl, bar_iface_impl>;
 
 // ---------------------------------------------------------------------
 
@@ -95,11 +78,8 @@ struct niz_iface_impl : IFace {
     }
 };
 
-// template <typename Holder>
-// using frobniz_iface_impl = niz_iface_impl<Holder, frob_iface_impl<Holder, frobniz_iface>>;
-
 template <typename Holder>
-using frobniz_iface_impl = iface_composer_t<Holder, frobniz_iface, frob_iface_impl, niz_iface_impl>;
+using frobniz_iface_impl = tanuki::composite_iface_impl<Holder, frobniz_iface, frob_iface_impl, niz_iface_impl>;
 
 using tanuki::wrap;
 

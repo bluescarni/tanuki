@@ -203,7 +203,23 @@ struct wrap_storage<IFace, 0> {
     value_iface<IFace> *m_pv_iface;
 };
 
+// Implementation details for composite interfaces.
+template <typename Holder, typename IFace, template <typename, typename> typename Impl0,
+          template <typename, typename> typename... Impls>
+struct iface_composer {
+    using type = Impl0<Holder, typename iface_composer<Holder, IFace, Impls...>::type>;
+};
+
+template <typename Holder, typename IFace, template <typename, typename> typename Impl0>
+struct iface_composer<Holder, IFace, Impl0> {
+    using type = Impl0<Holder, IFace>;
+};
+
 } // namespace detail
+
+template <typename Holder, typename IFace, template <typename, typename> typename... Impls>
+    requires(sizeof...(Impls) > 0u)
+using composite_iface_impl = typename detail::iface_composer<Holder, IFace, Impls...>::type;
 
 // Configuration structure for the wrap class.
 struct config {
@@ -257,6 +273,7 @@ class wrap : private detail::wrap_storage<IFace, Cfg.static_size>
 public:
     wrap() = delete;
 
+    // Generic ctor.
     template <typename T>
         requires
         // Must not compete with copy/move.
@@ -264,7 +281,7 @@ public:
         // T must be destructible.
         std::destructible<std::remove_cvref_t<T>> &&
         // These checks are for verifying that IFace is a base
-        // of the interface implementation and that all required
+        // of the interface implementation and that all
         // interface requirements have been implemented.
         std::derived_from<make_holder_t<T &&>, IFace>
         && std::constructible_from<make_holder_t<T &&>, T &&>

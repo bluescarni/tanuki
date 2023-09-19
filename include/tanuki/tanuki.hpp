@@ -208,7 +208,7 @@ struct wrap_storage<IFace, 0> {
 // Configuration structure for the wrap class.
 struct config {
     std::size_t static_size = 48;
-    bool implicit_iface_conversion = false;
+    bool explicit_iface_conversion = true;
 };
 
 template <typename IFace, template <typename> typename IFaceImpl, config Cfg = config{}>
@@ -481,23 +481,23 @@ public:
     }
 
     // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
-    explicit(Cfg.implicit_iface_conversion) operator const IFace *() const noexcept
+    explicit(Cfg.explicit_iface_conversion) operator const IFace *() const noexcept
     {
         return operator->();
     }
     // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
-    explicit(Cfg.implicit_iface_conversion) operator IFace *() noexcept
+    explicit(Cfg.explicit_iface_conversion) operator IFace *() noexcept
     {
         return operator->();
     }
 
     // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
-    explicit(Cfg.implicit_iface_conversion) operator const IFace &() const noexcept
+    explicit(Cfg.explicit_iface_conversion) operator const IFace &() const noexcept
     {
         return operator*();
     }
     // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
-    explicit(Cfg.implicit_iface_conversion) operator IFace &() noexcept
+    explicit(Cfg.explicit_iface_conversion) operator IFace &() noexcept
     {
         return operator*();
     }

@@ -9,6 +9,7 @@
 #ifndef TANUKI_TANUKI_HPP
 #define TANUKI_TANUKI_HPP
 
+#include <algorithm>
 #include <cassert>
 #include <concepts>
 #include <cstddef>
@@ -192,7 +193,10 @@ template <typename IFace, std::size_t StaticStorageSize, std::size_t StaticStora
 struct wrap_storage {
     static_assert(StaticStorageSize > 0u);
 
-    alignas(StaticStorageAlignment) std::byte static_storage[StaticStorageSize];
+    // NOTE: the static storage is used to store an IFace * in dynamic
+    // storage mode, thus it has minimum size and alignment requirements.
+    alignas(std::max(StaticStorageAlignment,
+                     alignof(IFace *))) std::byte static_storage[std::max(StaticStorageSize, sizeof(IFace *))];
     IFace *m_p_iface;
     value_iface<IFace> *m_pv_iface;
 };

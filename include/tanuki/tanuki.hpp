@@ -577,7 +577,8 @@ public:
         }
     }
 
-    const IFace *operator->() const noexcept
+private:
+    const IFace *get_iface_ptr() const noexcept
     {
         if constexpr (Cfg.static_size == 0u) {
             return this->m_p_iface;
@@ -585,7 +586,7 @@ public:
             return std::get<0>(stype());
         }
     }
-    IFace *operator->() noexcept
+    IFace *get_iface_ptr() noexcept
     {
         if constexpr (Cfg.static_size == 0u) {
             return this->m_p_iface;
@@ -594,24 +595,34 @@ public:
         }
     }
 
+public:
+    const IFace *operator->() const noexcept
+    {
+        return get_iface_ptr();
+    }
+    IFace *operator->() noexcept
+    {
+        return get_iface_ptr();
+    }
+
     const IFace &operator*() const noexcept
     {
-        return *operator->();
+        return *get_iface_ptr();
     }
     IFace &operator*() noexcept
     {
-        return *operator->();
+        return *get_iface_ptr();
     }
 
     // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
     explicit(Cfg.explicit_iface_conversion) operator const IFace *() const noexcept
     {
-        return operator->();
+        return get_iface_ptr();
     }
     // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
     explicit(Cfg.explicit_iface_conversion) operator IFace *() noexcept
     {
-        return operator->();
+        return get_iface_ptr();
     }
 
     // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)

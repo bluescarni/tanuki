@@ -256,6 +256,12 @@ class wrap;
 template <typename IFace, template <typename> typename IFaceImpl, config Cfg, template <typename> typename TypeChecks>
 void swap(wrap<IFace, IFaceImpl, Cfg, TypeChecks> &, wrap<IFace, IFaceImpl, Cfg, TypeChecks> &) noexcept;
 
+template <typename IFace, template <typename> typename IFaceImpl, config Cfg, template <typename> typename TypeChecks>
+[[nodiscard]] bool is_invalid(const wrap<IFace, IFaceImpl, Cfg, TypeChecks> &) noexcept;
+
+template <typename IFace, template <typename> typename IFaceImpl, config Cfg, template <typename> typename TypeChecks>
+[[nodiscard]] std::type_index value_type_index(const wrap<IFace, IFaceImpl, Cfg, TypeChecks> &) noexcept;
+
 template <typename IFace, template <typename> typename IFaceImpl, config Cfg = default_config,
           template <typename> typename TypeChecks = no_type_checks>
     requires std::is_polymorphic_v<IFace> && std::has_virtual_destructor_v<IFace> &&
@@ -264,6 +270,8 @@ template <typename IFace, template <typename> typename IFaceImpl, config Cfg = d
 class wrap : private detail::wrap_storage<IFace, Cfg.static_size, Cfg.static_alignment>
 {
     friend void swap<IFace, IFaceImpl, Cfg, TypeChecks>(wrap &, wrap &) noexcept;
+    friend bool is_invalid<IFace, IFaceImpl, Cfg, TypeChecks>(const wrap &) noexcept;
+    friend std::type_index value_type_index<IFace, IFaceImpl, Cfg, TypeChecks>(const wrap &) noexcept;
 
     using value_iface_t = detail::value_iface<IFace>;
 
@@ -457,7 +465,7 @@ public:
         }
 
         // Handle invalid object.
-        if (is_invalid()) {
+        if (is_invalid(*this)) {
             // No need to destroy, just move init
             // from other is sufficient.
             move_init_from(std::move(other));
@@ -465,7 +473,7 @@ public:
         }
 
         // Handle different internal types.
-        if (value_type_index() != other.value_type_index()) {
+        if (value_type_index(*this) != value_type_index(other)) {
             destroy();
             move_init_from(std::move(other));
             return *this;
@@ -529,7 +537,7 @@ public:
         }
 
         // Handle invalid object or different internal types.
-        if (is_invalid() || value_type_index() != other.value_type_index()) {
+        if (is_invalid(*this) || value_type_index(*this) != value_type_index(other)) {
             *this = wrap(other);
             return *this;
         }
@@ -551,30 +559,6 @@ public:
         }
 
         return *this;
-    }
-
-    // NOTE: this object is invalid if the storage type is dynamic and
-    // it has been moved from. In such a case, the move operation
-    // will have set the interface pointers to null.
-    // The only valid operations on an invalid object are:
-    // - destruction,
-    // - revival via copy/move assignment.
-    [[nodiscard]] bool is_invalid() const noexcept
-    {
-        if constexpr (Cfg.static_size == 0u) {
-            return this->m_p_iface == nullptr;
-        } else {
-            return std::get<0>(stype()) == nullptr;
-        }
-    }
-
-    [[nodiscard]] std::type_index value_type_index() const noexcept
-    {
-        if constexpr (Cfg.static_size == 0u) {
-            return this->m_pv_iface->value_type_index(detail::vtag{});
-        } else {
-            return std::get<1>(stype())->value_type_index(detail::vtag{});
-        }
     }
 
 private:
@@ -637,6 +621,32 @@ public:
     }
 };
 
+// NOTE: w is invalid if the storage type is dynamic and
+// it has been moved from. In such a case, the move operation
+// will have set the interface pointers to null.
+// The only valid operations on an invalid object are:
+// - destruction,
+// - revival via copy/move assignment.
+template <typename IFace, template <typename> typename IFaceImpl, config Cfg, template <typename> typename TypeChecks>
+bool is_invalid(const wrap<IFace, IFaceImpl, Cfg, TypeChecks> &w) noexcept
+{
+    if constexpr (Cfg.static_size == 0u) {
+        return w.m_p_iface == nullptr;
+    } else {
+        return std::get<0>(w.stype()) == nullptr;
+    }
+}
+
+template <typename IFace, template <typename> typename IFaceImpl, config Cfg, template <typename> typename TypeChecks>
+std::type_index value_type_index(const wrap<IFace, IFaceImpl, Cfg, TypeChecks> &w) noexcept
+{
+    if constexpr (Cfg.static_size == 0u) {
+        return w.m_pv_iface->value_type_index(detail::vtag{});
+    } else {
+        return std::get<1>(w.stype())->value_type_index(detail::vtag{});
+    }
+}
+
 template <typename IFace, template <typename> typename IFaceImpl, config Cfg, template <typename> typename TypeChecks>
 void swap(wrap<IFace, IFaceImpl, Cfg, TypeChecks> &w1, wrap<IFace, IFaceImpl, Cfg, TypeChecks> &w2) noexcept
 {
@@ -646,7 +656,7 @@ void swap(wrap<IFace, IFaceImpl, Cfg, TypeChecks> &w1, wrap<IFace, IFaceImpl, Cf
     }
 
     // Handle different types with the canonical swap() implementation.
-    if (w1.value_type_index() != w2.value_type_index()) {
+    if (value_type_index(w1) != value_type_index(w2)) {
         auto temp(std::move(w1));
         w1 = std::move(w2);
         w2 = std::move(temp);

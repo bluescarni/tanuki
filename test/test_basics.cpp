@@ -161,4 +161,15 @@ TEST_CASE("foo and bar")
     static_cast<bar_iface *>(g);
 }
 
+TEST_CASE("dasda")
+{
+    wrap<iface0, iface0_impl, tanuki::config{.static_size = 0}> w1(4);
+    auto w2 = std::move(w1);
+    wrap<iface0, iface0_impl, tanuki::config{.static_size = 0}> w3(42.);
+
+    using std::swap;
+
+    swap(w2, w3);
+}
+
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace)

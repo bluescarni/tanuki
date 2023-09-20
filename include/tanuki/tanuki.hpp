@@ -108,6 +108,7 @@ struct value_iface {
     virtual std::pair<IFace *, value_iface *> move_init_holder(void *, vtag) && noexcept = 0;
     virtual void copy_assign_value(void *, vtag) const = 0;
     virtual void move_assign_value(void *, vtag) && noexcept = 0;
+    virtual void swap_value(void *, vtag) noexcept = 0;
 };
 
 template <typename T, typename IFace, template <typename> typename IFaceImpl>
@@ -183,8 +184,13 @@ private:
     // Move-assign m_value into the object of type T assumed to be stored in ptr.
     void move_assign_value(void *ptr, vtag) && noexcept final
     {
-        // NOTE: see comments above.
         *static_cast<T *>(ptr) = std::move(m_value);
+    }
+    // Swap m_value with the object of type T assumed to be stored in ptr.
+    void swap_value(void *ptr, vtag) noexcept final
+    {
+        using std::swap;
+        swap(m_value, *static_cast<T *>(ptr));
     }
 };
 
@@ -235,11 +241,24 @@ struct config {
 
 inline constexpr auto default_config = config{};
 
-template <typename IFace, template <typename> typename IFaceImpl, auto Cfg = default_config>
-    requires std::is_polymorphic_v<IFace> && std::has_virtual_destructor_v<IFace> && (Cfg.static_alignment > 0u)
-             && ((Cfg.static_alignment & (Cfg.static_alignment - 1u)) == 0u)
+// Fwd declaration.
+template <typename IFace, template <typename> typename IFaceImpl, config Cfg>
+    requires std::is_polymorphic_v<IFace> && std::has_virtual_destructor_v<IFace> &&
+             // The static alignment value must be a power of 2.
+             (Cfg.static_alignment > 0u) && ((Cfg.static_alignment & (Cfg.static_alignment - 1u)) == 0u)
+class wrap;
+
+template <typename IFace, template <typename> typename IFaceImpl, config Cfg>
+void swap(wrap<IFace, IFaceImpl, Cfg> &, wrap<IFace, IFaceImpl, Cfg> &) noexcept;
+
+template <typename IFace, template <typename> typename IFaceImpl, config Cfg = default_config>
+    requires std::is_polymorphic_v<IFace> && std::has_virtual_destructor_v<IFace> &&
+             // The static alignment value must be a power of 2.
+             (Cfg.static_alignment > 0u) && ((Cfg.static_alignment & (Cfg.static_alignment - 1u)) == 0u)
 class wrap : private detail::wrap_storage<IFace, Cfg.static_size, Cfg.static_alignment>
 {
+    friend void swap<IFace, IFaceImpl, Cfg>(wrap &, wrap &);
+
     using value_iface_t = detail::value_iface<IFace>;
 
     // Helpers to fetch the interface pointers and the storage type.
@@ -300,66 +319,91 @@ public:
     {
         using holder_t = make_holder_t<T &&>;
 
-        if constexpr (sizeof(holder_t) <= Cfg.static_size) {
-            // Static storage.
+        if constexpr (Cfg.static_size == 0u) {
+            // Static storage disabled.
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-            auto *d_ptr = ::new (this->static_storage) holder_t(std::forward<T>(x));
+            auto d_ptr = new holder_t(std::forward<T>(x));
             this->m_p_iface = d_ptr;
             this->m_pv_iface = d_ptr;
         } else {
-            // Dynamic storage.
-            // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-            auto d_ptr = new holder_t(std::forward<T>(x));
-            ::new (this->static_storage) IFace *(d_ptr);
-            this->m_p_iface = nullptr;
-            this->m_pv_iface = d_ptr;
+            if constexpr (sizeof(holder_t) <= Cfg.static_size) {
+                // Static storage.
+                // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+                auto *d_ptr = ::new (this->static_storage) holder_t(std::forward<T>(x));
+                this->m_p_iface = d_ptr;
+                this->m_pv_iface = d_ptr;
+            } else {
+                // Dynamic storage.
+                // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+                auto d_ptr = new holder_t(std::forward<T>(x));
+                ::new (this->static_storage) IFace *(d_ptr);
+                this->m_p_iface = nullptr;
+                this->m_pv_iface = d_ptr;
+            }
         }
     }
 
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
     wrap(const wrap &other)
     {
-        const auto [_, pv_iface, st] = other.stype();
-
-        if (st) {
-            // Other has static storage.
-            auto [new_p_iface, new_pv_iface] = pv_iface->copy_init_holder(this->static_storage, detail::vtag{});
-            this->m_p_iface = new_p_iface;
-            this->m_pv_iface = new_pv_iface;
+        if constexpr (Cfg.static_size == 0u) {
+            // Static storage disabled.
+            std::tie(this->m_p_iface, this->m_pv_iface) = other.m_pv_iface->clone(detail::vtag{});
         } else {
-            // Other has dynamic storage.
-            auto [new_p_iface, new_pv_iface] = pv_iface->clone(detail::vtag{});
-            ::new (this->static_storage) IFace *(new_p_iface);
-            this->m_p_iface = nullptr;
-            this->m_pv_iface = new_pv_iface;
+            const auto [_, pv_iface, st] = other.stype();
+
+            if (st) {
+                // Other has static storage.
+                auto [new_p_iface, new_pv_iface] = pv_iface->copy_init_holder(this->static_storage, detail::vtag{});
+                this->m_p_iface = new_p_iface;
+                this->m_pv_iface = new_pv_iface;
+            } else {
+                // Other has dynamic storage.
+                auto [new_p_iface, new_pv_iface] = pv_iface->clone(detail::vtag{});
+                ::new (this->static_storage) IFace *(new_p_iface);
+                this->m_p_iface = nullptr;
+                this->m_pv_iface = new_pv_iface;
+            }
         }
     }
 
 private:
     void move_init_from(wrap &&other) noexcept
     {
-        const auto [p_iface, pv_iface, st] = other.stype();
-
-        if (st) {
-            // Other has static storage.
-            auto [new_p_iface, new_pv_iface]
-                = std::move(*pv_iface).move_init_holder(this->static_storage, detail::vtag{});
-            this->m_p_iface = new_p_iface;
-            this->m_pv_iface = new_pv_iface;
-        } else {
-            // Other has dynamic storage.
-            ::new (this->static_storage) IFace *(p_iface);
-            this->m_p_iface = nullptr;
-            this->m_pv_iface = pv_iface;
+        if constexpr (Cfg.static_size == 0u) {
+            // Static storage disabled.
+            // Shallow copy the pointers.
+            this->m_p_iface = other.m_p_iface;
+            this->m_pv_iface = other.m_pv_iface;
 
             // Nullify the interface pointers in other, so that, on destruction,
             // we will be calling delete on a nullptr.
-            // NOTE: re-initing with new() is ok here: we know that
-            // other.static_storage contains a pointer and we can overwrite
-            // it with another pointer without calling the destructor first.
-            ::new (other.static_storage) IFace *(nullptr);
-            assert(other.m_p_iface == nullptr);
+            other.m_p_iface = nullptr;
             other.m_pv_iface = nullptr;
+        } else {
+            const auto [p_iface, pv_iface, st] = other.stype();
+
+            if (st) {
+                // Other has static storage.
+                auto [new_p_iface, new_pv_iface]
+                    = std::move(*pv_iface).move_init_holder(this->static_storage, detail::vtag{});
+                this->m_p_iface = new_p_iface;
+                this->m_pv_iface = new_pv_iface;
+            } else {
+                // Other has dynamic storage.
+                ::new (this->static_storage) IFace *(p_iface);
+                this->m_p_iface = nullptr;
+                this->m_pv_iface = pv_iface;
+
+                // Nullify the interface pointers in other, so that, on destruction,
+                // we will be calling delete on a nullptr.
+                // NOTE: re-initing with new() is ok here: we know that
+                // other.static_storage contains a pointer and we can overwrite
+                // it with another pointer without calling the destructor first.
+                ::new (other.static_storage) IFace *(nullptr);
+                assert(other.m_p_iface == nullptr);
+                other.m_pv_iface = nullptr;
+            }
         }
     }
 
@@ -373,13 +417,20 @@ public:
 private:
     void destroy() noexcept
     {
-        const auto [p_iface, _, st] = stype();
+        if constexpr (Cfg.static_size == 0u) {
+            // NOTE: if one pointer is null, the other one must be as well.
+            assert((this->m_p_iface == nullptr) == (this->m_pv_iface == nullptr));
 
-        if (st) {
-            p_iface->~IFace();
+            delete this->m_p_iface;
         } else {
-            // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-            delete p_iface;
+            const auto [p_iface, _, st] = stype();
+
+            if (st) {
+                p_iface->~IFace();
+            } else {
+                // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+                delete p_iface;
+            }
         }
     }
 
@@ -412,34 +463,50 @@ public:
         }
 
         // The internal types are the same.
-        const auto [p_iface0, pv_iface0, st0] = stype();
-        const auto [p_iface1, pv_iface1, st1] = other.stype();
-
-        // The storage flags must match, as they depend only
-        // on the internal types.
-        assert(st0 == st1);
-
-        if (st0) {
-            // For static storage, directly move assign the internal value.
-            std::move(*pv_iface1).move_assign_value(pv_iface0->value_ptr(detail::vtag{}), detail::vtag{});
-        } else {
+        if constexpr (Cfg.static_size == 0u) {
             // For dynamic storage, delete the current value and
             // then shallow copy the interface pointers
             // from other.
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-            delete p_iface0;
+            delete this->m_p_iface;
 
-            // NOTE: no need to set m_p_iface to null, as
-            // it should already be null.
-            ::new (this->static_storage) IFace *(p_iface1);
-            assert(this->m_p_iface == nullptr);
-            this->m_pv_iface = pv_iface1;
+            this->m_p_iface = other.m_p_iface;
+            this->m_pv_iface = other.m_pv_iface;
 
             // Nullify the interface pointers in other, so that, on destruction,
             // we will be calling delete on a nullptr.
-            ::new (other.static_storage) IFace *(nullptr);
-            assert(other.m_p_iface == nullptr);
+            other.m_p_iface = nullptr;
             other.m_pv_iface = nullptr;
+        } else {
+            const auto [p_iface0, pv_iface0, st0] = stype();
+            const auto [p_iface1, pv_iface1, st1] = other.stype();
+
+            // The storage flags must match, as they depend only
+            // on the internal types.
+            assert(st0 == st1);
+
+            if (st0) {
+                // For static storage, directly move assign the internal value.
+                std::move(*pv_iface1).move_assign_value(pv_iface0->value_ptr(detail::vtag{}), detail::vtag{});
+            } else {
+                // For dynamic storage, delete the current value and
+                // then shallow copy the interface pointers
+                // from other.
+                // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+                delete p_iface0;
+
+                // NOTE: no need to set m_p_iface to null, as
+                // it should already be null.
+                ::new (this->static_storage) IFace *(p_iface1);
+                assert(this->m_p_iface == nullptr);
+                this->m_pv_iface = pv_iface1;
+
+                // Nullify the interface pointers in other, so that, on destruction,
+                // we will be calling delete on a nullptr.
+                ::new (other.static_storage) IFace *(nullptr);
+                assert(other.m_p_iface == nullptr);
+                other.m_pv_iface = nullptr;
+            }
         }
 
         return *this;
@@ -459,15 +526,20 @@ public:
         }
 
         // The internal types are the same.
-        const auto [p_iface0, pv_iface0, st0] = stype();
-        const auto [p_iface1, pv_iface1, st1] = other.stype();
+        if constexpr (Cfg.static_size == 0u) {
+            // Assign the internal value.
+            other.m_pv_iface->copy_assign_value(this->m_pv_iface->value_ptr(detail::vtag{}), detail::vtag{});
+        } else {
+            const auto [p_iface0, pv_iface0, st0] = stype();
+            const auto [p_iface1, pv_iface1, st1] = other.stype();
 
-        // The storage flags must match, as they depend only
-        // on the internal types.
-        assert(st0 == st1);
+            // The storage flags must match, as they depend only
+            // on the internal types.
+            assert(st0 == st1);
 
-        // Assign the internal value.
-        pv_iface1->copy_assign_value(pv_iface0->value_ptr(detail::vtag{}), detail::vtag{});
+            // Assign the internal value.
+            pv_iface1->copy_assign_value(pv_iface0->value_ptr(detail::vtag{}), detail::vtag{});
+        }
 
         return *this;
     }
@@ -480,21 +552,37 @@ public:
     // - revival via copy/move assignment.
     [[nodiscard]] bool is_invalid() const noexcept
     {
-        return std::get<0>(stype()) == nullptr;
+        if constexpr (Cfg.static_size == 0u) {
+            return this->m_p_iface == nullptr;
+        } else {
+            return std::get<0>(stype()) == nullptr;
+        }
     }
 
     [[nodiscard]] std::type_index value_type_index() const noexcept
     {
-        return std::get<1>(stype())->value_type_index(detail::vtag{});
+        if constexpr (Cfg.static_size == 0u) {
+            return this->m_pv_iface->value_type_index(detail::vtag{});
+        } else {
+            return std::get<1>(stype())->value_type_index(detail::vtag{});
+        }
     }
 
     const IFace *operator->() const noexcept
     {
-        return std::get<0>(stype());
+        if constexpr (Cfg.static_size == 0u) {
+            return this->m_p_iface;
+        } else {
+            return std::get<0>(stype());
+        }
     }
     IFace *operator->() noexcept
     {
-        return std::get<0>(stype());
+        if constexpr (Cfg.static_size == 0u) {
+            return this->m_p_iface;
+        } else {
+            return std::get<0>(stype());
+        }
     }
 
     const IFace &operator*() const noexcept
@@ -528,6 +616,50 @@ public:
         return operator*();
     }
 };
+
+template <typename IFace, template <typename> typename IFaceImpl, config Cfg>
+void swap(wrap<IFace, IFaceImpl, Cfg> &w1, wrap<IFace, IFaceImpl, Cfg> &w2) noexcept
+{
+    // Handle self swap.
+    if (&w1 == &w2) {
+        return;
+    }
+
+    // Handle different types with the canonical swap() implementation.
+    if (w1.value_type_index() != w2.value_type_index()) {
+        auto temp(std::move(w1));
+        w1 = std::move(w2);
+        w2 = std::move(temp);
+        return;
+    }
+
+    // The types are the same.
+    if constexpr (Cfg.static_size == 0u) {
+        // For dynamic storage, swap the pointers.
+        std::swap(w1.m_p_iface, w2.m_p_iface);
+        std::swap(w1.m_pv_iface, w2.m_pv_iface);
+    } else {
+        const auto [p_iface1, pv_iface1, st1] = w1.stype();
+        const auto [p_iface2, pv_iface2, st2] = w2.stype();
+
+        // The storage flags must match, as they depend only
+        // on the internal types.
+        assert(st1 == st2);
+
+        if (st1) {
+            // For static storage, directly swap the internal values.
+            pv_iface2->swap_value(pv_iface1->value_ptr(detail::vtag{}), detail::vtag{});
+        } else {
+            // For dynamic storage, swap the pointers.
+            assert(w1.m_p_iface == nullptr);
+            assert(w2.m_p_iface == nullptr);
+
+            std::swap(*std::launder(reinterpret_cast<IFace **>(w1.static_storage)),
+                      *std::launder(reinterpret_cast<IFace **>(w2.static_storage)));
+            std::swap(w1.m_pv_iface, w2.m_pv_iface);
+        }
+    }
+}
 
 TANUKI_END_NAMESPACE
 

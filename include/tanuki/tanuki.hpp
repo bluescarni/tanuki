@@ -257,7 +257,7 @@ template <typename IFace, template <typename> typename IFaceImpl, config Cfg = d
              (Cfg.static_alignment > 0u) && ((Cfg.static_alignment & (Cfg.static_alignment - 1u)) == 0u)
 class wrap : private detail::wrap_storage<IFace, Cfg.static_size, Cfg.static_alignment>
 {
-    friend void swap<IFace, IFaceImpl, Cfg>(wrap &, wrap &);
+    friend void swap<IFace, IFaceImpl, Cfg>(wrap &, wrap &) noexcept;
 
     using value_iface_t = detail::value_iface<IFace>;
 

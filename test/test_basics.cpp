@@ -158,7 +158,7 @@ TEST_CASE("foo and bar")
     daada(*h);
     daadauda(*h);
 
-    static_cast<bar_iface *>(g);
+    (void)static_cast<bar_iface *>(g);
 }
 
 TEST_CASE("dasda")

@@ -241,23 +241,29 @@ struct config {
 
 inline constexpr auto default_config = config{};
 
+template <typename>
+struct no_type_checks : std::true_type {
+};
+
+template <std::size_t N>
+concept power_of_two = (N > 0u) && ((N & (N - 1u)) == 0u);
+
 // Fwd declaration.
-template <typename IFace, template <typename> typename IFaceImpl, config Cfg>
-    requires std::is_polymorphic_v<IFace> && std::has_virtual_destructor_v<IFace> &&
-             // The static alignment value must be a power of 2.
-             (Cfg.static_alignment > 0u) && ((Cfg.static_alignment & (Cfg.static_alignment - 1u)) == 0u)
+template <typename IFace, template <typename> typename, config Cfg, template <typename> typename>
+    requires std::is_polymorphic_v<IFace> && std::has_virtual_destructor_v<IFace> && power_of_two<Cfg.static_alignment>
 class wrap;
 
-template <typename IFace, template <typename> typename IFaceImpl, config Cfg>
-void swap(wrap<IFace, IFaceImpl, Cfg> &, wrap<IFace, IFaceImpl, Cfg> &) noexcept;
+template <typename IFace, template <typename> typename IFaceImpl, config Cfg, template <typename> typename TypeChecks>
+void swap(wrap<IFace, IFaceImpl, Cfg, TypeChecks> &, wrap<IFace, IFaceImpl, Cfg, TypeChecks> &) noexcept;
 
-template <typename IFace, template <typename> typename IFaceImpl, config Cfg = default_config>
+template <typename IFace, template <typename> typename IFaceImpl, config Cfg = default_config,
+          template <typename> typename TypeChecks = no_type_checks>
     requires std::is_polymorphic_v<IFace> && std::has_virtual_destructor_v<IFace> &&
              // The static alignment value must be a power of 2.
-             (Cfg.static_alignment > 0u) && ((Cfg.static_alignment & (Cfg.static_alignment - 1u)) == 0u)
+             power_of_two<Cfg.static_alignment>
 class wrap : private detail::wrap_storage<IFace, Cfg.static_size, Cfg.static_alignment>
 {
-    friend void swap<IFace, IFaceImpl, Cfg>(wrap &, wrap &) noexcept;
+    friend void swap<IFace, IFaceImpl, Cfg, TypeChecks>(wrap &, wrap &) noexcept;
 
     using value_iface_t = detail::value_iface<IFace>;
 
@@ -313,7 +319,10 @@ public:
         // interface requirements have been implemented.
         std::derived_from<make_holder_t<T &&>, IFace> && std::constructible_from<make_holder_t<T &&>, T &&> &&
         // Alignment checks.
-        (sizeof(make_holder_t<T &&>) > Cfg.static_size || alignof(make_holder_t<T &&>) <= Cfg.static_alignment)
+        (sizeof(make_holder_t<T &&>) > Cfg.static_size || alignof(make_holder_t<T &&>) <= Cfg.static_alignment) &&
+        // Type checks.
+        std::same_as<const bool, decltype(TypeChecks<std::remove_cvref_t<T>>::value)>
+        && (TypeChecks<std::remove_cvref_t<T>>::value)
         // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,cppcoreguidelines-pro-type-member-init,hicpp-member-init)
         explicit wrap(T &&x)
     {
@@ -617,8 +626,8 @@ public:
     }
 };
 
-template <typename IFace, template <typename> typename IFaceImpl, config Cfg>
-void swap(wrap<IFace, IFaceImpl, Cfg> &w1, wrap<IFace, IFaceImpl, Cfg> &w2) noexcept
+template <typename IFace, template <typename> typename IFaceImpl, config Cfg, template <typename> typename TypeChecks>
+void swap(wrap<IFace, IFaceImpl, Cfg, TypeChecks> &w1, wrap<IFace, IFaceImpl, Cfg, TypeChecks> &w2) noexcept
 {
     // Handle self swap.
     if (&w1 == &w2) {

@@ -28,7 +28,7 @@ struct bar_iface : foo_iface {
     virtual void bar() const = 0;
 };
 
-template <typename Holder, typename IFace>
+template <typename Holder, typename IFace = foo_iface>
 struct foo_iface_impl : IFace {
     void foo() const override
     {
@@ -171,5 +171,27 @@ TEST_CASE("dasda")
 
     swap(w2, w3);
 }
+
+template <typename Wrap>
+struct foo_ref_iface {
+    TANUKI_MAKE_REF_IFACE_MEMFUN(foo)
+};
+
+TEST_CASE("ref iface")
+{
+    wrap<foo_iface, foo_iface_impl, tanuki::default_config, tanuki::no_type_checks, foo_ref_iface> w(my_foobar{});
+
+    w.foo();
+}
+
+template <typename R, typename... Args>
+struct function_iface {
+    virtual ~function_iface() = default;
+    virtual R operator()(Args... args) const = 0;
+};
+
+template <typename Holder, typename R, typename... Args>
+struct function_iface_impl : function_iface<R, Args...> {
+};
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace)

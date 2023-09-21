@@ -111,7 +111,7 @@ struct value_iface {
     virtual void swap_value(void *, vtag) noexcept = 0;
 };
 
-template <typename T, typename IFace, template <typename> typename IFaceImpl>
+template <typename T, typename IFace, template <typename, typename...> typename IFaceImpl>
 struct holder final : public value_iface<IFace>, public IFaceImpl<holder<T, IFace, IFaceImpl>> {
     TANUKI_NO_UNIQUE_ADDRESS T m_value;
 
@@ -245,35 +245,74 @@ template <typename>
 struct no_type_checks : std::true_type {
 };
 
+template <typename>
+struct no_ref_iface {
+};
+
+#define TANUKI_MAKE_REF_IFACE_MEMFUN(name)                                                                             \
+    template <typename JustWrap = Wrap, typename... Args>                                                              \
+    auto name(Args &&...args) & noexcept(                                                                              \
+        noexcept(static_cast<JustWrap *>(this)->get_iface_ptr()->name(std::forward<Args>(args)...)))                   \
+        ->decltype(static_cast<JustWrap *>(this)->get_iface_ptr()->name(std::forward<Args>(args)...))                  \
+    {                                                                                                                  \
+        return static_cast<Wrap *>(this)->get_iface_ptr()->name(std::forward<Args>(args)...);                          \
+    }                                                                                                                  \
+    template <typename JustWrap = Wrap, typename... Args>                                                              \
+    auto name(Args &&...args) const & noexcept(                                                                        \
+        noexcept(static_cast<const JustWrap *>(this)->get_iface_ptr()->name(std::forward<Args>(args)...)))             \
+        ->decltype(static_cast<const JustWrap *>(this)->get_iface_ptr()->name(std::forward<Args>(args)...))            \
+    {                                                                                                                  \
+        return static_cast<const Wrap *>(this)->get_iface_ptr()->name(std::forward<Args>(args)...);                    \
+    }                                                                                                                  \
+    template <typename JustWrap = Wrap, typename... Args>                                                              \
+    auto name(Args &&...args) && noexcept(                                                                             \
+        noexcept(std::move(*static_cast<JustWrap *>(this)->get_iface_ptr()).name(std::forward<Args>(args)...)))        \
+        ->decltype(std::move(*static_cast<JustWrap *>(this)->get_iface_ptr()).name(std::forward<Args>(args)...))       \
+    {                                                                                                                  \
+        return std::move(*static_cast<Wrap *>(this)->get_iface_ptr()).name(std::forward<Args>(args)...);               \
+    }
+
 template <std::size_t N>
 concept power_of_two = (N > 0u) && ((N & (N - 1u)) == 0u);
 
 // Fwd declaration.
-template <typename IFace, template <typename> typename, config Cfg, template <typename> typename>
+template <typename IFace, template <typename, typename...> typename, config Cfg, template <typename> typename,
+          template <typename> typename>
     requires std::is_polymorphic_v<IFace> && std::has_virtual_destructor_v<IFace> && power_of_two<Cfg.static_alignment>
 class wrap;
 
-template <typename IFace, template <typename> typename IFaceImpl, config Cfg, template <typename> typename TypeChecks>
-void swap(wrap<IFace, IFaceImpl, Cfg, TypeChecks> &, wrap<IFace, IFaceImpl, Cfg, TypeChecks> &) noexcept;
+template <typename IFace, template <typename, typename...> typename IFaceImpl, config Cfg,
+          template <typename> typename TypeChecks, template <typename> typename RefIFace>
+void swap(wrap<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace> &,
+          wrap<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace> &) noexcept;
 
-template <typename IFace, template <typename> typename IFaceImpl, config Cfg, template <typename> typename TypeChecks>
-[[nodiscard]] bool is_invalid(const wrap<IFace, IFaceImpl, Cfg, TypeChecks> &) noexcept;
+template <typename IFace, template <typename, typename...> typename IFaceImpl, config Cfg,
+          template <typename> typename TypeChecks, template <typename> typename RefIFace>
+[[nodiscard]] bool is_invalid(const wrap<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace> &) noexcept;
 
-template <typename IFace, template <typename> typename IFaceImpl, config Cfg, template <typename> typename TypeChecks>
-[[nodiscard]] std::type_index value_type_index(const wrap<IFace, IFaceImpl, Cfg, TypeChecks> &) noexcept;
+template <typename IFace, template <typename, typename...> typename IFaceImpl, config Cfg,
+          template <typename> typename TypeChecks, template <typename> typename RefIFace>
+[[nodiscard]] std::type_index value_type_index(const wrap<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace> &) noexcept;
 
-template <typename IFace, template <typename> typename IFaceImpl, config Cfg = default_config,
-          template <typename> typename TypeChecks = no_type_checks>
+template <typename IFace, template <typename, typename...> typename IFaceImpl, config Cfg = default_config,
+          template <typename> typename TypeChecks = no_type_checks,
+          template <typename> typename RefIFace = no_ref_iface>
     requires std::is_polymorphic_v<IFace> && std::has_virtual_destructor_v<IFace> &&
-             // The static alignment value must be a power of 2.
-             power_of_two<Cfg.static_alignment>
-class wrap : private detail::wrap_storage<IFace, Cfg.static_size, Cfg.static_alignment>
+                 // The static alignment value must be a power of 2.
+                 power_of_two<Cfg.static_alignment>
+class wrap : private detail::wrap_storage<IFace, Cfg.static_size, Cfg.static_alignment>,
+             public RefIFace<wrap<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace>>
 {
-    friend void swap<IFace, IFaceImpl, Cfg, TypeChecks>(wrap &, wrap &) noexcept;
-    friend bool is_invalid<IFace, IFaceImpl, Cfg, TypeChecks>(const wrap &) noexcept;
-    friend std::type_index value_type_index<IFace, IFaceImpl, Cfg, TypeChecks>(const wrap &) noexcept;
+    friend void swap<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace>(wrap &, wrap &) noexcept;
+    friend bool is_invalid<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace>(const wrap &) noexcept;
+    friend std::type_index value_type_index<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace>(const wrap &) noexcept;
 
     using value_iface_t = detail::value_iface<IFace>;
+
+    using ref_iface_t = RefIFace<wrap<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace>>;
+    friend ref_iface_t;
+    static constexpr bool has_ref_iface
+        = !std::is_same_v<ref_iface_t, no_ref_iface<wrap<IFace, IFaceImpl, Cfg, TypeChecks, no_ref_iface>>>;
 
     // Helpers to fetch the interface pointers and the storage type.
     std::tuple<const IFace *, const value_iface_t *, bool> stype() const noexcept
@@ -581,43 +620,51 @@ private:
 
 public:
     const IFace *operator->() const noexcept
+        requires(!has_ref_iface)
     {
         return get_iface_ptr();
     }
     IFace *operator->() noexcept
+        requires(!has_ref_iface)
     {
         return get_iface_ptr();
     }
 
     const IFace &operator*() const noexcept
+        requires(!has_ref_iface)
     {
         return *get_iface_ptr();
     }
     IFace &operator*() noexcept
+        requires(!has_ref_iface)
     {
         return *get_iface_ptr();
     }
 
     // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
     explicit(Cfg.explicit_iface_conversion) operator const IFace *() const noexcept
+        requires(!has_ref_iface)
     {
         return get_iface_ptr();
     }
     // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
     explicit(Cfg.explicit_iface_conversion) operator IFace *() noexcept
+        requires(!has_ref_iface)
     {
         return get_iface_ptr();
     }
 
     // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
     explicit(Cfg.explicit_iface_conversion) operator const IFace &() const noexcept
+        requires(!has_ref_iface)
     {
-        return operator*();
+        return *get_iface_ptr();
     }
     // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
     explicit(Cfg.explicit_iface_conversion) operator IFace &() noexcept
+        requires(!has_ref_iface)
     {
-        return operator*();
+        return *get_iface_ptr();
     }
 };
 
@@ -627,8 +674,9 @@ public:
 // The only valid operations on an invalid object are:
 // - destruction,
 // - revival via copy/move assignment.
-template <typename IFace, template <typename> typename IFaceImpl, config Cfg, template <typename> typename TypeChecks>
-bool is_invalid(const wrap<IFace, IFaceImpl, Cfg, TypeChecks> &w) noexcept
+template <typename IFace, template <typename, typename...> typename IFaceImpl, config Cfg,
+          template <typename> typename TypeChecks, template <typename> typename RefIFace>
+bool is_invalid(const wrap<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace> &w) noexcept
 {
     if constexpr (Cfg.static_size == 0u) {
         return w.m_p_iface == nullptr;
@@ -637,8 +685,9 @@ bool is_invalid(const wrap<IFace, IFaceImpl, Cfg, TypeChecks> &w) noexcept
     }
 }
 
-template <typename IFace, template <typename> typename IFaceImpl, config Cfg, template <typename> typename TypeChecks>
-std::type_index value_type_index(const wrap<IFace, IFaceImpl, Cfg, TypeChecks> &w) noexcept
+template <typename IFace, template <typename, typename...> typename IFaceImpl, config Cfg,
+          template <typename> typename TypeChecks, template <typename> typename RefIFace>
+std::type_index value_type_index(const wrap<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace> &w) noexcept
 {
     if constexpr (Cfg.static_size == 0u) {
         return w.m_pv_iface->value_type_index(detail::vtag{});
@@ -647,8 +696,10 @@ std::type_index value_type_index(const wrap<IFace, IFaceImpl, Cfg, TypeChecks> &
     }
 }
 
-template <typename IFace, template <typename> typename IFaceImpl, config Cfg, template <typename> typename TypeChecks>
-void swap(wrap<IFace, IFaceImpl, Cfg, TypeChecks> &w1, wrap<IFace, IFaceImpl, Cfg, TypeChecks> &w2) noexcept
+template <typename IFace, template <typename, typename...> typename IFaceImpl, config Cfg,
+          template <typename> typename TypeChecks, template <typename> typename RefIFace>
+void swap(wrap<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace> &w1,
+          wrap<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace> &w2) noexcept
 {
     // Handle self swap.
     if (&w1 == &w2) {

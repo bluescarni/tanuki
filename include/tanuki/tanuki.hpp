@@ -111,8 +111,8 @@ struct value_iface {
     virtual void swap_value(void *, vtag) noexcept = 0;
 };
 
-template <typename T, typename IFace, template <typename, typename...> typename IFaceImpl>
-struct holder final : public value_iface<IFace>, public IFaceImpl<holder<T, IFace, IFaceImpl>> {
+template <typename T, template <typename, typename...> typename IFaceT, typename... Args>
+struct holder final : public value_iface<IFaceT<void, Args...>>, public IFaceT<holder<T, IFaceT, Args...>, Args...> {
     TANUKI_NO_UNIQUE_ADDRESS T m_value;
 
     using value_type = T;
@@ -132,8 +132,10 @@ struct holder final : public value_iface<IFace>, public IFaceImpl<holder<T, IFac
     explicit holder(T &&x) noexcept : m_value(std::move(x)) {}
 
     // NOTE: mark everything else as private so that it is going to be
-    // unreachable from IFaceImpl.
+    // unreachable from the interface implementation.
 private:
+    using iface_t = IFaceT<void, Args...>;
+
     [[nodiscard]] std::type_index value_type_index(vtag) const noexcept final
     {
         return typeid(T);
@@ -148,7 +150,7 @@ private:
     }
 
     // Clone this, and cast the result to the two bases.
-    [[nodiscard]] std::pair<IFace *, value_iface<IFace> *> clone(vtag) const final
+    [[nodiscard]] std::pair<iface_t *, value_iface<iface_t> *> clone(vtag) const final
     {
         // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
         auto *ret = new holder(m_value);
@@ -156,7 +158,7 @@ private:
     }
     // Copy-init a new holder into the storage beginning at ptr.
     // Then cast the result to the two bases and return.
-    std::pair<IFace *, value_iface<IFace> *> copy_init_holder(void *ptr, vtag) const final
+    std::pair<iface_t *, value_iface<iface_t> *> copy_init_holder(void *ptr, vtag) const final
     {
         // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
         auto *ret = ::new (ptr) holder(m_value);
@@ -164,7 +166,7 @@ private:
     }
     // Move-init a new holder into the storage beginning at ptr.
     // Then cast the result to the two bases and return.
-    std::pair<IFace *, value_iface<IFace> *> move_init_holder(void *ptr, vtag) && noexcept final
+    std::pair<iface_t *, value_iface<iface_t> *> move_init_holder(void *ptr, vtag) && noexcept final
     {
         // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
         auto *ret = ::new (ptr) holder(std::move(m_value));
@@ -213,24 +215,7 @@ struct wrap_storage<IFace, 0, StaticStorageAlignment> {
     value_iface<IFace> *m_pv_iface;
 };
 
-// Implementation details for composite interfaces.
-template <typename Holder, typename IFace, template <typename, typename> typename Impl0,
-          template <typename, typename> typename... Impls>
-struct iface_composer {
-    using type = Impl0<Holder, typename iface_composer<Holder, IFace, Impls...>::type>;
-};
-
-template <typename Holder, typename IFace, template <typename, typename> typename Impl0>
-struct iface_composer<Holder, IFace, Impl0> {
-    using type = Impl0<Holder, IFace>;
-};
-
 } // namespace detail
-
-// Composite interface implementation.
-template <typename Holder, typename IFace, template <typename, typename> typename... Impls>
-    requires(sizeof...(Impls) > 0u)
-using composite_iface_impl = typename detail::iface_composer<Holder, IFace, Impls...>::type;
 
 // Configuration structure for the wrap class.
 struct config {
@@ -276,51 +261,54 @@ template <std::size_t N>
 concept power_of_two = (N > 0u) && ((N & (N - 1u)) == 0u);
 
 // Fwd declaration.
-template <typename IFace, template <typename, typename...> typename, config Cfg, template <typename> typename,
-          template <typename> typename>
-    requires std::is_polymorphic_v<IFace> && std::has_virtual_destructor_v<IFace> && power_of_two<Cfg.static_alignment>
+template <template <typename, typename...> typename IFaceT, config Cfg, template <typename> typename,
+          template <typename> typename, typename... Args>
+    requires std::is_polymorphic_v<IFaceT<void, Args...>> && std::has_virtual_destructor_v<IFaceT<void, Args...>>
+             && power_of_two<Cfg.static_alignment>
 class wrap;
 
-template <typename IFace, template <typename, typename...> typename IFaceImpl, config Cfg,
-          template <typename> typename TypeChecks, template <typename> typename RefIFace>
-void swap(wrap<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace> &,
-          wrap<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace> &) noexcept;
+template <template <typename, typename...> typename IFaceT, config Cfg, template <typename> typename TypeChecks,
+          template <typename> typename RefIFace, typename... Args>
+void swap(wrap<IFaceT, Cfg, TypeChecks, RefIFace, Args...> &,
+          wrap<IFaceT, Cfg, TypeChecks, RefIFace, Args...> &) noexcept;
 
-template <typename IFace, template <typename, typename...> typename IFaceImpl, config Cfg,
-          template <typename> typename TypeChecks, template <typename> typename RefIFace>
-[[nodiscard]] bool is_invalid(const wrap<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace> &) noexcept;
+template <template <typename, typename...> typename IFaceT, config Cfg, template <typename> typename TypeChecks,
+          template <typename> typename RefIFace, typename... Args>
+[[nodiscard]] bool is_invalid(const wrap<IFaceT, Cfg, TypeChecks, RefIFace, Args...> &) noexcept;
 
-template <typename IFace, template <typename, typename...> typename IFaceImpl, config Cfg,
-          template <typename> typename TypeChecks, template <typename> typename RefIFace>
-[[nodiscard]] std::type_index value_type_index(const wrap<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace> &) noexcept;
+template <template <typename, typename...> typename IFaceT, config Cfg, template <typename> typename TypeChecks,
+          template <typename> typename RefIFace, typename... Args>
+[[nodiscard]] std::type_index value_type_index(const wrap<IFaceT, Cfg, TypeChecks, RefIFace, Args...> &) noexcept;
 
-template <typename IFace, template <typename, typename...> typename IFaceImpl, config Cfg = default_config,
+template <template <typename, typename...> typename IFaceT, config Cfg = default_config,
           template <typename> typename TypeChecks = no_type_checks,
-          template <typename> typename RefIFace = no_ref_iface>
-    requires std::is_polymorphic_v<IFace> && std::has_virtual_destructor_v<IFace> &&
+          template <typename> typename RefIFace = no_ref_iface, typename... Args>
+    requires std::is_polymorphic_v<IFaceT<void, Args...>> && std::has_virtual_destructor_v<IFaceT<void, Args...>> &&
                  // The static alignment value must be a power of 2.
                  power_of_two<Cfg.static_alignment>
-class wrap : private detail::wrap_storage<IFace, Cfg.static_size, Cfg.static_alignment>,
-             public RefIFace<wrap<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace>>
+class wrap : private detail::wrap_storage<IFaceT<void, Args...>, Cfg.static_size, Cfg.static_alignment>,
+             public RefIFace<wrap<IFaceT, Cfg, TypeChecks, RefIFace, Args...>>
 {
-    friend void swap<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace>(wrap &, wrap &) noexcept;
-    friend bool is_invalid<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace>(const wrap &) noexcept;
-    friend std::type_index value_type_index<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace>(const wrap &) noexcept;
+    friend void swap<IFaceT, Cfg, TypeChecks, RefIFace, Args...>(wrap &, wrap &) noexcept;
+    friend bool is_invalid<IFaceT, Cfg, TypeChecks, RefIFace, Args...>(const wrap &) noexcept;
+    friend std::type_index value_type_index<IFaceT, Cfg, TypeChecks, RefIFace, Args...>(const wrap &) noexcept;
 
-    using value_iface_t = detail::value_iface<IFace>;
+    using iface_t = IFaceT<void, Args...>;
 
-    using ref_iface_t = RefIFace<wrap<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace>>;
+    using value_iface_t = detail::value_iface<iface_t>;
+
+    using ref_iface_t = RefIFace<wrap<IFaceT, Cfg, TypeChecks, RefIFace, Args...>>;
     friend ref_iface_t;
     static constexpr bool has_ref_iface
-        = !std::is_same_v<ref_iface_t, no_ref_iface<wrap<IFace, IFaceImpl, Cfg, TypeChecks, no_ref_iface>>>;
+        = !std::is_same_v<ref_iface_t, no_ref_iface<wrap<IFaceT, Cfg, TypeChecks, no_ref_iface, Args...>>>;
 
     // Helpers to fetch the interface pointers and the storage type.
-    std::tuple<const IFace *, const value_iface_t *, bool> stype() const noexcept
+    std::tuple<const iface_t *, const value_iface_t *, bool> stype() const noexcept
         requires(Cfg.static_size > 0u)
     {
         if (this->m_p_iface == nullptr) {
             // Dynamic storage.
-            const auto *ret = *std::launder(reinterpret_cast<IFace *const *>(this->static_storage));
+            const auto *ret = *std::launder(reinterpret_cast<iface_t *const *>(this->static_storage));
             // NOTE: if one interface pointer is null, the other must be as well, and vice-versa.
             // Null interface pointers with dynamic storage indicate that this object is in the
             // invalid state.
@@ -333,11 +321,11 @@ class wrap : private detail::wrap_storage<IFace, Cfg.static_size, Cfg.static_ali
             return {this->m_p_iface, this->m_pv_iface, true};
         }
     }
-    std::tuple<IFace *, value_iface_t *, bool> stype() noexcept
+    std::tuple<iface_t *, value_iface_t *, bool> stype() noexcept
         requires(Cfg.static_size > 0u)
     {
         if (this->m_p_iface == nullptr) {
-            auto *ret = *std::launder(reinterpret_cast<IFace **>(this->static_storage));
+            auto *ret = *std::launder(reinterpret_cast<iface_t **>(this->static_storage));
             assert((ret == nullptr) == (this->m_pv_iface == nullptr));
             return {ret, this->m_pv_iface, false};
         } else {
@@ -349,7 +337,7 @@ class wrap : private detail::wrap_storage<IFace, Cfg.static_size, Cfg.static_ali
     // The holder type corresponding to the type T
     // passed to the generic ctor.
     template <typename T>
-    using make_holder_t = detail::holder<std::remove_cvref_t<T>, IFace, IFaceImpl>;
+    using make_holder_t = detail::holder<std::remove_cvref_t<T>, IFaceT, Args...>;
 
 public:
     wrap() = delete;
@@ -361,10 +349,10 @@ public:
         (!std::same_as<std::remove_cvref_t<T>, wrap>) &&
         // T must be destructible.
         std::destructible<std::remove_cvref_t<T>> &&
-        // These checks are for verifying that IFace is a base
+        // These checks are for verifying that iface_t is a base
         // of the interface implementation and that all
         // interface requirements have been implemented.
-        std::derived_from<make_holder_t<T &&>, IFace> && std::constructible_from<make_holder_t<T &&>, T &&> &&
+        std::derived_from<make_holder_t<T &&>, iface_t> && std::constructible_from<make_holder_t<T &&>, T &&> &&
         // Alignment checks.
         (sizeof(make_holder_t<T &&>) > Cfg.static_size || alignof(make_holder_t<T &&>) <= Cfg.static_alignment) &&
         // Type checks.
@@ -392,7 +380,7 @@ public:
                 // Dynamic storage.
                 // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
                 auto d_ptr = new holder_t(std::forward<T>(x));
-                ::new (this->static_storage) IFace *(d_ptr);
+                ::new (this->static_storage) iface_t *(d_ptr);
                 this->m_p_iface = nullptr;
                 this->m_pv_iface = d_ptr;
             }
@@ -416,7 +404,7 @@ public:
             } else {
                 // Other has dynamic storage.
                 auto [new_p_iface, new_pv_iface] = pv_iface->clone(detail::vtag{});
-                ::new (this->static_storage) IFace *(new_p_iface);
+                ::new (this->static_storage) iface_t *(new_p_iface);
                 this->m_p_iface = nullptr;
                 this->m_pv_iface = new_pv_iface;
             }
@@ -447,7 +435,7 @@ private:
                 this->m_pv_iface = new_pv_iface;
             } else {
                 // Other has dynamic storage.
-                ::new (this->static_storage) IFace *(p_iface);
+                ::new (this->static_storage) iface_t *(p_iface);
                 this->m_p_iface = nullptr;
                 this->m_pv_iface = pv_iface;
 
@@ -456,7 +444,7 @@ private:
                 // NOTE: re-initing with new() is ok here: we know that
                 // other.static_storage contains a pointer and we can overwrite
                 // it with another pointer without calling the destructor first.
-                ::new (other.static_storage) IFace *(nullptr);
+                ::new (other.static_storage) iface_t *(nullptr);
                 assert(other.m_p_iface == nullptr);
                 other.m_pv_iface = nullptr;
             }
@@ -482,7 +470,7 @@ private:
             const auto [p_iface, _, st] = stype();
 
             if (st) {
-                p_iface->~IFace();
+                p_iface->~iface_t();
             } else {
                 // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
                 delete p_iface;
@@ -553,13 +541,13 @@ public:
 
                 // NOTE: no need to set m_p_iface to null, as
                 // it should already be null.
-                ::new (this->static_storage) IFace *(p_iface1);
+                ::new (this->static_storage) iface_t *(p_iface1);
                 assert(this->m_p_iface == nullptr);
                 this->m_pv_iface = pv_iface1;
 
                 // Nullify the interface pointers in other, so that, on destruction,
                 // we will be calling delete on a nullptr.
-                ::new (other.static_storage) IFace *(nullptr);
+                ::new (other.static_storage) iface_t *(nullptr);
                 assert(other.m_p_iface == nullptr);
                 other.m_pv_iface = nullptr;
             }
@@ -601,7 +589,7 @@ public:
     }
 
 private:
-    const IFace *get_iface_ptr() const noexcept
+    const iface_t *get_iface_ptr() const noexcept
     {
         if constexpr (Cfg.static_size == 0u) {
             return this->m_p_iface;
@@ -609,7 +597,7 @@ private:
             return std::get<0>(stype());
         }
     }
-    IFace *get_iface_ptr() noexcept
+    iface_t *get_iface_ptr() noexcept
     {
         if constexpr (Cfg.static_size == 0u) {
             return this->m_p_iface;
@@ -619,49 +607,49 @@ private:
     }
 
 public:
-    const IFace *operator->() const noexcept
+    const iface_t *operator->() const noexcept
         requires(!has_ref_iface)
     {
         return get_iface_ptr();
     }
-    IFace *operator->() noexcept
-        requires(!has_ref_iface)
-    {
-        return get_iface_ptr();
-    }
-
-    const IFace &operator*() const noexcept
-        requires(!has_ref_iface)
-    {
-        return *get_iface_ptr();
-    }
-    IFace &operator*() noexcept
-        requires(!has_ref_iface)
-    {
-        return *get_iface_ptr();
-    }
-
-    // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
-    explicit(Cfg.explicit_iface_conversion) operator const IFace *() const noexcept
-        requires(!has_ref_iface)
-    {
-        return get_iface_ptr();
-    }
-    // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
-    explicit(Cfg.explicit_iface_conversion) operator IFace *() noexcept
+    iface_t *operator->() noexcept
         requires(!has_ref_iface)
     {
         return get_iface_ptr();
     }
 
+    const iface_t &operator*() const noexcept
+        requires(!has_ref_iface)
+    {
+        return *get_iface_ptr();
+    }
+    iface_t &operator*() noexcept
+        requires(!has_ref_iface)
+    {
+        return *get_iface_ptr();
+    }
+
     // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
-    explicit(Cfg.explicit_iface_conversion) operator const IFace &() const noexcept
+    explicit(Cfg.explicit_iface_conversion) operator const iface_t *() const noexcept
+        requires(!has_ref_iface)
+    {
+        return get_iface_ptr();
+    }
+    // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
+    explicit(Cfg.explicit_iface_conversion) operator iface_t *() noexcept
+        requires(!has_ref_iface)
+    {
+        return get_iface_ptr();
+    }
+
+    // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
+    explicit(Cfg.explicit_iface_conversion) operator const iface_t &() const noexcept
         requires(!has_ref_iface)
     {
         return *get_iface_ptr();
     }
     // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
-    explicit(Cfg.explicit_iface_conversion) operator IFace &() noexcept
+    explicit(Cfg.explicit_iface_conversion) operator iface_t &() noexcept
         requires(!has_ref_iface)
     {
         return *get_iface_ptr();
@@ -674,9 +662,9 @@ public:
 // The only valid operations on an invalid object are:
 // - destruction,
 // - revival via copy/move assignment.
-template <typename IFace, template <typename, typename...> typename IFaceImpl, config Cfg,
-          template <typename> typename TypeChecks, template <typename> typename RefIFace>
-bool is_invalid(const wrap<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace> &w) noexcept
+template <template <typename, typename...> typename IFaceT, config Cfg, template <typename> typename TypeChecks,
+          template <typename> typename RefIFace, typename... Args>
+bool is_invalid(const wrap<IFaceT, Cfg, TypeChecks, RefIFace, Args...> &w) noexcept
 {
     if constexpr (Cfg.static_size == 0u) {
         return w.m_p_iface == nullptr;
@@ -685,9 +673,9 @@ bool is_invalid(const wrap<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace> &w) noex
     }
 }
 
-template <typename IFace, template <typename, typename...> typename IFaceImpl, config Cfg,
-          template <typename> typename TypeChecks, template <typename> typename RefIFace>
-std::type_index value_type_index(const wrap<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace> &w) noexcept
+template <template <typename, typename...> typename IFaceT, config Cfg, template <typename> typename TypeChecks,
+          template <typename> typename RefIFace, typename... Args>
+std::type_index value_type_index(const wrap<IFaceT, Cfg, TypeChecks, RefIFace, Args...> &w) noexcept
 {
     if constexpr (Cfg.static_size == 0u) {
         return w.m_pv_iface->value_type_index(detail::vtag{});
@@ -696,10 +684,10 @@ std::type_index value_type_index(const wrap<IFace, IFaceImpl, Cfg, TypeChecks, R
     }
 }
 
-template <typename IFace, template <typename, typename...> typename IFaceImpl, config Cfg,
-          template <typename> typename TypeChecks, template <typename> typename RefIFace>
-void swap(wrap<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace> &w1,
-          wrap<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace> &w2) noexcept
+template <template <typename, typename...> typename IFaceT, config Cfg, template <typename> typename TypeChecks,
+          template <typename> typename RefIFace, typename... Args>
+void swap(wrap<IFaceT, Cfg, TypeChecks, RefIFace, Args...> &w1,
+          wrap<IFaceT, Cfg, TypeChecks, RefIFace, Args...> &w2) noexcept
 {
     // Handle self swap.
     if (&w1 == &w2) {
@@ -735,8 +723,10 @@ void swap(wrap<IFace, IFaceImpl, Cfg, TypeChecks, RefIFace> &w1,
             assert(w1.m_p_iface == nullptr);
             assert(w2.m_p_iface == nullptr);
 
-            std::swap(*std::launder(reinterpret_cast<IFace **>(w1.static_storage)),
-                      *std::launder(reinterpret_cast<IFace **>(w2.static_storage)));
+            using iface_t = typename wrap<IFaceT, Cfg, TypeChecks, RefIFace, Args...>::iface_t;
+
+            std::swap(*std::launder(reinterpret_cast<iface_t **>(w1.static_storage)),
+                      *std::launder(reinterpret_cast<iface_t **>(w2.static_storage)));
             std::swap(w1.m_pv_iface, w2.m_pv_iface);
         }
     }

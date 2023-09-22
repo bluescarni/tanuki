@@ -7,16 +7,55 @@
 
 #include <iostream>
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
+template <typename>
+struct any_iface;
+
+template <>
 // NOLINTNEXTLINE
-struct iface0 {
-    virtual ~iface0() = default;
+struct any_iface<void> {
+    virtual ~any_iface() = default;
 };
 
 template <typename Holder>
-struct iface0_impl : iface0 {
+struct any_iface : any_iface<void> {
 };
+
+TEST_CASE("basics")
+{
+    using tanuki::wrap;
+
+    struct blaf {
+        char buffer[100];
+    };
+
+    wrap<any_iface> w1(3.), w2(blaf{}), w3(std::function<void()>{});
+
+    auto w4 = w3;
+
+    // NOLINTBEGIN
+    auto w5(std::move(w2));
+    REQUIRE(is_invalid(w2));
+    //  NOLINTEND
+
+    w1 = std::move(w3);
+
+    w3 = wrap<any_iface>(std::function<void()>{});
+
+    auto w1a = w1;
+    w1 = w1a;
+
+    auto w5a = wrap<any_iface>(blaf{});
+    w5a = std::move(w5);
+
+    w2 = wrap<any_iface>(blaf{});
+    auto w2a = wrap<any_iface>(blaf{});
+    w2 = w2a;
+}
+
+#if 0
+
 
 struct foo_iface {
     virtual ~foo_iface() = default;
@@ -190,8 +229,40 @@ struct function_iface {
     virtual R operator()(Args... args) const = 0;
 };
 
+// template <typename R, typename... Args>
+// struct foo_function_iface : function_iface<R, Args...>, foo_iface {
+// };
+
 template <typename Holder, typename R, typename... Args>
 struct function_iface_impl : function_iface<R, Args...> {
+    R operator()(Args... args) const final;
 };
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace)
+template <typename R, typename... Args>
+struct blap_iface : function_iface<R, Args...> {
+    virtual void blap() const = 0;
+};
+
+template <typename Holder, typename R, typename... Args>
+struct blap_iface_impl : function_iface_impl<Holder, R, Args...> {
+    void blap() const override;
+};
+
+// template <typename Holder, typename R, typename... Args>
+// using foo_function_iface_impl
+//     = foo_iface_impl<Holder, function_iface_impl<Holder, foo_function_iface<R, Args...>, R, Args...>>;
+
+// template <typename R, typename... Args>
+// using foo_function = wrap<foo_function_iface<R, Args...>, foo_function_iface_impl>;
+
+template <typename R, typename... Args>
+using foo_function = wrap<foo_function_iface<R, Args...>, function_iface_impl>;
+
+// TEST_CASE("foo_function")
+// {
+//     foo_function<void> f([]() {});
+// }
+
+#endif
+
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

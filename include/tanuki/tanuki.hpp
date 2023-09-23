@@ -255,7 +255,7 @@ using ref_iface_selector = std::conditional_t<std::derived_from<RefIFace, null_r
 
 } // namespace detail
 
-#define TANUKI_MAKE_REF_IFACE_MEMFUN(name)                                                                             \
+#define TANUKI_REF_IFACE_MEMFUN(name)                                                                                  \
     template <typename JustWrap = Wrap, typename... Args>                                                              \
     auto name(Args &&...args) & noexcept(                                                                              \
         noexcept(static_cast<JustWrap *>(this)->get_iface_ptr()->name(std::forward<Args>(args)...)))                   \

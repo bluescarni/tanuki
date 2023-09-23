@@ -5,8 +5,6 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <iostream>
-
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
 template <typename>
@@ -21,6 +19,15 @@ struct any_iface<void> {
 template <typename Holder>
 struct any_iface : any_iface<void> {
 };
+
+namespace tanuki
+{
+
+// template <typename Wrap>
+// struct ref_iface<Wrap, any_iface> {
+// };
+
+} // namespace tanuki
 
 TEST_CASE("basics")
 {
@@ -54,8 +61,7 @@ TEST_CASE("basics")
     w2 = w2a;
 }
 
-#if 0
-
+#if defined(AASDSADASDSADSA)
 
 struct foo_iface {
     virtual ~foo_iface() = default;

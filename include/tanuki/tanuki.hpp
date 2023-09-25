@@ -369,6 +369,30 @@ struct value_t_from_impl<R(Args...)> {
 template <typename T>
 using value_t_from = typename value_t_from_impl<std::remove_cvref_t<T>>::type;
 
+// These two concepts are used in the implementation of the wrap constructors.
+
+// Check if we can construct from U a valid Holder for the interface IFace.
+// Holder is expected to be an instance of the "holder" class defined earlier.
+// Cfg must be a valid config instance.
+template <typename Holder, typename IFace, auto Cfg, typename... U>
+concept ctible_holder =
+    // These checks are for verifying that:
+    // - IFace is a base of the interface implementation, and
+    // - all interface requirements have been implemented, and
+    // - we can construct the value type from the variadic args, and
+    // - the value type T satisfies the conditions to be stored in a holder.
+    std::constructible_from<Holder, U...> && std::derived_from<Holder, IFace> &&
+    // Alignment checks: if we are going to use dynamic storage, then no checks are needed
+    // as new() takes care of proper alignment; otherwise, we need to ensure that the static
+    // storage is sufficiently aligned.
+    (sizeof(Holder) > Cfg.static_size || alignof(Holder) <= Cfg.static_alignment);
+
+// Utility concept to check if the type T satisfies the is_wrappable type trait (which must
+// have been implemented correctly).
+template <typename T, template <typename, typename...> typename IFaceT, typename... Args>
+concept wrappable
+    = std::same_as<const bool, decltype(is_wrappable<T, IFaceT, Args...>)> && is_wrappable<T, IFaceT, Args...>;
+
 } // namespace detail
 
 // Fwd declarations.
@@ -453,21 +477,7 @@ class wrap : private detail::wrap_storage<IFaceT<void, Args...>, Cfg.static_size
     // Implementation of generic construction. This will constrcut
     // a holder with value type T using the construction argument(s) x.
     template <typename T, typename... U>
-        requires
-        // These checks are for verifying that:
-        // - iface_t is a base of the interface implementation, and
-        // - all interface requirements have been implemented, and
-        // - we can construct the value type from the variadic args, and
-        // - the value type T satisfies the conditions to be stored in a holder.
-        std::constructible_from<holder_t<T>, U &&...> && std::derived_from<holder_t<T>, iface_t> &&
-        // Alignment checks: if we are going to use dynamic storage, then no checks are needed
-        // as new() takes care of proper alignment; otherwise, we need to ensure that the static
-        // storage is sufficiently aligned.
-        (sizeof(holder_t<T>) > Cfg.static_size || alignof(holder_t<T>) <= Cfg.static_alignment) &&
-        // Value type checks.
-        std::same_as<const bool, decltype(is_wrappable<T, IFaceT, Args...>)>
-        && is_wrappable<T, IFaceT, Args...>
-        void ctor_impl(U &&...x)
+    void ctor_impl(U &&...x)
     {
         if constexpr (Cfg.static_size == 0u) {
             // Static storage disabled.
@@ -500,9 +510,10 @@ public:
                     // A default value type must have been specified
                     // in the configuration.
                     (!std::same_as<void, default_value_t>) &&
-                    // We must be able to value-init a default_value_t
-                    // into the holder.
-                    requires(wrap &w) { w.ctor_impl<default_value_t>(); })
+                    // default_value_t must pass the is_wrappable check.
+                    detail::wrappable<default_value_t, IFaceT, Args...> &&
+                    // We must be able to value-init the holder.
+                    detail::ctible_holder<holder_t<default_value_t>, iface_t, Cfg>)
     {
         if constexpr (Cfg.definit_invalid) {
             if constexpr (Cfg.static_size != 0u) {
@@ -525,8 +536,10 @@ public:
         requires
         // Must not compete with copy/move.
         (!std::same_as<std::remove_cvref_t<T>, wrap>) &&
+        // The value type must pass the is_wrappable check.
+        detail::wrappable<detail::value_t_from<T &&>, IFaceT, Args...> &&
         // We must be able to construct a holder from x.
-        requires(wrap &w, T &&arg) { w.ctor_impl<detail::value_t_from<T &&>>(std::forward<T>(arg)); }
+        detail::ctible_holder<holder_t<detail::value_t_from<T &&>>, iface_t, Cfg, T &&>
         // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,cppcoreguidelines-pro-type-member-init,hicpp-member-init)
         explicit wrap(T &&x)
     {

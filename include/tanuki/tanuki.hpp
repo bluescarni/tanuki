@@ -325,29 +325,6 @@ template <typename, template <typename, typename...> typename, typename...>
 struct ref_iface {
 };
 
-namespace detail
-{
-
-// Meta-programming to establish a holder value type for a type T.
-// This is used in the generic ctor of wrap.
-template <typename T>
-struct value_t_from_impl {
-    // By default, the value type is T itself.
-    using type = T;
-};
-
-template <typename R, typename... Args>
-struct value_t_from_impl<R(Args...)> {
-    // For function types, let it decay so that
-    // the stored value is a function pointer.
-    using type = std::decay_t<R(Args...)>;
-};
-
-template <typename T>
-using value_t_from = typename value_t_from_impl<std::remove_cvref_t<T>>::type;
-
-} // namespace detail
-
 #define TANUKI_REF_IFACE_MEMFUN(name)                                                                                  \
     template <typename JustWrap = Wrap, typename... MemFunArgs>                                                        \
     auto name(MemFunArgs &&...args) & noexcept(                                                                        \
@@ -371,7 +348,30 @@ using value_t_from = typename value_t_from_impl<std::remove_cvref_t<T>>::type;
         return std::move(*get_iface_ptr(*static_cast<Wrap *>(this))).name(std::forward<MemFunArgs>(args)...);          \
     }
 
-// Fwd declaration.
+namespace detail
+{
+
+// Meta-programming to establish a holder value type for a type T.
+// This is used in the generic ctor of wrap.
+template <typename T>
+struct value_t_from_impl {
+    // By default, the value type is T itself.
+    using type = T;
+};
+
+template <typename R, typename... Args>
+struct value_t_from_impl<R(Args...)> {
+    // For function types, let it decay so that
+    // the stored value is a function pointer.
+    using type = std::decay_t<R(Args...)>;
+};
+
+template <typename T>
+using value_t_from = typename value_t_from_impl<std::remove_cvref_t<T>>::type;
+
+} // namespace detail
+
+// Fwd declarations.
 template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
     requires std::is_polymorphic_v<IFaceT<void, Args...>> && std::has_virtual_destructor_v<IFaceT<void, Args...>>
              && valid_config<Cfg>
@@ -404,11 +404,11 @@ class wrap : private detail::wrap_storage<IFaceT<void, Args...>, Cfg.static_size
     using value_iface_t = detail::value_iface<iface_t>;
 
     // Friendship with the free functions.
-    friend void swap<IFaceT, Cfg, Args...>(wrap &, wrap &) noexcept;
-    friend bool is_invalid<IFaceT, Cfg, Args...>(const wrap &) noexcept;
-    friend std::type_index value_type_index<IFaceT, Cfg, Args...>(const wrap &) noexcept;
-    friend const iface_t *get_iface_ptr(const wrap<IFaceT, Cfg, Args...> &) noexcept;
-    friend iface_t *get_iface_ptr(wrap<IFaceT, Cfg, Args...> &) noexcept;
+    friend void swap<>(wrap &, wrap &) noexcept;
+    friend bool is_invalid<>(const wrap &) noexcept;
+    friend std::type_index value_type_index<>(const wrap &) noexcept;
+    friend const iface_t *get_iface_ptr<>(const wrap &) noexcept;
+    friend iface_t *get_iface_ptr<>(wrap &) noexcept;
 
     // The default value type.
     using default_value_t = typename decltype(Cfg)::default_value_type;

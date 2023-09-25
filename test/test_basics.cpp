@@ -67,6 +67,8 @@ TEST_CASE("basics2")
     using tanuki::wrap;
 
     const wrap<any_iface, config<int>{}> w1;
+
+    (void)tanuki::get_iface_ptr(w1);
 }
 
 #if defined(AASDSADASDSADSA)

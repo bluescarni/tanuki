@@ -243,6 +243,11 @@ private:
 // Implementation of basic storage for the wrap class.
 template <typename IFace, std::size_t StaticStorageSize, std::size_t StaticStorageAlignment>
 struct wrap_storage {
+    // NOTE: static storage optimisation enabled. The m_p_iface member is used as a flag:
+    // if it is null, then the current storage type is dynamic and the interface pointer
+    // (which may be null for the invalid state) is stored in static_storage. If m_p_iface
+    // is *not* null, then the current storage type is static and both m_p_iface and m_pv_iface
+    // point somewhere in static_storage.
     static_assert(StaticStorageSize > 0u);
 
     // NOTE: the static storage is used to store an IFace * in dynamic
@@ -501,8 +506,13 @@ public:
     {
         if constexpr (Cfg.definit_invalid) {
             if constexpr (Cfg.static_size != 0u) {
+                // Init the interface pointer to null.
                 ::new (this->static_storage) iface_t *(nullptr);
             }
+
+            // NOTE: if static storage is enabled, this will indicate
+            // that dynamic storage is being employed. Otherwise, this will
+            // set the interface pointer to null.
             this->m_p_iface = nullptr;
             this->m_pv_iface = nullptr;
         } else {

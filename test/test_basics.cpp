@@ -61,6 +61,14 @@ TEST_CASE("basics")
     w2 = w2a;
 }
 
+TEST_CASE("basics2")
+{
+    using tanuki::config;
+    using tanuki::wrap;
+
+    const wrap<any_iface, config<int>{}> w1;
+}
+
 #if defined(AASDSADASDSADSA)
 
 struct foo_iface {

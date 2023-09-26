@@ -136,15 +136,13 @@ struct holder final : public value_iface<IFaceT<void, Args...>>, public IFaceT<h
     // NOTE: special-casing to avoid the single-argument ctor
     // potentially competing with the copy/move ctors.
     template <typename U>
-    explicit holder(U &&x)
         requires(!std::same_as<holder, std::remove_cvref_t<U>>) && std::constructible_from<T, U &&>
-        : m_value(std::forward<U>(x))
+    explicit holder(U &&x) noexcept(std::is_nothrow_constructible_v<T, U &&>) : m_value(std::forward<U>(x))
     {
     }
     template <typename... U>
-    explicit holder(U &&...x)
         requires(sizeof...(U) != 1u) && std::constructible_from<T, U &&...>
-        : m_value(std::forward<U>(x)...)
+    explicit holder(U &&...x) noexcept(std::is_nothrow_constructible_v<T, U &&...>) : m_value(std::forward<U>(x)...)
     {
     }
 
@@ -291,9 +289,11 @@ struct config final : detail::config_base {
     // Alignment of the static storage.
     std::size_t static_alignment = alignof(std::max_align_t);
     // Default constructor initialises to the invalid state.
-    bool definit_invalid = false;
+    bool invalid_default_ctor = false;
     // Provide pointer interface.
     bool pointer_interface = true;
+    // Explicit constructor from value.
+    bool explicit_value_ctor = true;
     // Explicit conversion operators to interface reference/pointer.
     bool explicit_iface_conversion = true;
     // Enable copy construction/assignment.
@@ -490,7 +490,8 @@ class wrap : private detail::wrap_storage<IFaceT<void, Args...>, Cfg.static_size
     // Implementation of generic construction. This will constrcut
     // a holder with value type T using the construction argument(s) x.
     template <typename T, typename... U>
-    void ctor_impl(U &&...x)
+    void ctor_impl(U &&...x) noexcept(sizeof(holder_t<T>) <= Cfg.static_size
+                                      && std::is_nothrow_constructible_v<holder_t<T>, U &&...>)
     {
         if constexpr (Cfg.static_size == 0u) {
             // Static storage disabled.
@@ -517,31 +518,32 @@ class wrap : private detail::wrap_storage<IFaceT<void, Args...>, Cfg.static_size
     }
 
 public:
-    wrap()
-        requires(Cfg.definit_invalid)
-                || (
-                    // A default value type must have been specified
-                    // in the configuration.
-                    (!std::same_as<void, default_value_t>) &&
-                    // default_value_t must pass the is_wrappable check.
-                    detail::wrappable<default_value_t, IFaceT, Args...> &&
-                    // We must be able to value-init the holder.
-                    detail::ctible_holder<holder_t<default_value_t>, iface_t, Cfg>)
+    wrap() noexcept
+        requires(Cfg.invalid_default_ctor)
     {
-        if constexpr (Cfg.definit_invalid) {
-            if constexpr (Cfg.static_size != 0u) {
-                // Init the interface pointer to null.
-                ::new (this->static_storage) iface_t *(nullptr);
-            }
-
-            // NOTE: if static storage is enabled, this will indicate
-            // that dynamic storage is being employed. Otherwise, this will
-            // set the interface pointer to null.
-            this->m_p_iface = nullptr;
-            this->m_pv_iface = nullptr;
-        } else {
-            ctor_impl<default_value_t>();
+        if constexpr (Cfg.static_size != 0u) {
+            // Init the interface pointer to null.
+            ::new (this->static_storage) iface_t *(nullptr);
         }
+
+        // NOTE: if static storage is enabled, this will indicate
+        // that dynamic storage is being employed. Otherwise, this will
+        // set the interface pointer to null.
+        this->m_p_iface = nullptr;
+        this->m_pv_iface = nullptr;
+    }
+    wrap() noexcept(noexcept(this->ctor_impl<default_value_t>()))
+        requires(!Cfg.invalid_default_ctor) &&
+                // A default value type must have been specified
+                // in the configuration.
+                (!std::same_as<void, default_value_t>) &&
+                // default_value_t must pass the is_wrappable check.
+                detail::wrappable<default_value_t, IFaceT, Args...> &&
+                // We must be able to value-init the holder.
+                detail::ctible_holder<holder_t<default_value_t>, iface_t, Cfg>
+
+    {
+        ctor_impl<default_value_t>();
     }
 
     // Generic ctor from a wrappable value.
@@ -553,8 +555,9 @@ public:
         detail::wrappable<detail::value_t_from<T &&>, IFaceT, Args...> &&
         // We must be able to construct a holder from x.
         detail::ctible_holder<holder_t<detail::value_t_from<T &&>>, iface_t, Cfg, T &&>
-        // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,cppcoreguidelines-pro-type-member-init,hicpp-member-init)
-        explicit wrap(T &&x)
+        explicit(Cfg.explicit_value_ctor)
+        // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,cppcoreguidelines-pro-type-member-init,hicpp-member-init,google-explicit-constructor,hicpp-explicit-conversions)
+        wrap(T &&x) noexcept(noexcept(this->ctor_impl<detail::value_t_from<T &&>>(std::forward<T>(x))))
     {
         ctor_impl<detail::value_t_from<T &&>>(std::forward<T>(x));
     }

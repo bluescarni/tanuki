@@ -271,6 +271,13 @@ struct config_base {
 
 } // namespace detail
 
+#if defined(__GNUC__)
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+
+#endif
+
 // Configuration settings for the wrap class.
 // NOTE: the DefaultValueType is subject to the constraints
 // for valid value types.
@@ -296,6 +303,12 @@ struct config final : detail::config_base {
     // Enable swap.
     bool swappable = true;
 };
+
+#if defined(__GNUC__)
+
+#pragma GCC diagnostic pop
+
+#endif
 
 // Default configuration for the wrap class.
 inline constexpr auto default_config = config{};
@@ -796,6 +809,23 @@ public:
         return *get_iface_ptr(*this);
     }
 };
+
+namespace detail
+{
+
+template <typename>
+struct is_any_wrap_impl : std::false_type {
+};
+
+template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+struct is_any_wrap_impl<wrap<IFaceT, Cfg, Args...>> : std::true_type {
+};
+
+} // namespace detail
+
+// Concept to detect any wrap instance.
+template <typename T>
+concept any_wrap = detail::is_any_wrap_impl<T>::value;
 
 // NOTE: w is invalid if the storage type is dynamic and
 // it has been moved from. In such a case, the move operation

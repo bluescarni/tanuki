@@ -669,7 +669,7 @@ public:
         requires(Cfg.movable)
     {
         // Handle self-assign.
-        if (this == &other) {
+        if (this == std::addressof(other)) {
             return *this;
         }
 
@@ -740,7 +740,7 @@ public:
         requires(Cfg.copyable)
     {
         // Handle self-assign.
-        if (this == &other) {
+        if (this == std::addressof(other)) {
             return *this;
         }
 
@@ -867,7 +867,32 @@ template <template <typename, typename...> typename IFaceT, auto Cfg, typename..
 void swap(wrap<IFaceT, Cfg, Args...> &w1, wrap<IFaceT, Cfg, Args...> &w2) noexcept
 {
     // Handle self swap.
-    if (&w1 == &w2) {
+    if (std::addressof(w1) == std::addressof(w2)) {
+        return;
+    }
+
+    // Handle invalid arguments.
+    const auto inv1 = is_invalid(w1);
+    const auto inv2 = is_invalid(w2);
+
+    if (inv1 && inv2) {
+        // Both w1 and w2 are invalid, do nothing.
+        return;
+    }
+
+    if (inv1) {
+        // w1 is invalid, w2 is not: move-init w1 from w2.
+        // This may or may not
+        // leave w2 in the invalid state.
+        // NOTE: no need to invoke any destructor
+        // when w1 is in the invalid state.
+        w1.move_init_from(std::move(w2));
+        return;
+    }
+
+    if (inv2) {
+        // Opposite of the above.
+        w2.move_init_from(std::move(w1));
         return;
     }
 

@@ -248,6 +248,11 @@ struct wrap_storage {
     // point somewhere in static_storage.
     static_assert(StaticStorageSize > 0u);
 
+    // NOTE: replacing static_storage with an union (IFace *, std::byte[]) may allow us to get rid
+    // of the reinterpret_casts and perhaps even to make wrap constexpr-friendly. However, there are
+    // some patterns we use (e.g., void * cast and back) which, as of C++20, still cannot be used
+    // in constant expressions. Something to investigate for later versions of the standard?
+
     // NOTE: the static storage is used to store an IFace * in dynamic
     // storage mode, thus it has minimum size and alignment requirements.
     alignas(std::max(StaticStorageAlignment,

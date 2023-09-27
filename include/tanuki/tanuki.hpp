@@ -835,12 +835,16 @@ struct is_any_wrap_impl<wrap<IFaceT, Cfg, Args...>> : std::true_type {
 template <typename T>
 concept any_wrap = detail::is_any_wrap_impl<T>::value;
 
-// NOTE: w is invalid if the storage type is dynamic and
-// it has been moved from. In such a case, the move operation
+// NOTE: w is invalid if its storage type is dynamic and
+// it has been moved from (note that this also includes the case
+// in which w has been swapped with an invalid object).
+// In such a case, the move operation
 // will have set the interface pointers to null.
 // The only valid operations on an invalid object are:
+//
+// - invocation of is_invalid(),
 // - destruction,
-// - revival via copy/move assignment.
+// - copy/move assignment from and swapping with a valid object.
 template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 bool is_invalid(const wrap<IFaceT, Cfg, Args...> &w) noexcept
 {
@@ -881,18 +885,16 @@ void swap(wrap<IFaceT, Cfg, Args...> &w1, wrap<IFaceT, Cfg, Args...> &w2) noexce
     }
 
     if (inv1) {
-        // w1 is invalid, w2 is not: move-init w1 from w2.
+        // w1 is invalid, w2 is not: move-assign w2 to w1.
         // This may or may not
         // leave w2 in the invalid state.
-        // NOTE: no need to invoke any destructor
-        // when w1 is in the invalid state.
-        w1.move_init_from(std::move(w2));
+        w1 = std::move(w2);
         return;
     }
 
     if (inv2) {
         // Opposite of the above.
-        w2.move_init_from(std::move(w1));
+        w2 = std::move(w1);
         return;
     }
 

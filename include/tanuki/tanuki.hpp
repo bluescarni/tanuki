@@ -274,13 +274,6 @@ struct config_base {
 
 } // namespace detail
 
-#if defined(__GNUC__)
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
-
-#endif
-
 // Configuration settings for the wrap class.
 // NOTE: the DefaultValueType is subject to the constraints
 // for valid value types.
@@ -308,12 +301,6 @@ struct config final : detail::config_base {
     // Enable swap.
     bool swappable = true;
 };
-
-#if defined(__GNUC__)
-
-#pragma GCC diagnostic pop
-
-#endif
 
 // Default configuration for the wrap class.
 inline constexpr auto default_config = config{};
@@ -435,6 +422,12 @@ template <template <typename, typename...> typename IFaceT, auto Cfg, typename..
 template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 [[nodiscard]] IFaceT<void, Args...> *get_iface_ptr(wrap<IFaceT, Cfg, Args...> &) noexcept;
 
+template <typename T, template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+[[nodiscard]] const T *get_value_ptr(const wrap<IFaceT, Cfg, Args...> &) noexcept;
+
+template <typename T, template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+[[nodiscard]] T *get_value_ptr(wrap<IFaceT, Cfg, Args...> &) noexcept;
+
 template <template <typename, typename...> typename IFaceT, auto Cfg = default_config, typename... Args>
     requires std::is_polymorphic_v<IFaceT<void, Args...>> && std::has_virtual_destructor_v<IFaceT<void, Args...>>
                  && valid_config<Cfg>
@@ -451,6 +444,10 @@ class wrap : private detail::wrap_storage<IFaceT<void, Args...>, Cfg.static_size
     friend std::type_index value_type_index<>(const wrap &) noexcept;
     friend const iface_t *get_iface_ptr<>(const wrap &) noexcept;
     friend iface_t *get_iface_ptr<>(wrap &) noexcept;
+    template <typename T, template <typename, typename...> typename IFaceT2, auto Cfg2, typename... Args2>
+    friend const T *get_value_ptr(const wrap<IFaceT2, Cfg2, Args2...> &) noexcept;
+    template <typename T, template <typename, typename...> typename IFaceT2, auto Cfg2, typename... Args2>
+    friend T *get_value_ptr(wrap<IFaceT2, Cfg2, Args2...> &) noexcept;
 
     // The default value type.
     using default_value_t = typename decltype(Cfg)::default_value_type;
@@ -937,7 +934,7 @@ void swap(wrap<IFaceT, Cfg, Args...> &w1, wrap<IFaceT, Cfg, Args...> &w2) noexce
 }
 
 template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
-[[nodiscard]] const IFaceT<void, Args...> *get_iface_ptr(const wrap<IFaceT, Cfg, Args...> &w) noexcept
+const IFaceT<void, Args...> *get_iface_ptr(const wrap<IFaceT, Cfg, Args...> &w) noexcept
 {
     if constexpr (Cfg.static_size == 0u) {
         return w.m_p_iface;
@@ -947,12 +944,52 @@ template <template <typename, typename...> typename IFaceT, auto Cfg, typename..
 }
 
 template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
-[[nodiscard]] IFaceT<void, Args...> *get_iface_ptr(wrap<IFaceT, Cfg, Args...> &w) noexcept
+IFaceT<void, Args...> *get_iface_ptr(wrap<IFaceT, Cfg, Args...> &w) noexcept
 {
     if constexpr (Cfg.static_size == 0u) {
         return w.m_p_iface;
     } else {
         return std::get<0>(w.stype());
+    }
+}
+
+template <typename T, template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+const T *get_value_ptr(const wrap<IFaceT, Cfg, Args...> &w) noexcept
+{
+    if constexpr (Cfg.static_size == 0u) {
+        if (w.m_pv_iface->value_type_index(detail::vtag{}) == typeid(T)) {
+            return static_cast<const T *>(w.m_pv_iface->value_ptr(detail::vtag{}));
+        } else {
+            return nullptr;
+        }
+    } else {
+        const auto [_1, pv_iface, _2] = w.stype();
+
+        if (pv_iface->value_type_index(detail::vtag{}) == typeid(T)) {
+            return static_cast<const T *>(pv_iface->value_ptr(detail::vtag{}));
+        } else {
+            return nullptr;
+        }
+    }
+}
+
+template <typename T, template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+T *get_value_ptr(wrap<IFaceT, Cfg, Args...> &w) noexcept
+{
+    if constexpr (Cfg.static_size == 0u) {
+        if (w.m_pv_iface->value_type_index(detail::vtag{}) == typeid(T)) {
+            return static_cast<T *>(w.m_pv_iface->value_ptr(detail::vtag{}));
+        } else {
+            return nullptr;
+        }
+    } else {
+        const auto [_1, pv_iface, _2] = w.stype();
+
+        if (pv_iface->value_type_index(detail::vtag{}) == typeid(T)) {
+            return static_cast<T *>(pv_iface->value_ptr(detail::vtag{}));
+        } else {
+            return nullptr;
+        }
     }
 }
 

@@ -365,15 +365,15 @@ namespace detail
 template <std::size_t N>
 concept power_of_two = (N > 0u) && ((N & (N - 1u)) == 0u);
 
-} // namespace detail
-
 // Concept for checking that Cfg is a valid config instance.
 template <auto Cfg>
 concept valid_config =
     // This checks that decltype(Cfg) is a specialisation from the primary config template.
-    std::derived_from<std::remove_const_t<decltype(Cfg)>, detail::config_base> &&
+    std::derived_from<std::remove_const_t<decltype(Cfg)>, config_base> &&
     // The static alignment value must be a power of 2.
-    detail::power_of_two<Cfg.static_alignment>;
+    power_of_two<Cfg.static_alignment>;
+
+} // namespace detail
 
 // Default implementation of value type checking.
 template <typename, template <typename, typename...> typename, typename...>
@@ -457,7 +457,7 @@ concept wrappable
 // Fwd declarations.
 template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
     requires std::is_polymorphic_v<IFaceT<void, Args...>> && std::has_virtual_destructor_v<IFaceT<void, Args...>>
-             && valid_config<Cfg>
+             && detail::valid_config<Cfg>
 class wrap;
 
 template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
@@ -484,7 +484,7 @@ template <typename T, template <typename, typename...> typename IFaceT, auto Cfg
 
 template <template <typename, typename...> typename IFaceT, auto Cfg = default_config, typename... Args>
     requires std::is_polymorphic_v<IFaceT<void, Args...>> && std::has_virtual_destructor_v<IFaceT<void, Args...>>
-                 && valid_config<Cfg>
+                 && detail::valid_config<Cfg>
 class wrap : private detail::wrap_storage<IFaceT<void, Args...>, Cfg.static_size, Cfg.static_alignment>,
              public ref_iface<wrap<IFaceT, Cfg, Args...>, IFaceT, Args...>
 {

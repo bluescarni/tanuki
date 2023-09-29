@@ -1,9 +1,26 @@
+#include <array>
 #include <functional>
+#include <sstream>
+#include <string>
 #include <utility>
+
+#if defined(TANUKI_WITH_BOOST_S11N)
+
+#include <boost/serialization/array.hpp>
+#include <boost/serialization/string.hpp>
+
+#endif
 
 #include <tanuki/tanuki.hpp>
 
 #include <catch2/catch_test_macros.hpp>
+
+#if defined(__GNUC__)
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+
+#endif
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
@@ -29,15 +46,40 @@ namespace tanuki
 
 } // namespace tanuki
 
+struct large {
+    std::array<char, 100> buffer = {1, 2, 3};
+    std::string str = "hello world                                                                            ";
+
+    template <typename Archive>
+    void serialize(Archive &ar, unsigned)
+    {
+        ar & buffer;
+        ar & str;
+    }
+};
+
+struct small {
+    std::string s = "42";
+
+    template <typename Archive>
+    void serialize(Archive &ar, unsigned)
+    {
+        ar & s;
+    }
+};
+
+#if defined(TANUKI_WITH_BOOST_S11N)
+
+TANUKI_S11N_WRAP_EXPORT(large, any_iface)
+TANUKI_S11N_WRAP_EXPORT(small, any_iface)
+
+#endif
+
 TEST_CASE("basics")
 {
     using tanuki::wrap;
 
-    struct blaf {
-        char buffer[100];
-    };
-
-    wrap<any_iface> w1(3.), w2(blaf{}), w3(std::function<void()>{});
+    wrap<any_iface> w1(3.), w2(large{}), w3(std::function<void()>{});
 
     auto w4 = w3;
 
@@ -53,11 +95,11 @@ TEST_CASE("basics")
     auto w1a = w1;
     w1 = w1a;
 
-    auto w5a = wrap<any_iface>(blaf{});
+    auto w5a = wrap<any_iface>(large{});
     w5a = std::move(w5);
 
-    w2 = wrap<any_iface>(blaf{});
-    auto w2a = wrap<any_iface>(blaf{});
+    w2 = wrap<any_iface>(large{});
+    auto w2a = wrap<any_iface>(large{});
     w2 = w2a;
 }
 
@@ -70,6 +112,85 @@ TEST_CASE("basics2")
 
     (void)tanuki::get_iface_ptr(w1);
 }
+
+#if defined(TANUKI_WITH_BOOST_S11N)
+
+TEST_CASE("s11n nostatic")
+{
+    using wrap_t = tanuki::wrap<any_iface, tanuki::config{.static_size = 0}>;
+
+    wrap_t w(large{});
+    get_value_ptr<large>(w)->buffer[0] = 42;
+
+    std::stringstream ss;
+
+    {
+        boost::archive::binary_oarchive oa(ss);
+        oa << w;
+    }
+
+    w = wrap_t(3);
+
+    {
+        boost::archive::binary_iarchive ia(ss);
+        ia >> w;
+    }
+
+    REQUIRE(value_type_index(w) == typeid(large));
+    REQUIRE(get_value_ptr<large>(w)->buffer[0] == 42);
+}
+
+TEST_CASE("s11n large")
+{
+    using wrap_t = tanuki::wrap<any_iface>;
+
+    wrap_t w(large{});
+    get_value_ptr<large>(w)->buffer[0] = 42;
+
+    std::stringstream ss;
+
+    {
+        boost::archive::binary_oarchive oa(ss);
+        oa << w;
+    }
+
+    w = wrap_t(3);
+
+    {
+        boost::archive::binary_iarchive ia(ss);
+        ia >> w;
+    }
+
+    REQUIRE(value_type_index(w) == typeid(large));
+    REQUIRE(get_value_ptr<large>(w)->buffer[0] == 42);
+}
+
+TEST_CASE("s11n small")
+{
+    using wrap_t = tanuki::wrap<any_iface>;
+
+    wrap_t w(small{});
+    get_value_ptr<small>(w)->s = "-42";
+
+    std::stringstream ss;
+
+    {
+        boost::archive::binary_oarchive oa(ss);
+        oa << w;
+    }
+
+    w = wrap_t(3);
+
+    {
+        boost::archive::binary_iarchive ia(ss);
+        ia >> w;
+    }
+
+    REQUIRE(value_type_index(w) == typeid(small));
+    REQUIRE(get_value_ptr<small>(w)->s == "-42");
+}
+
+#endif
 
 #if defined(AASDSADASDSADSA)
 
@@ -282,3 +403,9 @@ using foo_function = wrap<foo_function_iface<R, Args...>, function_iface_impl>;
 #endif
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+
+#if defined(__GNUC__)
+
+#pragma GCC diagnostic pop
+
+#endif

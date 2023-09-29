@@ -23,6 +23,7 @@ include(YACMACompilerLinkerSettings)
 
 # The build options.
 option(TANUKI_BUILD_TESTS "Build unit tests." OFF)
+option(TANUKI_WITH_BOOST_S11N "Enable support for the Boost.Serialization library." OFF)
 option(TANUKI_CLANG_TIDY "Enable clang-tidy when building the unit tests." OFF)
 mark_as_advanced(TANUKI_CLANG_TIDY)
 set(TANUKI_CLANG_TIDY_PATH "clang-tidy" CACHE STRING "Path to clang-tidy.")
@@ -129,10 +130,18 @@ if(YACMA_COMPILER_IS_MSVC)
   unset(_TANUKI_MSVC_SUPPORTS_STRICT_CONFORMANCE)
 endif()
 
-# Creade the tanuki header-only library.
+# Optional Boost.Serialization support.
+if(TANUKI_WITH_BOOST_S11N)
+  find_package(Boost REQUIRED serialization)
+  add_library(tanuki_boost_s11n INTERFACE)
+  target_link_libraries(tanuki_boost_s11n INTERFACE Boost::serialization)
+  target_compile_definitions(tanuki_boost_s11n INTERFACE TANUKI_WITH_BOOST_S11N)
+endif()
+
+# Create the tanuki header-only library.
 add_library(tanuki INTERFACE)
 
-# Ensure that C++20 is employed when both compiling and consuming tanuki.
+# Ensure that C++20 is employed when consuming tanuki.
 target_compile_features(tanuki INTERFACE cxx_std_20)
 
 target_include_directories(tanuki INTERFACE

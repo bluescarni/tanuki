@@ -3,6 +3,9 @@ add_subdirectory(catch)
 function(ADD_TANUKI_TESTCASE arg1)
   add_executable(${arg1} ${arg1}.cpp)
   target_link_libraries(${arg1} PRIVATE tanuki Catch2::Catch2WithMain)
+  if(TANUKI_WITH_BOOST_S11N)
+    target_link_libraries(${arg1} PRIVATE tanuki_boost_s11n)
+  endif()
   target_compile_options(${arg1} PRIVATE
     "$<$<CONFIG:Debug>:${TANUKI_CXX_FLAGS_DEBUG}>"
     "$<$<CONFIG:Release>:${TANUKI_CXX_FLAGS_RELEASE}>"

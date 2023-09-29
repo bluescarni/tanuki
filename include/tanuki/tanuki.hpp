@@ -22,6 +22,18 @@
 #include <typeinfo>
 #include <utility>
 
+#if defined(TANUKI_WITH_BOOST_S11N)
+
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/access.hpp>
+#include <boost/serialization/base_object.hpp>
+#include <boost/serialization/export.hpp>
+#include <boost/serialization/split_member.hpp>
+#include <boost/serialization/tracking.hpp>
+
+#endif
+
 // Versioning.
 #define TANUKI_VERSION_STRING "1.0.0"
 #define TANUKI_VERSION_MAJOR 1
@@ -109,6 +121,18 @@ struct value_iface {
     virtual void copy_assign_value(void *, vtag) const = 0;
     virtual void move_assign_value(void *, vtag) && noexcept = 0;
     virtual void swap_value(void *, vtag) noexcept = 0;
+
+#if defined(TANUKI_WITH_BOOST_S11N)
+
+private:
+    // Serialization.
+    friend class boost::serialization::access;
+    template <typename Archive>
+    void serialize(Archive &, unsigned)
+    {
+    }
+
+#endif
 };
 
 // NOTE: constrain value types to be non-cv qualified objects for the time being.
@@ -136,13 +160,27 @@ struct holder final : public value_iface<IFaceT<void, Args...>>, public IFaceT<h
     // NOTE: special-casing to avoid the single-argument ctor
     // potentially competing with the copy/move ctors.
     template <typename U>
-        requires(!std::same_as<holder, std::remove_cvref_t<U>>) && std::constructible_from<T, U &&>
-    explicit holder(U &&x) noexcept(std::is_nothrow_constructible_v<T, U &&>) : m_value(std::forward<U>(x))
+        requires(!std::same_as<holder, std::remove_cvref_t<U>>)
+                && std::constructible_from<T, U &&>
+                // NOTE: we need the interface implementation to be:
+                // - default initable,
+                // - destructible.
+                // We also want it to be nothrow-dtible so that the defaulted ~holder()
+                // destructor is also nothrow.
+                && std::default_initializable<IFaceT<holder<T, IFaceT, Args...>, Args...>>
+                && std::is_nothrow_destructible_v<IFaceT<holder<T, IFaceT, Args...>, Args...>>
+    explicit holder(U &&x) noexcept(
+        std::is_nothrow_constructible_v<T, U &&> && noexcept(::new IFaceT<holder<T, IFaceT, Args...>, Args...>))
+        : m_value(std::forward<U>(x))
     {
     }
     template <typename... U>
         requires(sizeof...(U) != 1u) && std::constructible_from<T, U &&...>
-    explicit holder(U &&...x) noexcept(std::is_nothrow_constructible_v<T, U &&...>) : m_value(std::forward<U>(x)...)
+                && std::default_initializable<IFaceT<holder<T, IFaceT, Args...>, Args...>>
+                && std::is_nothrow_destructible_v<IFaceT<holder<T, IFaceT, Args...>, Args...>>
+    explicit holder(U &&...x) noexcept(
+        std::is_nothrow_constructible_v<T, U &&...> && noexcept(::new IFaceT<holder<T, IFaceT, Args...>, Args...>))
+        : m_value(std::forward<U>(x)...)
     {
     }
 
@@ -236,6 +274,19 @@ private:
             throw std::invalid_argument("Attempting to swap a non-swappable value type");
         }
     }
+
+#if defined(TANUKI_WITH_BOOST_S11N)
+
+    // Serialization.
+    friend class boost::serialization::access;
+    template <typename Archive>
+    void serialize(Archive &ar, unsigned)
+    {
+        ar &boost::serialization::base_object<value_iface<IFaceT<void, Args...>>>(*this);
+        ar & m_value;
+    }
+
+#endif
 };
 
 // Implementation of basic storage for the wrap class.
@@ -518,6 +569,87 @@ class wrap : private detail::wrap_storage<IFaceT<void, Args...>, Cfg.static_size
             }
         }
     }
+
+#if defined(TANUKI_WITH_BOOST_S11N)
+
+    // Serialization.
+    friend class boost::serialization::access;
+    void save(boost::archive::binary_oarchive &ar, unsigned) const
+    {
+        if constexpr (Cfg.static_size == 0u) {
+            // Store the pointer to the value interface.
+            ar << this->m_pv_iface;
+        } else {
+            const auto [_, pv_iface, st] = stype();
+
+            // Store the storage type.
+            ar << st;
+            // Store the pointer to the value interface.
+            ar << pv_iface;
+        }
+    }
+    // NOTE: as I have understood, when deserialising a pointer Boost
+    // allocates memory only the *first* time the pointer is encountered
+    // in an archive:
+    // https://stackoverflow.com/questions/62105624/how-does-boostserialization-allocate-memory-when-deserializing-through-a-point
+    // In our case, we disable object tracking for value_iface and I also
+    // think that there are no situations in which a pointer to value_iface
+    // could be shared amongst multiple wraps. Thus, we should be ok assuming
+    // that the pointer coming out of des11n has always been created with a new
+    // call.
+    void load(boost::archive::binary_iarchive &ar, unsigned)
+    {
+        if constexpr (Cfg.static_size == 0u) {
+            // Load the serialised pointer.
+            value_iface_t *pv_iface = nullptr;
+            ar >> pv_iface;
+            assert(pv_iface != nullptr);
+
+            // NOTE: from now on, all is noexcept.
+
+            // Destroy the current object.
+            destroy();
+
+            // Assign the new pointers.
+            this->m_pv_iface = pv_iface;
+            this->m_p_iface = dynamic_cast<iface_t *>(pv_iface);
+            assert(this->m_p_iface != nullptr);
+        } else {
+            // Recover the storage type.
+            bool st{};
+            ar >> st;
+
+            // Load the serialised pointer.
+            value_iface_t *pv_iface = nullptr;
+            ar >> pv_iface;
+            assert(pv_iface != nullptr);
+
+            // NOTE: from now on, all is noexcept.
+
+            // Destroy the current object.
+            destroy();
+
+            if (st) {
+                // Move-init the value from pv_iface.
+                auto [new_p_iface, new_pv_iface]
+                    = std::move(*pv_iface).move_init_holder(this->static_storage, detail::vtag{});
+                this->m_p_iface = new_p_iface;
+                this->m_pv_iface = new_pv_iface;
+
+                // Clean up pv_iface.
+                // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+                delete pv_iface;
+            } else {
+                assert(dynamic_cast<iface_t *>(pv_iface) != nullptr);
+                ::new (this->static_storage) iface_t *(dynamic_cast<iface_t *>(pv_iface));
+                this->m_p_iface = nullptr;
+                this->m_pv_iface = pv_iface;
+            }
+        }
+    }
+    BOOST_SERIALIZATION_SPLIT_MEMBER()
+
+#endif
 
 public:
     wrap() noexcept
@@ -998,6 +1130,61 @@ TANUKI_END_NAMESPACE
 #if defined(__GNUC__)
 
 #pragma GCC diagnostic pop
+
+#endif
+
+#if defined(TANUKI_WITH_BOOST_S11N)
+
+namespace boost::serialization
+{
+
+// NOTE: disable address tracking for value_iface. We do not need it as value_iface
+// pointers are never shared, and it might only create issues when
+// deserialising into a function-local pointer which is then copied
+// into the wrap storage.
+template <typename IFace>
+struct tracking_level<tanuki::detail::value_iface<IFace>> {
+    using tag = mpl::integral_c_tag;
+    using type = mpl::int_<track_never>;
+    BOOST_STATIC_CONSTANT(int, value = tracking_level::type::value);
+    BOOST_STATIC_ASSERT(
+        (mpl::greater<implementation_level<tanuki::detail::value_iface<IFace>>, mpl::int_<primitive_type>>::value));
+};
+
+} // namespace boost::serialization
+
+// NOTE: these are verbatim re-implementations of the BOOST_CLASS_EXPORT_KEY
+// and BOOST_CLASS_EXPORT_IMPLEMENT macros, which do not work well with class templates.
+#define TANUKI_S11N_WRAP_EXPORT_KEY(...)                                                                               \
+    namespace boost::serialization                                                                                     \
+    {                                                                                                                  \
+    template <>                                                                                                        \
+    struct guid_defined<tanuki::detail::holder<__VA_ARGS__>> : boost::mpl::true_ {                                     \
+    };                                                                                                                 \
+    template <>                                                                                                        \
+    inline const char *guid<tanuki::detail::holder<__VA_ARGS__>>()                                                     \
+    {                                                                                                                  \
+        /* NOTE: the stringize here will produce a name enclosed by brackets. */                                       \
+        return BOOST_PP_STRINGIZE((tanuki::detail::holder<__VA_ARGS__>));                                              \
+    }                                                                                                                  \
+    }
+
+#define TANUKI_S11N_WRAP_EXPORT_IMPLEMENT(...)                                                                         \
+    namespace boost::archive::detail::extra_detail                                                                     \
+    {                                                                                                                  \
+    template <>                                                                                                        \
+    struct init_guid<tanuki::detail::holder<__VA_ARGS__>> {                                                            \
+        static guid_initializer<tanuki::detail::holder<__VA_ARGS__>> const &g;                                         \
+    };                                                                                                                 \
+    guid_initializer<tanuki::detail::holder<__VA_ARGS__>> const &init_guid<tanuki::detail::holder<__VA_ARGS__>>::g     \
+        = ::boost::serialization::singleton<                                                                           \
+              guid_initializer<tanuki::detail::holder<__VA_ARGS__>>>::get_mutable_instance()                           \
+              .export_guid();                                                                                          \
+    }
+
+#define TANUKI_S11N_WRAP_EXPORT(...)                                                                                   \
+    TANUKI_S11N_WRAP_EXPORT_KEY(__VA_ARGS__)                                                                           \
+    TANUKI_S11N_WRAP_EXPORT_IMPLEMENT(__VA_ARGS__)
 
 #endif
 

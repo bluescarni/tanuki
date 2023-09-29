@@ -486,11 +486,17 @@ template <template <typename, typename...> typename IFaceT, auto Cfg = default_c
     requires std::is_polymorphic_v<IFaceT<void, Args...>> && std::has_virtual_destructor_v<IFaceT<void, Args...>>
                  && detail::valid_config<Cfg>
 class wrap : private detail::wrap_storage<IFaceT<void, Args...>, Cfg.static_size, Cfg.static_alignment>,
+             // NOTE: the reference interface is not supposed to hold any data: it will always
+             // be def-inited (even when copying/moving a wrap object), its assignment operators
+             // will never be invoked, it will never be swapped, etc. This needs to be documented.
              public ref_iface<wrap<IFaceT, Cfg, Args...>, IFaceT, Args...>
 {
     // Aliases for the two interfaces.
     using iface_t = IFaceT<void, Args...>;
     using value_iface_t = detail::value_iface<iface_t>;
+
+    // Alias for the reference interface.
+    using ref_iface_t = ref_iface<wrap<IFaceT, Cfg, Args...>, IFaceT, Args...>;
 
     // Friendship with the free functions.
     friend void swap<>(wrap &, wrap &) noexcept;
@@ -655,8 +661,8 @@ class wrap : private detail::wrap_storage<IFaceT<void, Args...>, Cfg.static_size
 #endif
 
 public:
-    wrap() noexcept
-        requires(Cfg.invalid_default_ctor)
+    wrap() noexcept(noexcept(::new ref_iface_t))
+        requires(Cfg.invalid_default_ctor) && std::default_initializable<ref_iface_t>
     {
         if constexpr (Cfg.static_size != 0u) {
             // Init the interface pointer to null.
@@ -669,8 +675,8 @@ public:
         this->m_p_iface = nullptr;
         this->m_pv_iface = nullptr;
     }
-    wrap() noexcept(noexcept(this->ctor_impl<default_value_t>()))
-        requires(!Cfg.invalid_default_ctor) &&
+    wrap() noexcept(noexcept(this->ctor_impl<default_value_t>()) && noexcept(::new ref_iface_t))
+        requires(!Cfg.invalid_default_ctor) && std::default_initializable<ref_iface_t> &&
                 // A default value type must have been specified
                 // in the configuration.
                 (!std::same_as<void, default_value_t>) &&
@@ -685,23 +691,24 @@ public:
 
     // Generic ctor from a wrappable value.
     template <typename T>
-        requires
-        // Must not compete with copy/move.
-        (!std::same_as<std::remove_cvref_t<T>, wrap>) &&
-        // The value type must pass the is_wrappable check.
-        detail::wrappable<detail::value_t_from<T &&>, IFaceT, Args...> &&
-        // We must be able to construct a holder from x.
-        detail::ctible_holder<holder_t<detail::value_t_from<T &&>>, iface_t, Cfg, T &&>
-        explicit(Cfg.explicit_value_ctor)
+        requires std::default_initializable<ref_iface_t> &&
+                 // Must not compete with copy/move.
+                 (!std::same_as<std::remove_cvref_t<T>, wrap>) &&
+                 // The value type must pass the is_wrappable check.
+                 detail::wrappable<detail::value_t_from<T &&>, IFaceT, Args...> &&
+                 // We must be able to construct a holder from x.
+                 detail::ctible_holder<holder_t<detail::value_t_from<T &&>>, iface_t, Cfg, T &&>
+    explicit(Cfg.explicit_value_ctor)
         // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,cppcoreguidelines-pro-type-member-init,hicpp-member-init,google-explicit-constructor,hicpp-explicit-conversions)
-        wrap(T &&x) noexcept(noexcept(this->ctor_impl<detail::value_t_from<T &&>>(std::forward<T>(x))))
+        wrap(T &&x) noexcept(
+            noexcept(this->ctor_impl<detail::value_t_from<T &&>>(std::forward<T>(x))) && noexcept(::new ref_iface_t))
     {
         ctor_impl<detail::value_t_from<T &&>>(std::forward<T>(x));
     }
 
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
     wrap(const wrap &other)
-        requires(Cfg.copyable)
+        requires(Cfg.copyable) && std::default_initializable<ref_iface_t>
     {
         if constexpr (Cfg.static_size == 0u) {
             // Static storage disabled.
@@ -766,7 +773,7 @@ private:
 public:
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
     wrap(wrap &&other) noexcept
-        requires(Cfg.movable)
+        requires(Cfg.movable) && std::default_initializable<ref_iface_t>
     {
         move_init_from(std::move(other));
     }
@@ -793,6 +800,7 @@ private:
 
 public:
     ~wrap()
+        requires std::destructible<ref_iface_t>
     {
         destroy();
     }

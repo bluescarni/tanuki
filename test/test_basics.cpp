@@ -1,5 +1,6 @@
 #include <array>
 #include <functional>
+#include <mutex>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -101,6 +102,10 @@ TEST_CASE("basics")
     w2 = wrap<any_iface>(large{});
     auto w2a = wrap<any_iface>(large{});
     w2 = w2a;
+
+    wrap<any_iface> w(tanuki::emplace<std::mutex>);
+
+    REQUIRE(noexcept(wrap<any_iface>(tanuki::emplace<int>)));
 }
 
 TEST_CASE("basics2")

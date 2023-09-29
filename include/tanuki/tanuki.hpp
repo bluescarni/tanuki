@@ -135,6 +135,23 @@ private:
 #endif
 };
 
+// Concept to detect if a type is default initialisable without throwing.
+template <typename T>
+concept nothrow_default_initializable
+    = std::default_initializable<T> && noexcept(::new (static_cast<void *>(nullptr)) T);
+
+#if defined(__clang__)
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wexceptions"
+
+#elif defined(__GNUC__)
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wterminate"
+
+#endif
+
 // NOTE: constrain value types to be non-cv qualified objects for the time being.
 // References and cv-qualified objects might be useful as future extensions,
 // but we must thread carefully as typeid() removes them.
@@ -172,8 +189,8 @@ struct holder final : public value_iface<IFaceT<void, Args...>>, public IFaceT<h
                 // - destructible.
                 && std::default_initializable<IFaceT<holder<T, IFaceT, Args...>, Args...>>
                 && std::destructible<IFaceT<holder<T, IFaceT, Args...>, Args...>>
-    explicit holder(U &&x) noexcept(
-        std::is_nothrow_constructible_v<T, U &&> && noexcept(::new IFaceT<holder<T, IFaceT, Args...>, Args...>))
+    explicit holder(U &&x) noexcept(std::is_nothrow_constructible_v<T, U &&>
+                                    && nothrow_default_initializable<IFaceT<holder<T, IFaceT, Args...>, Args...>>)
         : m_value(std::forward<U>(x))
     {
     }
@@ -181,8 +198,8 @@ struct holder final : public value_iface<IFaceT<void, Args...>>, public IFaceT<h
         requires(sizeof...(U) != 1u) && std::constructible_from<T, U &&...>
                 && std::default_initializable<IFaceT<holder<T, IFaceT, Args...>, Args...>>
                 && std::destructible<IFaceT<holder<T, IFaceT, Args...>, Args...>>
-    explicit holder(U &&...x) noexcept(
-        std::is_nothrow_constructible_v<T, U &&...> && noexcept(::new IFaceT<holder<T, IFaceT, Args...>, Args...>))
+    explicit holder(U &&...x) noexcept(std::is_nothrow_constructible_v<T, U &&...>
+                                       && nothrow_default_initializable<IFaceT<holder<T, IFaceT, Args...>, Args...>>)
         : m_value(std::forward<U>(x)...)
     {
     }
@@ -292,6 +309,12 @@ private:
 #endif
 };
 
+#if defined(__clang__) || defined(__GNUC__)
+
+#pragma GCC diagnostic pop
+
+#endif
+
 // Implementation of basic storage for the wrap class.
 template <typename IFace, std::size_t StaticStorageSize, std::size_t StaticStorageAlignment>
 struct wrap_storage {
@@ -327,6 +350,14 @@ struct config_base {
 };
 
 } // namespace detail
+
+// Helpers to determine the size and alignment of a holder instance, given the value
+// type T, template interface IFaceT and arguments Args for IFaceT.
+template <typename T, template <typename, typename...> typename IFaceT, typename... Args>
+inline constexpr auto holder_size = sizeof(detail::holder<T, IFaceT, Args...>);
+
+template <typename T, template <typename, typename...> typename IFaceT, typename... Args>
+inline constexpr auto holder_align = alignof(detail::holder<T, IFaceT, Args...>);
 
 // Configuration settings for the wrap class.
 // NOTE: the DefaultValueType is subject to the constraints
@@ -451,6 +482,30 @@ concept ctible_holder =
 template <typename T, template <typename, typename...> typename IFaceT, typename... Args>
 concept wrappable
     = std::same_as<const bool, decltype(is_wrappable<T, IFaceT, Args...>)> && is_wrappable<T, IFaceT, Args...>;
+
+} // namespace detail
+
+// Type used to indicate emplace construction in the wrap class.
+template <typename>
+struct emplace_type {
+};
+
+template <typename T>
+inline constexpr auto emplace = emplace_type<T>{};
+
+namespace detail
+{
+
+// Helper to detect if T is an emplace_type. This is used
+// to avoid ambiguities in the wrap class between the nullary emplace ctor
+// and the generic ctor.
+template <typename>
+struct is_emplace_type : std::false_type {
+};
+
+template <typename T>
+struct is_emplace_type<emplace_type<T>> : std::true_type {
+};
 
 } // namespace detail
 
@@ -661,7 +716,7 @@ class wrap : private detail::wrap_storage<IFaceT<void, Args...>, Cfg.static_size
 #endif
 
 public:
-    wrap() noexcept(noexcept(::new ref_iface_t))
+    wrap() noexcept(detail::nothrow_default_initializable<ref_iface_t>)
         requires(Cfg.invalid_default_ctor) && std::default_initializable<ref_iface_t>
     {
         if constexpr (Cfg.static_size != 0u) {
@@ -675,7 +730,7 @@ public:
         this->m_p_iface = nullptr;
         this->m_pv_iface = nullptr;
     }
-    wrap() noexcept(noexcept(this->ctor_impl<default_value_t>()) && noexcept(::new ref_iface_t))
+    wrap() noexcept(noexcept(this->ctor_impl<default_value_t>()) && detail::nothrow_default_initializable<ref_iface_t>)
         requires(!Cfg.invalid_default_ctor) && std::default_initializable<ref_iface_t> &&
                 // A default value type must have been specified
                 // in the configuration.
@@ -692,6 +747,8 @@ public:
     // Generic ctor from a wrappable value.
     template <typename T>
         requires std::default_initializable<ref_iface_t> &&
+                 // Must not compete with the emplace ctor.
+                 (!detail::is_emplace_type<std::remove_cvref_t<T>>::value) &&
                  // Must not compete with copy/move.
                  (!std::same_as<std::remove_cvref_t<T>, wrap>) &&
                  // The value type must pass the is_wrappable check.
@@ -700,10 +757,26 @@ public:
                  detail::ctible_holder<holder_t<detail::value_t_from<T &&>>, iface_t, Cfg, T &&>
     explicit(Cfg.explicit_value_ctor)
         // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,cppcoreguidelines-pro-type-member-init,hicpp-member-init,google-explicit-constructor,hicpp-explicit-conversions)
-        wrap(T &&x) noexcept(
-            noexcept(this->ctor_impl<detail::value_t_from<T &&>>(std::forward<T>(x))) && noexcept(::new ref_iface_t))
+        wrap(T &&x) noexcept(noexcept(this->ctor_impl<detail::value_t_from<T &&>>(std::forward<T>(x)))
+                             && detail::nothrow_default_initializable<ref_iface_t>)
     {
         ctor_impl<detail::value_t_from<T &&>>(std::forward<T>(x));
+    }
+
+    // NOTE: this will *value-init* if no args
+    // are provided. This must be documented well.
+    template <typename T, typename... U>
+        requires std::default_initializable<ref_iface_t> &&
+                 // Forbid emplacing a wrap inside a wrap.
+                 (!std::same_as<T, wrap>) &&
+                 // The value type must pass the is_wrappable check.
+                 detail::wrappable<T, IFaceT, Args...> &&
+                 // We must be able to construct a holder from args.
+                 detail::ctible_holder<holder_t<T>, iface_t, Cfg, U &&...>
+    explicit wrap(emplace_type<T>, U &&...args) noexcept(noexcept(this->ctor_impl<T>(std::forward<U>(args)...))
+                                                         && detail::nothrow_default_initializable<ref_iface_t>)
+    {
+        ctor_impl<T>(std::forward<U>(args)...);
     }
 
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init,hicpp-member-init)

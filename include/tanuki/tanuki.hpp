@@ -155,6 +155,11 @@ struct holder final : public value_iface<IFaceT<void, Args...>>, public IFaceT<h
     holder &operator=(const holder &) = delete;
     holder &operator=(holder &&) noexcept = delete;
 
+    // NOTE: this may not end up be noexcept because the value
+    // or the interface implementation might throw on destruction.
+    // In any case, the wrap dtor is marked noexcept, so, similarly
+    // to move operations, if the value or the interface implementation
+    // throw on destruction, the program will terminate.
     ~holder() final = default;
 
     // NOTE: special-casing to avoid the single-argument ctor
@@ -165,10 +170,8 @@ struct holder final : public value_iface<IFaceT<void, Args...>>, public IFaceT<h
                 // NOTE: we need the interface implementation to be:
                 // - default initable,
                 // - destructible.
-                // We also want it to be nothrow-dtible so that the defaulted ~holder()
-                // destructor is also nothrow.
                 && std::default_initializable<IFaceT<holder<T, IFaceT, Args...>, Args...>>
-                && std::is_nothrow_destructible_v<IFaceT<holder<T, IFaceT, Args...>, Args...>>
+                && std::destructible<IFaceT<holder<T, IFaceT, Args...>, Args...>>
     explicit holder(U &&x) noexcept(
         std::is_nothrow_constructible_v<T, U &&> && noexcept(::new IFaceT<holder<T, IFaceT, Args...>, Args...>))
         : m_value(std::forward<U>(x))
@@ -177,7 +180,7 @@ struct holder final : public value_iface<IFaceT<void, Args...>>, public IFaceT<h
     template <typename... U>
         requires(sizeof...(U) != 1u) && std::constructible_from<T, U &&...>
                 && std::default_initializable<IFaceT<holder<T, IFaceT, Args...>, Args...>>
-                && std::is_nothrow_destructible_v<IFaceT<holder<T, IFaceT, Args...>, Args...>>
+                && std::destructible<IFaceT<holder<T, IFaceT, Args...>, Args...>>
     explicit holder(U &&...x) noexcept(
         std::is_nothrow_constructible_v<T, U &&...> && noexcept(::new IFaceT<holder<T, IFaceT, Args...>, Args...>))
         : m_value(std::forward<U>(x)...)

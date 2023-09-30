@@ -122,7 +122,7 @@ TEST_CASE("basics2")
 
 TEST_CASE("s11n nostatic")
 {
-    using wrap_t = tanuki::wrap<any_iface, tanuki::config{.static_size = 0}>;
+    using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{.static_size = 0}>;
 
     wrap_t w(large{});
     get_value_ptr<large>(w)->buffer[0] = 42;

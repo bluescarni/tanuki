@@ -7,8 +7,12 @@
 
 #if defined(TANUKI_WITH_BOOST_S11N)
 
+// NOLINTBEGIN(misc-include-cleaner)
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/array.hpp>
 #include <boost/serialization/string.hpp>
+// NOLINTEND(misc-include-cleaner)
 
 #endif
 
@@ -103,7 +107,7 @@ TEST_CASE("basics")
     auto w2a = wrap<any_iface>(large{});
     w2 = w2a;
 
-    wrap<any_iface> w(tanuki::emplace<std::mutex>);
+    const wrap<any_iface> w(tanuki::emplace<std::mutex>);
 
     REQUIRE(noexcept(wrap<any_iface>(tanuki::emplace<int>)));
 }

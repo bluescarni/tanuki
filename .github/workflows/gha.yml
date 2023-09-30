@@ -6,9 +6,10 @@ on:
   pull_request:
     branches:
       - main
-  conda_gcc_10:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Build
-        run: bash tools/gha_conda_gcc_10.sh
+  jobs:
+    conda_gcc_10:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v3
+        - name: Build
+          run: bash tools/gha_conda_gcc_10.sh

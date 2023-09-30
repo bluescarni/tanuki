@@ -188,6 +188,11 @@ concept nothrow_default_initializable
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wterminate"
 
+#elif defined(_MSC_VER)
+
+#pragma warning(push)
+#pragma warning(disable : 4297)
+
 #endif
 
 // NOTE: constrain value types to be non-cv qualified objects for the time being.
@@ -350,6 +355,10 @@ private:
 #if defined(__clang__) || defined(__GNUC__)
 
 #pragma GCC diagnostic pop
+
+#elif defined(_MSC_VER)
+
+#pragma warning(pop)
 
 #endif
 

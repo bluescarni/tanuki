@@ -486,6 +486,9 @@ concept wrappable
 template <auto Cfg>
 concept cfg_no_invalid_default_ctor = !Cfg.invalid_default_ctor;
 
+template <typename T, typename U>
+concept not_same_as = !std::same_as<T, U>;
+
 } // namespace detail
 
 // Type used to indicate emplace construction in the wrap class.
@@ -737,7 +740,7 @@ public:
         requires detail::cfg_no_invalid_default_ctor<Cfg> && std::default_initializable<ref_iface_t> &&
                  // A default value type must have been specified
                  // in the configuration.
-                 (!std::same_as<void, default_value_t>) &&
+                 detail::not_same_as<void, default_value_t> &&
                  // default_value_t must pass the is_wrappable check.
                  detail::wrappable<default_value_t, IFaceT, Args...> &&
                  // We must be able to value-init the holder.

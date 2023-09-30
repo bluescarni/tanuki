@@ -24,7 +24,6 @@ cd build
 # GCC build.
 cmake -G Ninja ../ -DCMAKE_PREFIX_PATH=$deps_dir -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug -DTANUKI_BUILD_TESTS=yes -DTANUKI_WITH_BOOST_S11N=yes -DTANUKI_CLANG_TIDY=yes
 ninja
-ctest -V -j4
 
 set +e
 set +x

@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: Build
         run: bash tools/gha_osx_clang_14.sh
-  windows_vs2019:
+  windows_vs2022:
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v3

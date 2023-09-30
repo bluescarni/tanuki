@@ -22,7 +22,7 @@ mkdir build
 cd build
 
 # GCC build.
-cmake -G ninja ../ -DCMAKE_PREFIX_PATH=$deps_dir -DCMAKE_BUILD_TYPE=Debug -DTANUKI_BUILD_TESTS=yes -DTANUKI_WITH_BOOST_S11N=yes
+cmake -G Ninja ../ -DCMAKE_PREFIX_PATH=$deps_dir -DCMAKE_BUILD_TYPE=Debug -DTANUKI_BUILD_TESTS=yes -DTANUKI_WITH_BOOST_S11N=yes
 ninja
 ctest -V -j4
 

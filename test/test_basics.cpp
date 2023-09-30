@@ -100,9 +100,13 @@ TEST_CASE("basics")
 
     // A few simple initialisations from values.
     wrap_t w1(3.), w2(large{}), w3(std::function<void()>{});
-    REQUIRE(tanuki::value_type_index(w1) == typeid(double));
-    REQUIRE(tanuki::value_type_index(w2) == typeid(large));
-    REQUIRE(tanuki::value_type_index(w3) == typeid(std::function<void()>));
+    REQUIRE(value_type_index(w1) == typeid(double));
+    REQUIRE(*value_ptr<double>(w1) == 3.);
+    REQUIRE(value_isa<large>(w2));
+    value_ref<large>(w2).buffer[0] = 2;
+    REQUIRE(value_ptr<large>(std::as_const(w2))->buffer[0] == 2);
+    REQUIRE(value_type_index(w3) == typeid(std::function<void()>));
+    REQUIRE(!(*value_ptr<std::function<void()>>(w3)));
 
     // Default ctor disabled by default.
     REQUIRE(!std::default_initializable<wrap_t>);

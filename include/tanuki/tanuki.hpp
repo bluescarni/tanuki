@@ -1268,6 +1268,26 @@ T *value_ptr(wrap<IFaceT, Cfg, Args...> &w) noexcept
     }
 }
 
+template <typename T, template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+const T &value_ref(const wrap<IFaceT, Cfg, Args...> &w)
+{
+    const auto *ptr = value_ptr<T>(w);
+    return ptr ? *ptr : throw std::bad_cast{};
+}
+
+template <typename T, template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+T &value_ref(wrap<IFaceT, Cfg, Args...> &w)
+{
+    auto *ptr = value_ptr<T>(w);
+    return ptr ? *ptr : throw std::bad_cast{};
+}
+
+template <typename T, template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+bool value_isa(const wrap<IFaceT, Cfg, Args...> &w) noexcept
+{
+    return value_ptr<T>(w) != nullptr;
+}
+
 TANUKI_END_NAMESPACE
 
 #if defined(__GNUC__)

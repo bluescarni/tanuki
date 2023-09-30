@@ -10,12 +10,10 @@
 
 #if defined(TANUKI_WITH_BOOST_S11N)
 
-// NOLINTBEGIN(misc-include-cleaner)
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/array.hpp>
 #include <boost/serialization/string.hpp>
-// NOLINTEND(misc-include-cleaner)
 
 #endif
 
@@ -77,6 +75,16 @@ TANUKI_S11N_WRAP_EXPORT(small, any_iface)
 struct nonwrappable {
 };
 
+struct copythrow {
+    copythrow() = default;
+    // NOLINTNEXTLINE
+    copythrow(const copythrow &){};
+    copythrow(copythrow &&) noexcept = delete;
+    copythrow &operator=(const copythrow &) = delete;
+    copythrow &operator=(copythrow &&) noexcept = delete;
+    ~copythrow() = default;
+};
+
 namespace tanuki
 {
 
@@ -90,15 +98,29 @@ TEST_CASE("basics")
     using tanuki::wrap;
     using wrap_t = wrap<any_iface>;
 
+    // A few simple initialisations from values.
     wrap_t w1(3.), w2(large{}), w3(std::function<void()>{});
-
     REQUIRE(tanuki::value_type_index(w1) == typeid(double));
     REQUIRE(tanuki::value_type_index(w2) == typeid(large));
     REQUIRE(tanuki::value_type_index(w3) == typeid(std::function<void()>));
 
+    // Default ctor disabled by default.
     REQUIRE(!std::default_initializable<wrap_t>);
+
+    // noexcept handling for the value ctor.
     REQUIRE(std::is_nothrow_constructible_v<wrap_t, int>);
+    REQUIRE(std::is_constructible_v<wrap_t, const copythrow &>);
+    REQUIRE(!std::is_nothrow_constructible_v<wrap_t, const copythrow &>);
+
+    // noexcept handling for the emplace ctor.
+    REQUIRE(std::is_nothrow_constructible_v<wrap_t, tanuki::emplace_type<int>, int>);
+    REQUIRE(std::is_constructible_v<wrap_t, tanuki::emplace_type<copythrow>, const copythrow &>);
+    REQUIRE(!std::is_nothrow_constructible_v<wrap_t, tanuki::emplace_type<copythrow>, const copythrow &>);
+
+    // Value ctor explicit by default.
     REQUIRE(!std::is_convertible_v<int, wrap_t>);
+
+    // Value ctor disabled for non wrappable type.
     REQUIRE(!std::is_constructible_v<wrap_t, nonwrappable>);
 
     auto w4 = w3;
@@ -134,7 +156,7 @@ TEST_CASE("basics2")
 
     const wrap<any_iface, config<int>{}> w1;
 
-    (void)tanuki::get_iface_ptr(w1);
+    (void)tanuki::iface_ptr(w1);
 }
 
 #if defined(TANUKI_WITH_BOOST_S11N)
@@ -144,7 +166,7 @@ TEST_CASE("s11n nostatic")
     using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{.static_size = 0}>;
 
     wrap_t w(large{});
-    get_value_ptr<large>(w)->buffer[0] = 42;
+    value_ptr<large>(w)->buffer[0] = 42;
 
     std::stringstream ss;
 
@@ -161,7 +183,7 @@ TEST_CASE("s11n nostatic")
     }
 
     REQUIRE(value_type_index(w) == typeid(large));
-    REQUIRE(get_value_ptr<large>(w)->buffer[0] == 42);
+    REQUIRE(value_ptr<large>(w)->buffer[0] == 42);
 }
 
 TEST_CASE("s11n large")
@@ -169,7 +191,7 @@ TEST_CASE("s11n large")
     using wrap_t = tanuki::wrap<any_iface>;
 
     wrap_t w(large{});
-    get_value_ptr<large>(w)->buffer[0] = 42;
+    value_ptr<large>(w)->buffer[0] = 42;
 
     std::stringstream ss;
 
@@ -186,7 +208,7 @@ TEST_CASE("s11n large")
     }
 
     REQUIRE(value_type_index(w) == typeid(large));
-    REQUIRE(get_value_ptr<large>(w)->buffer[0] == 42);
+    REQUIRE(value_ptr<large>(w)->buffer[0] == 42);
 }
 
 TEST_CASE("s11n small")
@@ -194,7 +216,7 @@ TEST_CASE("s11n small")
     using wrap_t = tanuki::wrap<any_iface>;
 
     wrap_t w(small{});
-    get_value_ptr<small>(w)->s = "-42";
+    value_ptr<small>(w)->s = "-42";
 
     std::stringstream ss;
 
@@ -211,7 +233,7 @@ TEST_CASE("s11n small")
     }
 
     REQUIRE(value_type_index(w) == typeid(small));
-    REQUIRE(get_value_ptr<small>(w)->s == "-42");
+    REQUIRE(value_ptr<small>(w)->s == "-42");
 }
 
 #endif

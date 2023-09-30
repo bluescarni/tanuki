@@ -483,6 +483,9 @@ template <typename T, template <typename, typename...> typename IFaceT, typename
 concept wrappable
     = std::same_as<const bool, decltype(is_wrappable<T, IFaceT, Args...>)> && is_wrappable<T, IFaceT, Args...>;
 
+template <auto Cfg>
+concept cfg_no_invalid_default_ctor = !Cfg.invalid_default_ctor;
+
 } // namespace detail
 
 // Type used to indicate emplace construction in the wrap class.
@@ -731,14 +734,14 @@ public:
         this->m_pv_iface = nullptr;
     }
     wrap() noexcept(noexcept(this->ctor_impl<default_value_t>()) && detail::nothrow_default_initializable<ref_iface_t>)
-        requires(!Cfg.invalid_default_ctor) && std::default_initializable<ref_iface_t> &&
-                // A default value type must have been specified
-                // in the configuration.
-                (!std::same_as<void, default_value_t>) &&
-                // default_value_t must pass the is_wrappable check.
-                detail::wrappable<default_value_t, IFaceT, Args...> &&
-                // We must be able to value-init the holder.
-                detail::ctible_holder<holder_t<default_value_t>, iface_t, Cfg>
+        requires detail::cfg_no_invalid_default_ctor<Cfg> && std::default_initializable<ref_iface_t> &&
+                 // A default value type must have been specified
+                 // in the configuration.
+                 (!std::same_as<void, default_value_t>) &&
+                 // default_value_t must pass the is_wrappable check.
+                 detail::wrappable<default_value_t, IFaceT, Args...> &&
+                 // We must be able to value-init the holder.
+                 detail::ctible_holder<holder_t<default_value_t>, iface_t, Cfg>
 
     {
         ctor_impl<default_value_t>();

@@ -72,6 +72,15 @@
     }                                                                                                                  \
     }
 
+// Clang concept bugs.
+// NOTE: perhaps we can put more specific version checking
+// here once we figure out exactly which versions work ok.
+#if defined(__clang__)
+
+#define TANUKI_CLANG_BUGGY_CONCEPTS
+
+#endif
+
 #if defined(__GNUC__)
 
 #pragma GCC diagnostic push
@@ -83,6 +92,35 @@ TANUKI_BEGIN_NAMESPACE
 
 namespace detail
 {
+
+#if defined(TANUKI_CLANG_BUGGY_CONCEPTS)
+
+// http://en.cppreference.com/w/cpp/experimental/is_detected
+template <class Default, class AlwaysVoid, template <class...> class Op, class... Args>
+struct detector {
+    using value_t = std::false_type;
+    using type = Default;
+};
+
+struct nonesuch {
+    nonesuch() = delete;
+    ~nonesuch() = delete;
+    nonesuch(nonesuch const &) = delete;
+    nonesuch(nonesuch &&) noexcept = delete;
+    nonesuch &operator=(nonesuch const &) = delete;
+    nonesuch &operator=(nonesuch &&) noexcept = delete;
+};
+
+template <class Default, template <class...> class Op, class... Args>
+struct detector<Default, std::void_t<Op<Args...>>, Op, Args...> {
+    using value_t = std::true_type;
+    using type = Op<Args...>;
+};
+
+template <template <class...> class Op, class... Args>
+using detected_t = typename detector<nonesuch, void, Op, Args...>::type;
+
+#endif
 
 // NOTE: an argument of this tag type is appended
 // to the signature of all member functions in value_iface. The purpose
@@ -738,8 +776,13 @@ public:
                 // default_value_t must pass the is_wrappable check.
                 detail::wrappable<default_value_t, IFaceT, Args...> &&
                 // We must be able to value-init the holder.
-                detail::ctible_holder<holder_t<default_value_t>, iface_t, Cfg>
-
+                detail::ctible_holder<
+#if defined(TANUKI_CLANG_BUGGY_CONCEPTS)
+                    detail::detected_t<holder_t, default_value_t>,
+#else
+                    holder_t<default_value_t>,
+#endif
+                    iface_t, Cfg>
     {
         ctor_impl<default_value_t>();
     }
@@ -1274,5 +1317,11 @@ struct tracking_level<tanuki::detail::value_iface<IFace>> {
 
 #undef TANUKI_ABI_TAG_ATTR
 #undef TANUKI_NO_UNIQUE_ADDRESS
+
+#if defined(TANUKI_CLANG_BUGGY_CONCEPTS)
+
+#undef TANUKI_CLANG_BUGGY_CONCEPTS
+
+#endif
 
 #endif

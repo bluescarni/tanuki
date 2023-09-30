@@ -1,8 +1,11 @@
 #include <array>
+#include <concepts>
 #include <functional>
 #include <mutex>
 #include <sstream>
 #include <string>
+#include <type_traits>
+#include <typeinfo>
 #include <utility>
 
 #if defined(TANUKI_WITH_BOOST_S11N)
@@ -42,15 +45,6 @@ template <typename Holder>
 struct any_iface : any_iface<void> {
 };
 
-namespace tanuki
-{
-
-// template <typename Wrap>
-// struct ref_iface<Wrap, any_iface> {
-// };
-
-} // namespace tanuki
-
 struct large {
     std::array<char, 100> buffer = {1, 2, 3};
     std::string str = "hello world                                                                            ";
@@ -80,11 +74,32 @@ TANUKI_S11N_WRAP_EXPORT(small, any_iface)
 
 #endif
 
+struct nonwrappable {
+};
+
+namespace tanuki
+{
+
+template <template <typename, typename...> typename IFaceT, typename... Args>
+inline constexpr bool is_wrappable<nonwrappable, IFaceT, Args...> = false;
+
+} // namespace tanuki
+
 TEST_CASE("basics")
 {
     using tanuki::wrap;
+    using wrap_t = wrap<any_iface>;
 
-    wrap<any_iface> w1(3.), w2(large{}), w3(std::function<void()>{});
+    wrap_t w1(3.), w2(large{}), w3(std::function<void()>{});
+
+    REQUIRE(tanuki::value_type_index(w1) == typeid(double));
+    REQUIRE(tanuki::value_type_index(w2) == typeid(large));
+    REQUIRE(tanuki::value_type_index(w3) == typeid(std::function<void()>));
+
+    REQUIRE(!std::default_initializable<wrap_t>);
+    REQUIRE(std::is_nothrow_constructible_v<wrap_t, int>);
+    REQUIRE(!std::is_convertible_v<int, wrap_t>);
+    REQUIRE(!std::is_constructible_v<wrap_t, nonwrappable>);
 
     auto w4 = w3;
 
@@ -95,21 +110,21 @@ TEST_CASE("basics")
 
     w1 = std::move(w3);
 
-    w3 = wrap<any_iface>(std::function<void()>{});
+    w3 = wrap_t(std::function<void()>{});
 
     auto w1a = w1;
     w1 = w1a;
 
-    auto w5a = wrap<any_iface>(large{});
+    auto w5a = wrap_t(large{});
     w5a = std::move(w5);
 
-    w2 = wrap<any_iface>(large{});
-    auto w2a = wrap<any_iface>(large{});
+    w2 = wrap_t(large{});
+    auto w2a = wrap_t(large{});
     w2 = w2a;
 
-    const wrap<any_iface> w(tanuki::emplace<std::mutex>);
+    const wrap_t w(tanuki::emplace<std::mutex>);
 
-    REQUIRE(noexcept(wrap<any_iface>(tanuki::emplace<int>)));
+    REQUIRE(noexcept(wrap_t(tanuki::emplace<int>)));
 }
 
 TEST_CASE("basics2")

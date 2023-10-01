@@ -274,7 +274,7 @@ private:
             auto *ret = new holder(m_value);
             return {ret, ret};
         } else {
-            throw std::invalid_argument("Attempting to copy-construct a non-copyable value type");
+            throw std::invalid_argument("Attempting to clone a non-copyable value type");
         }
     }
     // Copy-init a new holder into the storage beginning at ptr.

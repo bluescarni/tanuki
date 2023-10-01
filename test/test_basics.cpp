@@ -151,7 +151,7 @@ TEST_CASE("basics")
     // NOLINTEND
 
     // Emplace test with class which is not copyable/movable.
-    const wrap_t w_mut(tanuki::emplace<std::mutex>);
+    wrap_t w_mut(tanuki::emplace<std::mutex>);
     REQUIRE(noexcept(wrap_t(tanuki::emplace<int>)));
 
     // Check throwing in value_ref.

@@ -301,7 +301,7 @@ private:
             auto *ret = ::new (ptr) holder(std::move(m_value));
             return {ret, ret};
         } else {
-            throw std::invalid_argument("Attempting to move-construct a non-movable value type");
+            throw std::invalid_argument("Attempting to move-construct a non-movable value type"); // LCOV_EXCL_LINE
         }
     }
     // Copy-assign m_value into the object of type T assumed to be stored in ptr.
@@ -326,7 +326,7 @@ private:
         if constexpr (std::is_move_assignable_v<T>) {
             *static_cast<T *>(ptr) = std::move(m_value);
         } else {
-            throw std::invalid_argument("Attempting to move-assign a non-movable value type");
+            throw std::invalid_argument("Attempting to move-assign a non-movable value type"); // LCOV_EXCL_LINE
         }
     }
     // Swap m_value with the object of type T assumed to be stored in ptr.

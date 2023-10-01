@@ -26,3 +26,6 @@ function(ADD_TANUKI_TESTCASE arg1)
 endfunction()
 
 ADD_TANUKI_TESTCASE(test_basics)
+ADD_TANUKI_TESTCASE(test_swap)
+ADD_TANUKI_TESTCASE(test_defctor)
+ADD_TANUKI_TESTCASE(test_noncopyable)

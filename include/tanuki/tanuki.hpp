@@ -95,6 +95,9 @@ namespace detail
 
 #if defined(TANUKI_CLANG_BUGGY_CONCEPTS)
 
+// NOTE: we employ the detection idiom in order to work
+// around certain bugs in clang's concepts implementation.
+
 // http://en.cppreference.com/w/cpp/experimental/is_detected
 template <class Default, class AlwaysVoid, template <class...> class Op, class... Args>
 struct detector {
@@ -271,7 +274,7 @@ private:
             auto *ret = new holder(m_value);
             return {ret, ret};
         } else {
-            throw std::invalid_argument("Attempting to copy-construct a non-copyable value type");
+            throw std::invalid_argument("Attempting to clone a non-copyable value type");
         }
     }
     // Copy-init a new holder into the storage beginning at ptr.
@@ -298,7 +301,7 @@ private:
             auto *ret = ::new (ptr) holder(std::move(m_value));
             return {ret, ret};
         } else {
-            throw std::invalid_argument("Attempting to move-construct a non-movable value type");
+            throw std::invalid_argument("Attempting to move-construct a non-movable value type"); // LCOV_EXCL_LINE
         }
     }
     // Copy-assign m_value into the object of type T assumed to be stored in ptr.
@@ -323,7 +326,7 @@ private:
         if constexpr (std::is_move_assignable_v<T>) {
             *static_cast<T *>(ptr) = std::move(m_value);
         } else {
-            throw std::invalid_argument("Attempting to move-assign a non-movable value type");
+            throw std::invalid_argument("Attempting to move-assign a non-movable value type"); // LCOV_EXCL_LINE
         }
     }
     // Swap m_value with the object of type T assumed to be stored in ptr.
@@ -334,7 +337,7 @@ private:
             using std::swap;
             swap(m_value, *static_cast<T *>(ptr));
         } else {
-            throw std::invalid_argument("Attempting to swap a non-swappable value type");
+            throw std::invalid_argument("Attempting to swap a non-swappable value type"); // LCOV_EXCL_LINE
         }
     }
 
@@ -465,24 +468,24 @@ struct ref_iface {
 #define TANUKI_REF_IFACE_MEMFUN(name)                                                                                  \
     template <typename JustWrap = Wrap, typename... MemFunArgs>                                                        \
     auto name(MemFunArgs &&...args) & noexcept(                                                                        \
-        noexcept(get_iface_ptr(*static_cast<JustWrap *>(this))->name(std::forward<MemFunArgs>(args)...)))              \
-        -> decltype(get_iface_ptr(*static_cast<JustWrap *>(this))->name(std::forward<MemFunArgs>(args)...))            \
+        noexcept(iface_ptr(*static_cast<JustWrap *>(this))->name(std::forward<MemFunArgs>(args)...)))                  \
+        -> decltype(iface_ptr(*static_cast<JustWrap *>(this))->name(std::forward<MemFunArgs>(args)...))                \
     {                                                                                                                  \
-        return get_iface_ptr(*static_cast<Wrap *>(this))->name(std::forward<MemFunArgs>(args)...);                     \
+        return iface_ptr(*static_cast<Wrap *>(this))->name(std::forward<MemFunArgs>(args)...);                         \
     }                                                                                                                  \
     template <typename JustWrap = Wrap, typename... MemFunArgs>                                                        \
     auto name(MemFunArgs &&...args) const & noexcept(                                                                  \
-        noexcept(get_iface_ptr(*static_cast<const JustWrap *>(this))->name(std::forward<MemFunArgs>(args)...)))        \
-        -> decltype(get_iface_ptr(*static_cast<const JustWrap *>(this))->name(std::forward<MemFunArgs>(args)...))      \
+        noexcept(iface_ptr(*static_cast<const JustWrap *>(this))->name(std::forward<MemFunArgs>(args)...)))            \
+        -> decltype(iface_ptr(*static_cast<const JustWrap *>(this))->name(std::forward<MemFunArgs>(args)...))          \
     {                                                                                                                  \
-        return get_iface_ptr(*static_cast<const Wrap *>(this))->name(std::forward<MemFunArgs>(args)...);               \
+        return iface_ptr(*static_cast<const Wrap *>(this))->name(std::forward<MemFunArgs>(args)...);                   \
     }                                                                                                                  \
     template <typename JustWrap = Wrap, typename... MemFunArgs>                                                        \
     auto name(MemFunArgs &&...args) && noexcept(                                                                       \
-        noexcept(std::move(*get_iface_ptr(*static_cast<JustWrap *>(this))).name(std::forward<MemFunArgs>(args)...)))   \
-        -> decltype(std::move(*get_iface_ptr(*static_cast<JustWrap *>(this))).name(std::forward<MemFunArgs>(args)...)) \
+        noexcept(std::move(*iface_ptr(*static_cast<JustWrap *>(this))).name(std::forward<MemFunArgs>(args)...)))       \
+        -> decltype(std::move(*iface_ptr(*static_cast<JustWrap *>(this))).name(std::forward<MemFunArgs>(args)...))     \
     {                                                                                                                  \
-        return std::move(*get_iface_ptr(*static_cast<Wrap *>(this))).name(std::forward<MemFunArgs>(args)...);          \
+        return std::move(*iface_ptr(*static_cast<Wrap *>(this))).name(std::forward<MemFunArgs>(args)...);              \
     }
 
 namespace detail
@@ -573,16 +576,16 @@ template <template <typename, typename...> typename IFaceT, auto Cfg, typename..
 [[nodiscard]] std::type_index value_type_index(const wrap<IFaceT, Cfg, Args...> &) noexcept;
 
 template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
-[[nodiscard]] const IFaceT<void, Args...> *get_iface_ptr(const wrap<IFaceT, Cfg, Args...> &) noexcept;
+[[nodiscard]] const IFaceT<void, Args...> *iface_ptr(const wrap<IFaceT, Cfg, Args...> &) noexcept;
 
 template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
-[[nodiscard]] IFaceT<void, Args...> *get_iface_ptr(wrap<IFaceT, Cfg, Args...> &) noexcept;
+[[nodiscard]] IFaceT<void, Args...> *iface_ptr(wrap<IFaceT, Cfg, Args...> &) noexcept;
 
 template <typename T, template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
-[[nodiscard]] const T *get_value_ptr(const wrap<IFaceT, Cfg, Args...> &) noexcept;
+[[nodiscard]] const T *value_ptr(const wrap<IFaceT, Cfg, Args...> &) noexcept;
 
 template <typename T, template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
-[[nodiscard]] T *get_value_ptr(wrap<IFaceT, Cfg, Args...> &) noexcept;
+[[nodiscard]] T *value_ptr(wrap<IFaceT, Cfg, Args...> &) noexcept;
 
 template <template <typename, typename...> typename IFaceT, auto Cfg = default_config, typename... Args>
     requires std::is_polymorphic_v<IFaceT<void, Args...>> && std::has_virtual_destructor_v<IFaceT<void, Args...>>
@@ -604,12 +607,14 @@ class wrap : private detail::wrap_storage<IFaceT<void, Args...>, Cfg.static_size
     friend void swap<>(wrap &, wrap &) noexcept;
     friend bool is_invalid<>(const wrap &) noexcept;
     friend std::type_index value_type_index<>(const wrap &) noexcept;
-    friend const iface_t *get_iface_ptr<>(const wrap &) noexcept;
-    friend iface_t *get_iface_ptr<>(wrap &) noexcept;
+    friend const iface_t *iface_ptr<>(const wrap &) noexcept;
+    friend iface_t *iface_ptr<>(wrap &) noexcept;
+    // NOTE: need to declare fully generic friend, as friendship
+    // does not support partial specialisation.
     template <typename T, template <typename, typename...> typename IFaceT2, auto Cfg2, typename... Args2>
-    friend const T *get_value_ptr(const wrap<IFaceT2, Cfg2, Args2...> &) noexcept;
+    friend const T *value_ptr(const wrap<IFaceT2, Cfg2, Args2...> &) noexcept;
     template <typename T, template <typename, typename...> typename IFaceT2, auto Cfg2, typename... Args2>
-    friend T *get_value_ptr(wrap<IFaceT2, Cfg2, Args2...> &) noexcept;
+    friend T *value_ptr(wrap<IFaceT2, Cfg2, Args2...> &) noexcept;
 
     // The default value type.
     using default_value_t = typename decltype(Cfg)::default_value_type;
@@ -787,6 +792,8 @@ public:
                 // We must be able to value-init the holder.
                 detail::ctible_holder<
 #if defined(TANUKI_CLANG_BUGGY_CONCEPTS)
+                    // NOTE: this seems due to this bug:
+                    // https://github.com/llvm/llvm-project/issues/55945
                     detail::detected_t<holder_t, default_value_t>,
 #else
                     holder_t<default_value_t>,
@@ -843,9 +850,8 @@ public:
 
             if (st) {
                 // Other has static storage.
-                auto [new_p_iface, new_pv_iface] = pv_iface->copy_init_holder(this->static_storage, detail::vtag{});
-                this->m_p_iface = new_p_iface;
-                this->m_pv_iface = new_pv_iface;
+                std::tie(this->m_p_iface, this->m_pv_iface)
+                    = pv_iface->copy_init_holder(this->static_storage, detail::vtag{});
             } else {
                 // Other has dynamic storage.
                 auto [new_p_iface, new_pv_iface] = pv_iface->clone(detail::vtag{});
@@ -874,10 +880,8 @@ private:
 
             if (st) {
                 // Other has static storage.
-                auto [new_p_iface, new_pv_iface]
+                std::tie(this->m_p_iface, this->m_pv_iface)
                     = std::move(*pv_iface).move_init_holder(this->static_storage, detail::vtag{});
-                this->m_p_iface = new_p_iface;
-                this->m_pv_iface = new_pv_iface;
             } else {
                 // Other has dynamic storage.
                 ::new (this->static_storage) iface_t *(p_iface);
@@ -955,18 +959,9 @@ public:
 
         // The internal types are the same.
         if constexpr (Cfg.static_size == 0u) {
-            // For dynamic storage, delete the current value and
-            // then shallow copy the interface pointers
-            // from other.
-            // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-            delete this->m_p_iface;
-
-            this->m_p_iface = other.m_p_iface;
-            this->m_pv_iface = other.m_pv_iface;
-
-            // Invalidate other.
-            other.m_p_iface = nullptr;
-            other.m_pv_iface = nullptr;
+            // For dynamic storage, swap the pointers.
+            std::swap(this->m_p_iface, other.m_p_iface);
+            std::swap(this->m_pv_iface, other.m_pv_iface);
         } else {
             const auto [p_iface0, pv_iface0, st0] = stype();
             const auto [p_iface1, pv_iface1, st1] = other.stype();
@@ -979,22 +974,13 @@ public:
                 // For static storage, directly move assign the internal value.
                 std::move(*pv_iface1).move_assign_value(pv_iface0->value_ptr(detail::vtag{}), detail::vtag{});
             } else {
-                // For dynamic storage, delete the current value and
-                // then shallow copy the interface pointers
-                // from other.
-                // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-                delete p_iface0;
-
-                // NOTE: no need to set m_p_iface to null, as
-                // it should already be null.
-                ::new (this->static_storage) iface_t *(p_iface1);
+                // For dynamic storage, swap the pointers.
                 assert(this->m_p_iface == nullptr);
-                this->m_pv_iface = pv_iface1;
-
-                // Invalidate other.
-                ::new (other.static_storage) iface_t *(nullptr);
                 assert(other.m_p_iface == nullptr);
-                other.m_pv_iface = nullptr;
+
+                std::swap(*std::launder(reinterpret_cast<iface_t **>(this->static_storage)),
+                          *std::launder(reinterpret_cast<iface_t **>(other.static_storage)));
+                std::swap(this->m_pv_iface, other.m_pv_iface);
             }
         }
 
@@ -1037,49 +1023,49 @@ public:
     const iface_t *operator->() const noexcept
         requires(Cfg.pointer_interface)
     {
-        return get_iface_ptr(*this);
+        return iface_ptr(*this);
     }
     iface_t *operator->() noexcept
         requires(Cfg.pointer_interface)
     {
-        return get_iface_ptr(*this);
+        return iface_ptr(*this);
     }
 
     const iface_t &operator*() const noexcept
         requires(Cfg.pointer_interface)
     {
-        return *get_iface_ptr(*this);
+        return *iface_ptr(*this);
     }
     iface_t &operator*() noexcept
         requires(Cfg.pointer_interface)
     {
-        return *get_iface_ptr(*this);
+        return *iface_ptr(*this);
     }
 
     // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
     explicit(Cfg.explicit_iface_conversion) operator const iface_t *() const noexcept
         requires(Cfg.pointer_interface)
     {
-        return get_iface_ptr(*this);
+        return iface_ptr(*this);
     }
     // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
     explicit(Cfg.explicit_iface_conversion) operator iface_t *() noexcept
         requires(Cfg.pointer_interface)
     {
-        return get_iface_ptr(*this);
+        return iface_ptr(*this);
     }
 
     // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
     explicit(Cfg.explicit_iface_conversion) operator const iface_t &() const noexcept
         requires(Cfg.pointer_interface)
     {
-        return *get_iface_ptr(*this);
+        return *iface_ptr(*this);
     }
     // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
     explicit(Cfg.explicit_iface_conversion) operator iface_t &() noexcept
         requires(Cfg.pointer_interface)
     {
-        return *get_iface_ptr(*this);
+        return *iface_ptr(*this);
     }
 };
 
@@ -1202,7 +1188,7 @@ void swap(wrap<IFaceT, Cfg, Args...> &w1, wrap<IFaceT, Cfg, Args...> &w2) noexce
 }
 
 template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
-const IFaceT<void, Args...> *get_iface_ptr(const wrap<IFaceT, Cfg, Args...> &w) noexcept
+const IFaceT<void, Args...> *iface_ptr(const wrap<IFaceT, Cfg, Args...> &w) noexcept
 {
     if constexpr (Cfg.static_size == 0u) {
         return w.m_p_iface;
@@ -1212,7 +1198,7 @@ const IFaceT<void, Args...> *get_iface_ptr(const wrap<IFaceT, Cfg, Args...> &w) 
 }
 
 template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
-IFaceT<void, Args...> *get_iface_ptr(wrap<IFaceT, Cfg, Args...> &w) noexcept
+IFaceT<void, Args...> *iface_ptr(wrap<IFaceT, Cfg, Args...> &w) noexcept
 {
     if constexpr (Cfg.static_size == 0u) {
         return w.m_p_iface;
@@ -1222,7 +1208,7 @@ IFaceT<void, Args...> *get_iface_ptr(wrap<IFaceT, Cfg, Args...> &w) noexcept
 }
 
 template <typename T, template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
-const T *get_value_ptr(const wrap<IFaceT, Cfg, Args...> &w) noexcept
+const T *value_ptr(const wrap<IFaceT, Cfg, Args...> &w) noexcept
 {
     if constexpr (Cfg.static_size == 0u) {
         if (w.m_pv_iface->value_type_index(detail::vtag{}) == typeid(T)) {
@@ -1242,7 +1228,7 @@ const T *get_value_ptr(const wrap<IFaceT, Cfg, Args...> &w) noexcept
 }
 
 template <typename T, template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
-T *get_value_ptr(wrap<IFaceT, Cfg, Args...> &w) noexcept
+T *value_ptr(wrap<IFaceT, Cfg, Args...> &w) noexcept
 {
     if constexpr (Cfg.static_size == 0u) {
         if (w.m_pv_iface->value_type_index(detail::vtag{}) == typeid(T)) {
@@ -1259,6 +1245,26 @@ T *get_value_ptr(wrap<IFaceT, Cfg, Args...> &w) noexcept
             return nullptr;
         }
     }
+}
+
+template <typename T, template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+const T &value_ref(const wrap<IFaceT, Cfg, Args...> &w)
+{
+    const auto *ptr = value_ptr<T>(w);
+    return ptr ? *ptr : throw std::bad_cast{};
+}
+
+template <typename T, template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+T &value_ref(wrap<IFaceT, Cfg, Args...> &w)
+{
+    auto *ptr = value_ptr<T>(w);
+    return ptr ? *ptr : throw std::bad_cast{};
+}
+
+template <typename T, template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+bool value_isa(const wrap<IFaceT, Cfg, Args...> &w) noexcept
+{
+    return value_ptr<T>(w) != nullptr;
 }
 
 TANUKI_END_NAMESPACE

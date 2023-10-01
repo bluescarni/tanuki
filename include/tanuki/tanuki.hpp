@@ -850,9 +850,8 @@ public:
 
             if (st) {
                 // Other has static storage.
-                auto [new_p_iface, new_pv_iface] = pv_iface->copy_init_holder(this->static_storage, detail::vtag{});
-                this->m_p_iface = new_p_iface;
-                this->m_pv_iface = new_pv_iface;
+                std::tie(this->m_p_iface, this->m_pv_iface)
+                    = pv_iface->copy_init_holder(this->static_storage, detail::vtag{});
             } else {
                 // Other has dynamic storage.
                 auto [new_p_iface, new_pv_iface] = pv_iface->clone(detail::vtag{});
@@ -881,10 +880,8 @@ private:
 
             if (st) {
                 // Other has static storage.
-                auto [new_p_iface, new_pv_iface]
+                std::tie(this->m_p_iface, this->m_pv_iface)
                     = std::move(*pv_iface).move_init_holder(this->static_storage, detail::vtag{});
-                this->m_p_iface = new_p_iface;
-                this->m_pv_iface = new_pv_iface;
             } else {
                 // Other has dynamic storage.
                 ::new (this->static_storage) iface_t *(p_iface);
@@ -962,18 +959,9 @@ public:
 
         // The internal types are the same.
         if constexpr (Cfg.static_size == 0u) {
-            // For dynamic storage, delete the current value and
-            // then shallow copy the interface pointers
-            // from other.
-            // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-            delete this->m_p_iface;
-
-            this->m_p_iface = other.m_p_iface;
-            this->m_pv_iface = other.m_pv_iface;
-
-            // Invalidate other.
-            other.m_p_iface = nullptr;
-            other.m_pv_iface = nullptr;
+            // For dynamic storage, swap the pointers.
+            std::swap(this->m_p_iface, other.m_p_iface);
+            std::swap(this->m_pv_iface, other.m_pv_iface);
         } else {
             const auto [p_iface0, pv_iface0, st0] = stype();
             const auto [p_iface1, pv_iface1, st1] = other.stype();
@@ -986,22 +974,13 @@ public:
                 // For static storage, directly move assign the internal value.
                 std::move(*pv_iface1).move_assign_value(pv_iface0->value_ptr(detail::vtag{}), detail::vtag{});
             } else {
-                // For dynamic storage, delete the current value and
-                // then shallow copy the interface pointers
-                // from other.
-                // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-                delete p_iface0;
-
-                // NOTE: no need to set m_p_iface to null, as
-                // it should already be null.
-                ::new (this->static_storage) iface_t *(p_iface1);
+                // For dynamic storage, swap the pointers.
                 assert(this->m_p_iface == nullptr);
-                this->m_pv_iface = pv_iface1;
-
-                // Invalidate other.
-                ::new (other.static_storage) iface_t *(nullptr);
                 assert(other.m_p_iface == nullptr);
-                other.m_pv_iface = nullptr;
+
+                std::swap(*std::launder(reinterpret_cast<iface_t **>(this->static_storage)),
+                          *std::launder(reinterpret_cast<iface_t **>(other.static_storage)));
+                std::swap(this->m_pv_iface, other.m_pv_iface);
             }
         }
 

@@ -127,11 +127,33 @@ TEST_CASE("basics")
     // Value ctor disabled for non wrappable type.
     REQUIRE(!std::is_constructible_v<wrap_t, nonwrappable>);
 
+    // Copy constructing.
+    // Small one.
+    auto w1copy = w1;
+    REQUIRE(value_ref<double>(w1copy) == 3.);
+    // Large one.
+    auto w2copy = w2;
+    REQUIRE(value_ref<large>(w2copy).buffer[0] == 2);
+
+    // Move constructing.
+    // Small one.
+    auto w1move = std::move(w1);
+    REQUIRE(value_ref<double>(w1move) == 3.);
+    // NOLINTBEGIN
+    REQUIRE(!is_invalid(w1));
+    // NOLINTEND
+    // Large one.
+    auto w2move = std::move(w2);
+    REQUIRE(value_ref<large>(w2move).buffer[0] == 2);
+    // NOLINTBEGIN
+    REQUIRE(is_invalid(w2));
+    // NOLINTEND
+
     auto w4 = w3;
 
     // NOLINTBEGIN
-    auto w5(std::move(w2));
-    REQUIRE(is_invalid(w2));
+    // auto w5(std::move(w2));
+    // REQUIRE(is_invalid(w2));
     //  NOLINTEND
 
     w1 = std::move(w3);
@@ -141,8 +163,8 @@ TEST_CASE("basics")
     auto w1a = w1;
     w1 = w1a;
 
-    auto w5a = wrap_t(large{});
-    w5a = std::move(w5);
+    // auto w5a = wrap_t(large{});
+    // w5a = std::move(w5);
 
     w2 = wrap_t(large{});
     auto w2a = wrap_t(large{});

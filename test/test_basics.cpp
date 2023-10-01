@@ -154,26 +154,9 @@ TEST_CASE("basics")
     const wrap_t w_mut(tanuki::emplace<std::mutex>);
     REQUIRE(noexcept(wrap_t(tanuki::emplace<int>)));
 
-    auto w4 = w3;
-
-    // NOLINTBEGIN
-    // auto w5(std::move(w2));
-    // REQUIRE(is_invalid(w2));
-    //  NOLINTEND
-
-    w1 = std::move(w3);
-
-    w3 = wrap_t(std::function<void()>{});
-
-    auto w1a = w1;
-    w1 = w1a;
-
-    // auto w5a = wrap_t(large{});
-    // w5a = std::move(w5);
-
-    w2 = wrap_t(large{});
-    auto w2a = wrap_t(large{});
-    w2 = w2a;
+    // Check throwing in value_ref.
+    REQUIRE_THROWS_AS(value_ref<int>(w_mut), std::bad_cast);
+    REQUIRE_THROWS_AS(value_ref<int>(std::as_const(w_mut)), std::bad_cast);
 }
 
 TEST_CASE("assignment")

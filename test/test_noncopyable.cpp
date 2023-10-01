@@ -53,6 +53,10 @@ TEST_CASE("noncopyable")
     w = wrap_t(noncopyable<100>{});
 
     REQUIRE_THROWS_MATCHES(wrap_t(w), std::invalid_argument, Message("Attempting to clone a non-copyable value type"));
+
+    wrap_t w2(noncopyable<100>{});
+    REQUIRE_THROWS_MATCHES(w2 = w, std::invalid_argument,
+                           Message("Attempting to copy-assign a non-copyable value type"));
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

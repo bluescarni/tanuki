@@ -94,6 +94,8 @@ inline constexpr bool is_wrappable<nonwrappable, IFaceT, Args...> = false;
 
 } // namespace tanuki
 
+void my_func(int) {}
+
 TEST_CASE("basics")
 {
     using tanuki::wrap;
@@ -157,6 +159,12 @@ TEST_CASE("basics")
     // Check throwing in value_ref.
     REQUIRE_THROWS_AS(value_ref<int>(w_mut), std::bad_cast);
     REQUIRE_THROWS_AS(value_ref<int>(std::as_const(w_mut)), std::bad_cast);
+
+    // Test that a function is held via a function pointer.
+    const wrap_t wfunc1(my_func);
+    const wrap_t wfunc2(&my_func);
+    REQUIRE(value_isa<void (*)(int)>(wfunc1));
+    REQUIRE(value_isa<void (*)(int)>(wfunc2));
 }
 
 TEST_CASE("assignment")

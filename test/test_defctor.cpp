@@ -33,7 +33,7 @@ TEST_CASE("def invalid")
     REQUIRE(std::default_initializable<wrap1_t>);
     REQUIRE(noexcept(wrap1_t{}));
 
-    wrap1_t w1;
+    const wrap1_t w1;
     REQUIRE(is_invalid(w1));
 
     using wrap2_t = tanuki::wrap<any_iface, tanuki::config<>{.static_size = 0, .invalid_default_ctor = true}>;
@@ -41,7 +41,7 @@ TEST_CASE("def invalid")
     REQUIRE(std::default_initializable<wrap2_t>);
     REQUIRE(noexcept(wrap2_t{}));
 
-    wrap1_t w2;
+    const wrap1_t w2;
     REQUIRE(is_invalid(w2));
 }
 
@@ -80,7 +80,7 @@ TEST_CASE("def value type")
     REQUIRE(std::default_initializable<wrap3_t>);
     REQUIRE(noexcept(wrap3_t{}));
 
-    wrap3_t w3;
+    const wrap3_t w3;
     REQUIRE(is_invalid(w3));
 
     using wrap4_t = tanuki::wrap<any_iface, tanuki::config<bar>{}>;

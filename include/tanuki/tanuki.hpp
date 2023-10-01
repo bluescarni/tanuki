@@ -337,7 +337,7 @@ private:
             using std::swap;
             swap(m_value, *static_cast<T *>(ptr));
         } else {
-            throw std::invalid_argument("Attempting to swap a non-swappable value type");
+            throw std::invalid_argument("Attempting to swap a non-swappable value type"); // LCOV_EXCL_LINE
         }
     }
 

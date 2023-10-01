@@ -291,16 +291,6 @@ TEST_CASE("assignment")
     }
 }
 
-TEST_CASE("basics2")
-{
-    using tanuki::config;
-    using tanuki::wrap;
-
-    const wrap<any_iface, config<int>{}> w1;
-
-    (void)tanuki::iface_ptr(w1);
-}
-
 #if defined(TANUKI_WITH_BOOST_S11N)
 
 TEST_CASE("s11n nostatic")
@@ -381,6 +371,16 @@ TEST_CASE("s11n small")
 #endif
 
 #if defined(AASDSADASDSADSA)
+
+TEST_CASE("basics2")
+{
+    using tanuki::config;
+    using tanuki::wrap;
+
+    const wrap<any_iface, config<int>{}> w1;
+
+    (void)tanuki::iface_ptr(w1);
+}
 
 struct foo_iface {
     virtual ~foo_iface() = default;

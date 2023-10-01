@@ -27,3 +27,4 @@ endfunction()
 
 ADD_TANUKI_TESTCASE(test_basics)
 ADD_TANUKI_TESTCASE(test_swap)
+ADD_TANUKI_TESTCASE(test_defctor)

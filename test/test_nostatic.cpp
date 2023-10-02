@@ -126,7 +126,7 @@ TEST_CASE("basics")
 TEST_CASE("assignment")
 {
     using tanuki::wrap;
-    using wrap_t = wrap<any_iface>;
+    using wrap_t = wrap<any_iface, tanuki::config<>{.static_size = 0}>;
 
     wrap_t w(42);
 
@@ -151,7 +151,7 @@ TEST_CASE("assignment")
         wrap_t wl1(small{});
         auto wl2 = std::move(wl1);
         // NOLINTNEXTLINE
-        REQUIRE(!is_invalid(wl1));
+        REQUIRE(is_invalid(wl1));
         const wrap_t wl3(small{"briffo"});
         wl1 = wl3;
         REQUIRE(!is_invalid(wl1));
@@ -176,12 +176,12 @@ TEST_CASE("assignment")
         wrap_t wl1(small{});
         auto wl2 = std::move(wl1);
         // NOLINTNEXTLINE
-        REQUIRE(!is_invalid(wl1));
+        REQUIRE(is_invalid(wl1));
         wrap_t wl3(small{"briffo"});
         wl1 = std::move(wl3);
         REQUIRE(!is_invalid(wl1));
         // NOLINTNEXTLINE
-        REQUIRE(!is_invalid(wl3));
+        REQUIRE(is_invalid(wl3));
         REQUIRE(value_ref<small>(wl1).s == "briffo");
     }
 

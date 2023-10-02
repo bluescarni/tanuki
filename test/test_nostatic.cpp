@@ -63,6 +63,8 @@ TEST_CASE("basics")
 
     // A few simple initialisations from values.
     wrap_t w1(3.), w2(large{}), w3(std::function<void()>{});
+    REQUIRE(!has_static_storage(w1));
+    REQUIRE(has_dynamic_storage(w2));
     REQUIRE(value_type_index(w1) == typeid(double));
     REQUIRE(*value_ptr<double>(w1) == 3.);
     REQUIRE(value_isa<large>(w2));

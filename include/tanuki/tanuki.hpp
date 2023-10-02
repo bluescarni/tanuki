@@ -587,6 +587,9 @@ template <typename T, template <typename, typename...> typename IFaceT, auto Cfg
 template <typename T, template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 [[nodiscard]] T *value_ptr(wrap<IFaceT, Cfg, Args...> &) noexcept;
 
+template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+[[nodiscard]] bool has_static_storage(const wrap<IFaceT, Cfg, Args...> &) noexcept;
+
 template <template <typename, typename...> typename IFaceT, auto Cfg = default_config, typename... Args>
     requires std::is_polymorphic_v<IFaceT<void, Args...>> && std::has_virtual_destructor_v<IFaceT<void, Args...>>
                  && detail::valid_config<Cfg>
@@ -609,6 +612,7 @@ class wrap : private detail::wrap_storage<IFaceT<void, Args...>, Cfg.static_size
     friend std::type_index value_type_index<>(const wrap &) noexcept;
     friend const iface_t *iface_ptr<>(const wrap &) noexcept;
     friend iface_t *iface_ptr<>(wrap &) noexcept;
+    friend bool has_static_storage<>(const wrap &) noexcept;
     // NOTE: need to declare fully generic friend, as friendship
     // does not support partial specialisation.
     template <typename T, template <typename, typename...> typename IFaceT2, auto Cfg2, typename... Args2>
@@ -1086,6 +1090,20 @@ struct is_any_wrap_impl<wrap<IFaceT, Cfg, Args...>> : std::true_type {
 template <typename T>
 concept any_wrap = detail::is_any_wrap_impl<T>::value;
 
+// Helper that can be used to reduce typing in an
+// interface implementation.
+template <typename Holder>
+struct iface_impl_helper {
+    auto &value() noexcept
+    {
+        return static_cast<Holder *>(this)->m_value;
+    }
+    const auto &value() const noexcept
+    {
+        return static_cast<const Holder *>(this)->m_value;
+    }
+};
+
 // NOTE: w is invalid if its storage type is dynamic and
 // it has been moved from (note that this also includes the case
 // in which w has been swapped with an invalid object).
@@ -1105,6 +1123,22 @@ bool is_invalid(const wrap<IFaceT, Cfg, Args...> &w) noexcept
     } else {
         return std::get<0>(w.stype()) == nullptr;
     }
+}
+
+template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+bool has_static_storage(const wrap<IFaceT, Cfg, Args...> &w) noexcept
+{
+    if constexpr (Cfg.static_size == 0u) {
+        return false;
+    } else {
+        return std::get<2>(w.stype());
+    }
+}
+
+template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+bool has_dynamic_storage(const wrap<IFaceT, Cfg, Args...> &w) noexcept
+{
+    return !has_static_storage(w);
 }
 
 template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>

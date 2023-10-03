@@ -491,23 +491,15 @@ struct ref_iface {
 namespace detail
 {
 
-// Meta-programming to establish a holder value type for a type T.
-// This is used in the generic ctor of wrap.
+// Meta-programming to establish a holder value type
+// from an argument of type T.
+// This is used in the generic ctor/assignment of wrap.
+// By default, the value type is T itself without reference
+// or cv qualifications. For function types, let it decay so that
+// the stored value is a function pointer.
 template <typename T>
-struct value_t_from_impl {
-    // By default, the value type is T itself.
-    using type = T;
-};
-
-template <typename R, typename... Args>
-struct value_t_from_impl<R(Args...)> {
-    // For function types, let it decay so that
-    // the stored value is a function pointer.
-    using type = std::decay_t<R(Args...)>;
-};
-
-template <typename T>
-using value_t_from = typename value_t_from_impl<std::remove_cvref_t<T>>::type;
+using value_t_from_arg = std::conditional_t<std::is_function_v<std::remove_cvref_t<T>>,
+                                            std::decay_t<std::remove_cvref_t<T>>, std::remove_cvref_t<T>>;
 
 // These two concepts are used in the implementation of the wrap constructors.
 
@@ -815,15 +807,15 @@ public:
                  // Must not compete with copy/move.
                  (!std::same_as<std::remove_cvref_t<T>, wrap>) &&
                  // The value type must pass the is_wrappable check.
-                 detail::wrappable<detail::value_t_from<T &&>, IFaceT, Args...> &&
+                 detail::wrappable<detail::value_t_from_arg<T &&>, IFaceT, Args...> &&
                  // We must be able to construct a holder from x.
-                 detail::ctible_holder<holder_t<detail::value_t_from<T &&>>, iface_t, Cfg, T &&>
+                 detail::ctible_holder<holder_t<detail::value_t_from_arg<T &&>>, iface_t, Cfg, T &&>
     explicit(Cfg.explicit_value_ctor)
         // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,cppcoreguidelines-pro-type-member-init,hicpp-member-init,google-explicit-constructor,hicpp-explicit-conversions)
-        wrap(T &&x) noexcept(noexcept(this->ctor_impl<detail::value_t_from<T &&>>(std::forward<T>(x)))
+        wrap(T &&x) noexcept(noexcept(this->ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x)))
                              && detail::nothrow_default_initializable<ref_iface_t>)
     {
-        ctor_impl<detail::value_t_from<T &&>>(std::forward<T>(x));
+        ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x));
     }
 
     // NOTE: this will *value-init* if no args

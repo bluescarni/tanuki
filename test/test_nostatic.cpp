@@ -63,6 +63,8 @@ TEST_CASE("basics")
 
     // A few simple initialisations from values.
     wrap_t w1(3.), w2(large{}), w3(std::function<void()>{});
+    REQUIRE(!has_static_storage(w1));
+    REQUIRE(has_dynamic_storage(w2));
     REQUIRE(value_type_index(w1) == typeid(double));
     REQUIRE(*value_ptr<double>(w1) == 3.);
     REQUIRE(value_isa<large>(w2));
@@ -78,7 +80,7 @@ TEST_CASE("basics")
     REQUIRE(!std::is_nothrow_constructible_v<wrap_t, int>);
 
     // noexcept handling for the emplace ctor.
-    REQUIRE(!std::is_nothrow_constructible_v<wrap_t, tanuki::emplace_type<int>, int>);
+    REQUIRE(!std::is_nothrow_constructible_v<wrap_t, tanuki::in_place_type<int>, int>);
 
     // Value ctor explicit by default.
     REQUIRE(!std::is_convertible_v<int, wrap_t>);
@@ -109,8 +111,8 @@ TEST_CASE("basics")
     // NOLINTEND
 
     // Emplace test with class which is not copyable/movable.
-    wrap_t w_mut(tanuki::emplace<std::mutex>);
-    REQUIRE(!noexcept(wrap_t(tanuki::emplace<int>)));
+    wrap_t w_mut(tanuki::in_place<std::mutex>);
+    REQUIRE(!noexcept(wrap_t(tanuki::in_place<int>)));
 
     // Check throwing in value_ref.
     REQUIRE_THROWS_AS(value_ref<int>(w_mut), std::bad_cast);

@@ -122,9 +122,9 @@ TEST_CASE("basics")
     REQUIRE(!std::is_nothrow_constructible_v<wrap_t, const copythrow &>);
 
     // noexcept handling for the emplace ctor.
-    REQUIRE(std::is_nothrow_constructible_v<wrap_t, tanuki::emplace_type<int>, int>);
-    REQUIRE(std::is_constructible_v<wrap_t, tanuki::emplace_type<copythrow>, const copythrow &>);
-    REQUIRE(!std::is_nothrow_constructible_v<wrap_t, tanuki::emplace_type<copythrow>, const copythrow &>);
+    REQUIRE(std::is_nothrow_constructible_v<wrap_t, tanuki::in_place_type<int>, int>);
+    REQUIRE(std::is_constructible_v<wrap_t, tanuki::in_place_type<copythrow>, const copythrow &>);
+    REQUIRE(!std::is_nothrow_constructible_v<wrap_t, tanuki::in_place_type<copythrow>, const copythrow &>);
 
     // Value ctor explicit by default.
     REQUIRE(!std::is_convertible_v<int, wrap_t>);
@@ -155,8 +155,8 @@ TEST_CASE("basics")
     // NOLINTEND
 
     // Emplace test with class which is not copyable/movable.
-    wrap_t w_mut(tanuki::emplace<std::mutex>);
-    REQUIRE(noexcept(wrap_t(tanuki::emplace<int>)));
+    wrap_t w_mut(tanuki::in_place<std::mutex>);
+    REQUIRE(noexcept(wrap_t(tanuki::in_place<int>)));
 
     // Check throwing in value_ref.
     REQUIRE_THROWS_AS(value_ref<int>(w_mut), std::bad_cast);

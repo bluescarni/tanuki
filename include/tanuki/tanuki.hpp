@@ -13,6 +13,7 @@
 #include <cassert>
 #include <concepts>
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <new>
 #include <stdexcept>
@@ -161,6 +162,8 @@ struct value_iface {
     [[nodiscard]] virtual std::pair<IFace *, value_iface *> move_init_holder(void *, vtag) && noexcept = 0;
     virtual void copy_assign_value_to(void *, vtag) const = 0;
     virtual void move_assign_value_to(void *, vtag) && noexcept = 0;
+    virtual void copy_assign_value_from(const void *, vtag) = 0;
+    virtual void move_assign_value_from(void *, vtag) noexcept = 0;
     virtual void swap_value(void *, vtag) noexcept = 0;
 
 #if defined(TANUKI_WITH_BOOST_S11N)
@@ -180,6 +183,11 @@ private:
 template <typename T>
 concept nothrow_default_initializable
     = std::default_initializable<T> && noexcept(::new (static_cast<void *>(nullptr)) T);
+
+// Concept to detect if T is an rvalue reference without cv qualifications.
+template <typename T>
+concept noncv_rvalue_reference
+    = std::is_rvalue_reference_v<T> && std::same_as<std::remove_cvref_t<T>, std::remove_reference_t<T>>;
 
 #if defined(__clang__)
 
@@ -325,6 +333,24 @@ private:
     {
         if constexpr (std::is_move_assignable_v<T>) {
             *static_cast<T *>(ptr) = std::move(m_value);
+        } else {
+            throw std::invalid_argument("Attempting to move-assign a non-movable value type"); // LCOV_EXCL_LINE
+        }
+    }
+    // Copy-assign the object of type T assumed to be stored in ptr into m_value.
+    void copy_assign_value_from(const void *ptr, vtag) final
+    {
+        if constexpr (std::is_copy_assignable_v<T>) {
+            m_value = *static_cast<const T *>(ptr);
+        } else {
+            throw std::invalid_argument("Attempting to copy-assign a non-copyable value type");
+        }
+    }
+    // NOLINTNEXTLINE(bugprone-exception-escape)
+    void move_assign_value_from(void *ptr, vtag) noexcept final
+    {
+        if constexpr (std::is_move_assignable_v<T>) {
+            m_value = std::move(*static_cast<T *>(ptr));
         } else {
             throw std::invalid_argument("Attempting to move-assign a non-movable value type"); // LCOV_EXCL_LINE
         }
@@ -529,24 +555,24 @@ concept wrappable
 
 // Type used to indicate emplace construction in the wrap class.
 template <typename>
-struct emplace_type {
+struct in_place_type {
 };
 
 template <typename T>
-inline constexpr auto emplace = emplace_type<T>{};
+inline constexpr auto in_place = in_place_type<T>{};
 
 namespace detail
 {
 
-// Helper to detect if T is an emplace_type. This is used
+// Helper to detect if T is an in_place_type. This is used
 // to avoid ambiguities in the wrap class between the nullary emplace ctor
 // and the generic ctor.
 template <typename>
-struct is_emplace_type : std::false_type {
+struct is_in_place_type : std::false_type {
 };
 
 template <typename T>
-struct is_emplace_type<emplace_type<T>> : std::true_type {
+struct is_in_place_type<in_place_type<T>> : std::true_type {
 };
 
 } // namespace detail
@@ -764,6 +790,9 @@ class wrap : private detail::wrap_storage<IFaceT<void, Args...>, Cfg.static_size
 #endif
 
 public:
+    // Store the configuration.
+    static constexpr auto cfg = Cfg;
+
     wrap() noexcept(detail::nothrow_default_initializable<ref_iface_t>)
         requires(Cfg.invalid_default_ctor) && std::default_initializable<ref_iface_t>
     {
@@ -803,7 +832,7 @@ public:
     template <typename T>
         requires std::default_initializable<ref_iface_t> &&
                  // Must not compete with the emplace ctor.
-                 (!detail::is_emplace_type<std::remove_cvref_t<T>>::value) &&
+                 (!detail::is_in_place_type<std::remove_cvref_t<T>>::value) &&
                  // Must not compete with copy/move.
                  (!std::same_as<std::remove_cvref_t<T>, wrap>) &&
                  // The value type must pass the is_wrappable check.
@@ -828,8 +857,8 @@ public:
                  detail::wrappable<T, IFaceT, Args...> &&
                  // We must be able to construct a holder from args.
                  detail::ctible_holder<holder_t<T>, iface_t, Cfg, U &&...>
-    explicit wrap(emplace_type<T>, U &&...args) noexcept(noexcept(this->ctor_impl<T>(std::forward<U>(args)...))
-                                                         && detail::nothrow_default_initializable<ref_iface_t>)
+    explicit wrap(in_place_type<T>, U &&...args) noexcept(noexcept(this->ctor_impl<T>(std::forward<U>(args)...))
+                                                          && detail::nothrow_default_initializable<ref_iface_t>)
     {
         ctor_impl<T>(std::forward<U>(args)...);
     }
@@ -930,6 +959,7 @@ public:
         destroy();
     }
 
+    // Move assignment.
     wrap &operator=(wrap &&other) noexcept
         requires(Cfg.movable)
     {
@@ -983,6 +1013,7 @@ public:
         return *this;
     }
 
+    // Copy assignment.
     wrap &operator=(const wrap &other)
         requires(Cfg.copyable)
     {
@@ -1011,6 +1042,72 @@ public:
 
             // Assign the internal value.
             pv_iface1->copy_assign_value_to(pv_iface0->value_ptr(detail::vtag{}), detail::vtag{});
+        }
+
+        return *this;
+    }
+
+    // Generic assignment.
+    template <typename T>
+        requires
+        // NOTE: not 100% sure about this, but it seems consistent
+        // for generic assignment to be enabled only if copy/move
+        // assignment are as well.
+        (Cfg.copyable) && (Cfg.movable) &&
+        // Must not compete with copy/move assignment.
+        (!std::same_as<std::remove_cvref_t<T>, wrap>) &&
+        // The value type must pass the is_wrappable check.
+        detail::wrappable<detail::value_t_from_arg<T &&>, IFaceT, Args...> &&
+        // We must be able to construct a holder from x.
+        detail::ctible_holder<holder_t<detail::value_t_from_arg<T &&>>, iface_t, Cfg, T &&>
+        wrap &operator=(T &&x)
+    {
+        // Handle invalid object.
+        if (is_invalid(*this)) {
+            ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x));
+            return *this;
+        }
+
+        // Handle different internal types.
+        if (value_type_index(*this) != typeid(detail::value_t_from_arg<T &&>)) {
+            destroy();
+
+            try {
+                ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x));
+            } catch (...) {
+                // NOTE: if ctor_impl fails there's no cleanup required.
+                // Invalidate this before rethrowing.
+                if constexpr (Cfg.static_size == 0u) {
+                    this->m_p_iface = nullptr;
+                    this->m_pv_iface = nullptr;
+                } else {
+                    ::new (this->static_storage) iface_t *(nullptr);
+                    this->m_p_iface = nullptr;
+                    this->m_pv_iface = nullptr;
+                }
+
+                throw;
+            }
+
+            return *this;
+        }
+
+        if constexpr (std::is_function_v<std::remove_cvref_t<T &&>>) {
+            // NOTE: we need a special case if x is a function. The reason for this
+            // is that we cannot take the address of a function and then cast it directly to void *,
+            // as required by copy/move_assign_value_from(). See here:
+            // https://stackoverflow.com/questions/36645660/why-cant-i-cast-a-function-pointer-to-void
+            // Thus, we need to create a temporary pointer to the function and use its address
+            // in copy/move_assign_value_from() instead.
+            auto *fptr = std::addressof(x);
+            this->m_pv_iface->copy_assign_value_from(&fptr, detail::vtag{});
+        } else {
+            // The internal types are the same, do directly copy/move assignment.
+            if constexpr (detail::noncv_rvalue_reference<T &&>) {
+                this->m_pv_iface->move_assign_value_from(std::addressof(x), detail::vtag{});
+            } else {
+                this->m_pv_iface->copy_assign_value_from(std::addressof(x), detail::vtag{});
+            }
         }
 
         return *this;
@@ -1076,6 +1173,15 @@ template <template <typename, typename...> typename IFaceT, auto Cfg, typename..
 struct is_any_wrap_impl<wrap<IFaceT, Cfg, Args...>> : std::true_type {
 };
 
+// Type-trait to detect instances of std::reference_wrapper.
+template <typename T>
+struct is_reference_wrapper : std::false_type {
+};
+
+template <typename T>
+struct is_reference_wrapper<std::reference_wrapper<T>> : std::true_type {
+};
+
 } // namespace detail
 
 // Concept to detect any wrap instance.
@@ -1083,29 +1189,50 @@ template <typename T>
 concept any_wrap = detail::is_any_wrap_impl<T>::value;
 
 // Helper that can be used to reduce typing in an
-// interface implementation.
+// interface implementation. This implements value()
+// helpers for fetching the value held in Holder,
+// automatically unwrapping it in case it is
+// a std::reference_wrapper.
 template <typename Holder>
 struct iface_impl_helper {
     auto &value() noexcept
     {
-        return static_cast<Holder *>(this)->m_value;
+        using value_type = typename Holder::value_type;
+
+        auto &val = static_cast<Holder *>(this)->m_value;
+
+        if constexpr (detail::is_reference_wrapper<value_type>::value) {
+            return val.get();
+        } else {
+            return val;
+        }
     }
     const auto &value() const noexcept
     {
-        return static_cast<const Holder *>(this)->m_value;
+        using value_type = typename Holder::value_type;
+
+        const auto &val = static_cast<const Holder *>(this)->m_value;
+
+        if constexpr (detail::is_reference_wrapper<value_type>::value) {
+            return val.get();
+        } else {
+            return val;
+        }
     }
 };
 
-// NOTE: w is invalid if its storage type is dynamic and
+// NOTE: w is invalid if either its storage type is dynamic and
 // it has been moved from (note that this also includes the case
-// in which w has been swapped with an invalid object).
-// In such a case, the move operation
-// will have set the interface pointers to null.
+// in which w has been swapped with an invalid object),
+// or if generic assignment failed.
+// In an invalid wrap, the interface pointers are set to null,
+// and the static storage (if enabled) also stores a null pointer.
 // The only valid operations on an invalid object are:
 //
 // - invocation of is_invalid(),
 // - destruction,
-// - copy/move assignment from and swapping with a valid object.
+// - copy/move assignment from, and swapping with, a valid wrap,
+// - generic assignment.
 template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 bool is_invalid(const wrap<IFaceT, Cfg, Args...> &w) noexcept
 {

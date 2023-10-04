@@ -115,9 +115,9 @@ TEST_CASE("misc utils")
         using wrap_foo_t = tanuki::wrap<foo_iface, tanuki::config<>{.pointer_interface = false}>;
         wrap_foo_t wf0{fooer{}}, wf0_ref{std::ref(wf0)}, wf0_cref{std::cref(wf0)};
         REQUIRE(static_cast<void *>(&value_ref<std::reference_wrapper<wrap_foo_t>>(wf0_ref).get())
-                == static_cast<void *>(value_ptr<fooer>(wf0)));
+                == static_cast<void *>(&wf0));
         REQUIRE(static_cast<const void *>(&value_ref<std::reference_wrapper<const wrap_foo_t>>(wf0_cref).get())
-                == static_cast<const void *>(value_ptr<fooer>(wf0)));
+                == static_cast<const void *>(&wf0));
         REQUIRE_NOTHROW(wf0_ref.foo());
         REQUIRE_NOTHROW(wf0_cref.foo());
     }
@@ -126,7 +126,7 @@ TEST_CASE("misc utils")
         using wrap_bar_t = tanuki::wrap<bar_iface, tanuki::config<>{.pointer_interface = false}>;
         wrap_bar_t wf0{barer{}}, wf0_ref{std::ref(wf0)};
         REQUIRE(static_cast<void *>(&value_ref<std::reference_wrapper<wrap_bar_t>>(wf0_ref).get())
-                == static_cast<void *>(value_ptr<barer>(wf0)));
+                == static_cast<void *>(&wf0));
         REQUIRE_NOTHROW(wf0_ref.bar());
     }
 }

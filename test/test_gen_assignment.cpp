@@ -17,17 +17,17 @@
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
-template <typename>
+template <typename, typename>
 struct any_iface;
 
 template <>
 // NOLINTNEXTLINE
-struct any_iface<void> {
+struct any_iface<void, void> {
     virtual ~any_iface() = default;
 };
 
-template <typename Holder>
-struct any_iface : any_iface<void> {
+template <typename Holder, typename>
+struct any_iface : any_iface<void, void> {
 };
 
 struct large {

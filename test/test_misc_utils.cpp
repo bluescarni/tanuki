@@ -15,49 +15,49 @@
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
-template <typename>
+template <typename, typename>
 struct any_iface;
 
 template <>
 // NOLINTNEXTLINE
-struct any_iface<void> {
+struct any_iface<void, void> {
     virtual ~any_iface() = default;
 };
 
-template <typename Holder>
-struct any_iface : any_iface<void> {
+template <typename Holder, typename>
+struct any_iface : any_iface<void, void> {
 };
 
-template <typename>
+template <typename, typename>
 struct foo_iface;
 
 template <>
 // NOLINTNEXTLINE
-struct foo_iface<void> {
+struct foo_iface<void, void> {
     virtual ~foo_iface() = default;
     virtual void foo() const = 0;
 };
 
-template <typename Holder>
-struct foo_iface : foo_iface<void>, tanuki::iface_impl_helper<Holder> {
+template <typename Holder, typename T>
+struct foo_iface : foo_iface<void, void>, tanuki::iface_impl_helper<Holder, T> {
     void foo() const final
     {
         this->value().foo();
     }
 };
 
-template <typename>
+template <typename, typename>
 struct bar_iface;
 
 template <>
 // NOLINTNEXTLINE
-struct bar_iface<void> {
+struct bar_iface<void, void> {
     virtual ~bar_iface() = default;
     virtual void bar() = 0;
 };
 
-template <typename Holder>
-struct bar_iface : bar_iface<void>, tanuki::iface_impl_helper<Holder> {
+template <typename Holder, typename T>
+struct bar_iface : bar_iface<void, void>, tanuki::iface_impl_helper<Holder, T> {
     void bar() final
     {
         this->value().bar();

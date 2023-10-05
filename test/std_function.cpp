@@ -25,32 +25,30 @@ template <typename R, typename... Args>
 struct is_any_function<std::function<R(Args...)>> : std::true_type {
 };
 
-template <typename, typename, typename...>
+template <typename, typename, typename, typename...>
 struct func_iface;
 
 template <typename R, typename... Args>
 // NOLINTNEXTLINE
-struct func_iface<void, R, Args...> {
+struct func_iface<void, void, R, Args...> {
     virtual ~func_iface() = default;
     virtual R operator()(Args... args) const = 0;
     virtual explicit operator bool() const noexcept = 0;
 };
 
-template <typename Holder, typename R, typename... Args>
-struct func_iface : func_iface<void, R, Args...>, tanuki::iface_impl_helper<Holder> {
+template <typename Holder, typename T, typename R, typename... Args>
+struct func_iface : func_iface<void, void, R, Args...>, tanuki::iface_impl_helper<Holder, T> {
     R operator()(Args... args) const final
     {
-        using value_type = typename Holder::value_type;
-
-        if constexpr (std::is_pointer_v<value_type> || std::is_member_pointer_v<value_type>) {
+        if constexpr (std::is_pointer_v<T> || std::is_member_pointer_v<T>) {
             if (this->value() == nullptr) {
                 throw std::bad_function_call{};
             }
-        } else if constexpr (tanuki::any_wrap<value_type>) {
+        } else if constexpr (tanuki::any_wrap<T>) {
             if (is_invalid(this->value())) {
                 throw std::bad_function_call{};
             }
-        } else if constexpr (is_any_function<value_type>::value) {
+        } else if constexpr (is_any_function<T>::value) {
             if (!this->value()) {
                 throw std::bad_function_call{};
             }
@@ -64,13 +62,11 @@ struct func_iface : func_iface<void, R, Args...>, tanuki::iface_impl_helper<Hold
     }
     explicit operator bool() const noexcept final
     {
-        using value_type = typename Holder::value_type;
-
-        if constexpr (std::is_pointer_v<value_type> || std::is_member_pointer_v<value_type>) {
+        if constexpr (std::is_pointer_v<T> || std::is_member_pointer_v<T>) {
             return this->value() != nullptr;
-        } else if constexpr (tanuki::any_wrap<value_type>) {
+        } else if constexpr (tanuki::any_wrap<T>) {
             return !is_invalid(this->value());
-        } else if constexpr (is_any_function<value_type>::value) {
+        } else if constexpr (is_any_function<T>::value) {
             return static_cast<bool>(this->value());
         } else {
             return true;

@@ -15,20 +15,20 @@
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
-template <typename>
+template <typename, typename>
 struct foobar_iface;
 
 template <>
 // NOLINTNEXTLINE
-struct foobar_iface<void> {
+struct foobar_iface<void, void> {
     virtual ~foobar_iface() = default;
     virtual void foo() const noexcept = 0;
     virtual void bar() = 0;
     virtual void fuzz() && = 0;
 };
 
-template <typename Holder>
-struct foobar_iface : foobar_iface<void>, tanuki::iface_impl_helper<Holder> {
+template <typename Holder, typename T>
+struct foobar_iface : foobar_iface<void, void>, tanuki::iface_impl_helper<Holder, T> {
     void foo() const noexcept final
     {
         this->value().foo();
@@ -74,17 +74,17 @@ TEST_CASE("ref_iface basics")
     REQUIRE(!noexcept(wrap1_t{tanuki::in_place<fooer>}));
 }
 
-template <typename>
+template <typename, typename>
 struct any_iface;
 
 template <>
 // NOLINTNEXTLINE
-struct any_iface<void> {
+struct any_iface<void, void> {
     virtual ~any_iface() = default;
 };
 
-template <typename Holder>
-struct any_iface : any_iface<void> {
+template <typename Holder, typename>
+struct any_iface : any_iface<void, void> {
 };
 
 namespace tanuki

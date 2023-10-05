@@ -212,12 +212,11 @@ concept noncv_rvalue_reference
 template <typename T>
 concept valid_value_type = std::is_object_v<T> && (!std::is_const_v<T>)&&(!std::is_volatile_v<T>)&&std::destructible<T>;
 
-template <typename T, template <typename, typename...> typename IFaceT, typename... Args>
+template <typename T, template <typename, typename, typename...> typename IFaceT, typename... Args>
     requires valid_value_type<T>
-struct holder final : public value_iface<IFaceT<void, Args...>>, public IFaceT<holder<T, IFaceT, Args...>, Args...> {
+struct holder final : public value_iface<IFaceT<void, void, Args...>>,
+                      public IFaceT<holder<T, IFaceT, Args...>, T, Args...> {
     TANUKI_NO_UNIQUE_ADDRESS T m_value;
-
-    using value_type = T;
 
     // Make sure we don't end up accidentally copying/moving
     // this class.
@@ -241,19 +240,19 @@ struct holder final : public value_iface<IFaceT<void, Args...>>, public IFaceT<h
                 // NOTE: we need the interface implementation to be:
                 // - default initable,
                 // - destructible.
-                && std::default_initializable<IFaceT<holder<T, IFaceT, Args...>, Args...>>
-                && std::destructible<IFaceT<holder<T, IFaceT, Args...>, Args...>>
+                && std::default_initializable<IFaceT<holder<T, IFaceT, Args...>, T, Args...>>
+                && std::destructible<IFaceT<holder<T, IFaceT, Args...>, T, Args...>>
     explicit holder(U &&x) noexcept(std::is_nothrow_constructible_v<T, U &&>
-                                    && nothrow_default_initializable<IFaceT<holder<T, IFaceT, Args...>, Args...>>)
+                                    && nothrow_default_initializable<IFaceT<holder<T, IFaceT, Args...>, T, Args...>>)
         : m_value(std::forward<U>(x))
     {
     }
     template <typename... U>
         requires(sizeof...(U) != 1u) && std::constructible_from<T, U &&...>
-                && std::default_initializable<IFaceT<holder<T, IFaceT, Args...>, Args...>>
-                && std::destructible<IFaceT<holder<T, IFaceT, Args...>, Args...>>
+                && std::default_initializable<IFaceT<holder<T, IFaceT, Args...>, T, Args...>>
+                && std::destructible<IFaceT<holder<T, IFaceT, Args...>, T, Args...>>
     explicit holder(U &&...x) noexcept(std::is_nothrow_constructible_v<T, U &&...>
-                                       && nothrow_default_initializable<IFaceT<holder<T, IFaceT, Args...>, Args...>>)
+                                       && nothrow_default_initializable<IFaceT<holder<T, IFaceT, Args...>, T, Args...>>)
         : m_value(std::forward<U>(x)...)
     {
     }
@@ -275,7 +274,8 @@ private:
     }
 
     // Clone this, and cast the result to the two bases.
-    [[nodiscard]] std::pair<IFaceT<void, Args...> *, value_iface<IFaceT<void, Args...>> *> clone(vtag) const final
+    [[nodiscard]] std::pair<IFaceT<void, void, Args...> *, value_iface<IFaceT<void, void, Args...>> *>
+    clone(vtag) const final
     {
         if constexpr (std::copy_constructible<T>) {
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
@@ -287,7 +287,7 @@ private:
     }
     // Copy-init a new holder into the storage beginning at ptr.
     // Then cast the result to the two bases and return.
-    [[nodiscard]] std::pair<IFaceT<void, Args...> *, value_iface<IFaceT<void, Args...>> *>
+    [[nodiscard]] std::pair<IFaceT<void, void, Args...> *, value_iface<IFaceT<void, void, Args...>> *>
     copy_init_holder(void *ptr, vtag) const final
     {
         if constexpr (std::copy_constructible<T>) {
@@ -300,7 +300,7 @@ private:
     }
     // Move-init a new holder into the storage beginning at ptr.
     // Then cast the result to the two bases and return.
-    [[nodiscard]] std::pair<IFaceT<void, Args...> *, value_iface<IFaceT<void, Args...>> *>
+    [[nodiscard]] std::pair<IFaceT<void, void, Args...> *, value_iface<IFaceT<void, void, Args...>> *>
     // NOLINTNEXTLINE(bugprone-exception-escape)
     move_init_holder(void *ptr, vtag) && noexcept final
     {
@@ -374,7 +374,7 @@ private:
     template <typename Archive>
     void serialize(Archive &ar, unsigned)
     {
-        ar &boost::serialization::base_object<value_iface<IFaceT<void, Args...>>>(*this);
+        ar &boost::serialization::base_object<value_iface<IFaceT<void, void, Args...>>>(*this);
         ar & m_value;
     }
 
@@ -429,10 +429,10 @@ struct config_base {
 
 // Helpers to determine the size and alignment of a holder instance, given the value
 // type T, template interface IFaceT and arguments Args for IFaceT.
-template <typename T, template <typename, typename...> typename IFaceT, typename... Args>
+template <typename T, template <typename, typename, typename...> typename IFaceT, typename... Args>
 inline constexpr auto holder_size = sizeof(detail::holder<T, IFaceT, Args...>);
 
-template <typename T, template <typename, typename...> typename IFaceT, typename... Args>
+template <typename T, template <typename, typename, typename...> typename IFaceT, typename... Args>
 inline constexpr auto holder_align = alignof(detail::holder<T, IFaceT, Args...>);
 
 // Configuration settings for the wrap class.
@@ -483,11 +483,11 @@ concept valid_config =
 } // namespace detail
 
 // Default implementation of value type checking.
-template <typename, template <typename, typename...> typename, typename...>
+template <typename, template <typename, typename, typename...> typename, typename...>
 inline constexpr bool is_wrappable = true;
 
 // Default reference interface implementation.
-template <typename, template <typename, typename...> typename, typename...>
+template <typename, template <typename, typename, typename...> typename, typename...>
 struct ref_iface {
 };
 
@@ -547,7 +547,7 @@ concept ctible_holder =
 
 // Utility concept to check if the type T satisfies the is_wrappable type trait (which must
 // have been implemented correctly).
-template <typename T, template <typename, typename...> typename IFaceT, typename... Args>
+template <typename T, template <typename, typename, typename...> typename IFaceT, typename... Args>
 concept wrappable
     = std::same_as<const bool, decltype(is_wrappable<T, IFaceT, Args...>)> && is_wrappable<T, IFaceT, Args...>;
 
@@ -578,47 +578,47 @@ struct is_in_place_type<in_place_type<T>> : std::true_type {
 } // namespace detail
 
 // Fwd declarations.
-template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
-    requires std::is_polymorphic_v<IFaceT<void, Args...>> && std::has_virtual_destructor_v<IFaceT<void, Args...>>
-             && detail::valid_config<Cfg>
+template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+    requires std::is_polymorphic_v<IFaceT<void, void, Args...>>
+             && std::has_virtual_destructor_v<IFaceT<void, void, Args...>> && detail::valid_config<Cfg>
 class wrap;
 
-template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
     requires(Cfg.swappable)
 void swap(wrap<IFaceT, Cfg, Args...> &, wrap<IFaceT, Cfg, Args...> &) noexcept;
 
-template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 [[nodiscard]] bool is_invalid(const wrap<IFaceT, Cfg, Args...> &) noexcept;
 
-template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 [[nodiscard]] std::type_index value_type_index(const wrap<IFaceT, Cfg, Args...> &) noexcept;
 
-template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
-[[nodiscard]] const IFaceT<void, Args...> *iface_ptr(const wrap<IFaceT, Cfg, Args...> &) noexcept;
+template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+[[nodiscard]] const IFaceT<void, void, Args...> *iface_ptr(const wrap<IFaceT, Cfg, Args...> &) noexcept;
 
-template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
-[[nodiscard]] IFaceT<void, Args...> *iface_ptr(wrap<IFaceT, Cfg, Args...> &) noexcept;
+template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+[[nodiscard]] IFaceT<void, void, Args...> *iface_ptr(wrap<IFaceT, Cfg, Args...> &) noexcept;
 
-template <typename T, template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+template <typename T, template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 [[nodiscard]] const T *value_ptr(const wrap<IFaceT, Cfg, Args...> &) noexcept;
 
-template <typename T, template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+template <typename T, template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 [[nodiscard]] T *value_ptr(wrap<IFaceT, Cfg, Args...> &) noexcept;
 
-template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 [[nodiscard]] bool has_static_storage(const wrap<IFaceT, Cfg, Args...> &) noexcept;
 
-template <template <typename, typename...> typename IFaceT, auto Cfg = default_config, typename... Args>
-    requires std::is_polymorphic_v<IFaceT<void, Args...>> && std::has_virtual_destructor_v<IFaceT<void, Args...>>
-                 && detail::valid_config<Cfg>
-class wrap : private detail::wrap_storage<IFaceT<void, Args...>, Cfg.static_size, Cfg.static_alignment>,
+template <template <typename, typename, typename...> typename IFaceT, auto Cfg = default_config, typename... Args>
+    requires std::is_polymorphic_v<IFaceT<void, void, Args...>>
+                 && std::has_virtual_destructor_v<IFaceT<void, void, Args...>> && detail::valid_config<Cfg>
+class wrap : private detail::wrap_storage<IFaceT<void, void, Args...>, Cfg.static_size, Cfg.static_alignment>,
              // NOTE: the reference interface is not supposed to hold any data: it will always
              // be def-inited (even when copying/moving a wrap object), its assignment operators
              // will never be invoked, it will never be swapped, etc. This needs to be documented.
              public ref_iface<wrap<IFaceT, Cfg, Args...>, IFaceT, Args...>
 {
     // Aliases for the two interfaces.
-    using iface_t = IFaceT<void, Args...>;
+    using iface_t = IFaceT<void, void, Args...>;
     using value_iface_t = detail::value_iface<iface_t>;
 
     // Alias for the reference interface.
@@ -633,9 +633,9 @@ class wrap : private detail::wrap_storage<IFaceT<void, Args...>, Cfg.static_size
     friend bool has_static_storage<>(const wrap &) noexcept;
     // NOTE: need to declare fully generic friend, as friendship
     // does not support partial specialisation.
-    template <typename T, template <typename, typename...> typename IFaceT2, auto Cfg2, typename... Args2>
+    template <typename T, template <typename, typename, typename...> typename IFaceT2, auto Cfg2, typename... Args2>
     friend const T *value_ptr(const wrap<IFaceT2, Cfg2, Args2...> &) noexcept;
-    template <typename T, template <typename, typename...> typename IFaceT2, auto Cfg2, typename... Args2>
+    template <typename T, template <typename, typename, typename...> typename IFaceT2, auto Cfg2, typename... Args2>
     friend T *value_ptr(wrap<IFaceT2, Cfg2, Args2...> &) noexcept;
 
     // The default value type.
@@ -1169,7 +1169,7 @@ template <typename>
 struct is_any_wrap_impl : std::false_type {
 };
 
-template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 struct is_any_wrap_impl<wrap<IFaceT, Cfg, Args...>> : std::true_type {
 };
 
@@ -1193,15 +1193,13 @@ concept any_wrap = detail::is_any_wrap_impl<T>::value;
 // helpers for fetching the value held in Holder,
 // automatically unwrapping it in case it is
 // a std::reference_wrapper.
-template <typename Holder>
+template <typename Holder, typename T>
 struct iface_impl_helper {
     auto &value() noexcept
     {
-        using value_type = typename Holder::value_type;
-
         auto &val = static_cast<Holder *>(this)->m_value;
 
-        if constexpr (detail::is_reference_wrapper<value_type>::value) {
+        if constexpr (detail::is_reference_wrapper<T>::value) {
             return val.get();
         } else {
             return val;
@@ -1209,11 +1207,9 @@ struct iface_impl_helper {
     }
     const auto &value() const noexcept
     {
-        using value_type = typename Holder::value_type;
-
         const auto &val = static_cast<const Holder *>(this)->m_value;
 
-        if constexpr (detail::is_reference_wrapper<value_type>::value) {
+        if constexpr (detail::is_reference_wrapper<T>::value) {
             return val.get();
         } else {
             return val;
@@ -1233,7 +1229,7 @@ struct iface_impl_helper {
 // - destruction,
 // - copy/move assignment from, and swapping with, a valid wrap,
 // - generic assignment.
-template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 bool is_invalid(const wrap<IFaceT, Cfg, Args...> &w) noexcept
 {
     if constexpr (Cfg.static_size == 0u) {
@@ -1244,7 +1240,7 @@ bool is_invalid(const wrap<IFaceT, Cfg, Args...> &w) noexcept
     }
 }
 
-template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 bool has_static_storage(const wrap<IFaceT, Cfg, Args...> &w) noexcept
 {
     if constexpr (Cfg.static_size == 0u) {
@@ -1254,13 +1250,13 @@ bool has_static_storage(const wrap<IFaceT, Cfg, Args...> &w) noexcept
     }
 }
 
-template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 bool has_dynamic_storage(const wrap<IFaceT, Cfg, Args...> &w) noexcept
 {
     return !has_static_storage(w);
 }
 
-template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 std::type_index value_type_index(const wrap<IFaceT, Cfg, Args...> &w) noexcept
 {
     if constexpr (Cfg.static_size == 0u) {
@@ -1270,7 +1266,7 @@ std::type_index value_type_index(const wrap<IFaceT, Cfg, Args...> &w) noexcept
     }
 }
 
-template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
     requires(Cfg.swappable)
 void swap(wrap<IFaceT, Cfg, Args...> &w1, wrap<IFaceT, Cfg, Args...> &w2) noexcept
 {
@@ -1340,8 +1336,8 @@ void swap(wrap<IFaceT, Cfg, Args...> &w1, wrap<IFaceT, Cfg, Args...> &w2) noexce
     }
 }
 
-template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
-const IFaceT<void, Args...> *iface_ptr(const wrap<IFaceT, Cfg, Args...> &w) noexcept
+template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+const IFaceT<void, void, Args...> *iface_ptr(const wrap<IFaceT, Cfg, Args...> &w) noexcept
 {
     if constexpr (Cfg.static_size == 0u) {
         return w.m_p_iface;
@@ -1350,8 +1346,8 @@ const IFaceT<void, Args...> *iface_ptr(const wrap<IFaceT, Cfg, Args...> &w) noex
     }
 }
 
-template <template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
-IFaceT<void, Args...> *iface_ptr(wrap<IFaceT, Cfg, Args...> &w) noexcept
+template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+IFaceT<void, void, Args...> *iface_ptr(wrap<IFaceT, Cfg, Args...> &w) noexcept
 {
     if constexpr (Cfg.static_size == 0u) {
         return w.m_p_iface;
@@ -1360,7 +1356,7 @@ IFaceT<void, Args...> *iface_ptr(wrap<IFaceT, Cfg, Args...> &w) noexcept
     }
 }
 
-template <typename T, template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+template <typename T, template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 const T *value_ptr(const wrap<IFaceT, Cfg, Args...> &w) noexcept
 {
     if constexpr (Cfg.static_size == 0u) {
@@ -1380,7 +1376,7 @@ const T *value_ptr(const wrap<IFaceT, Cfg, Args...> &w) noexcept
     }
 }
 
-template <typename T, template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+template <typename T, template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 T *value_ptr(wrap<IFaceT, Cfg, Args...> &w) noexcept
 {
     if constexpr (Cfg.static_size == 0u) {
@@ -1400,21 +1396,21 @@ T *value_ptr(wrap<IFaceT, Cfg, Args...> &w) noexcept
     }
 }
 
-template <typename T, template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+template <typename T, template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 const T &value_ref(const wrap<IFaceT, Cfg, Args...> &w)
 {
     const auto *ptr = value_ptr<T>(w);
     return ptr ? *ptr : throw std::bad_cast{};
 }
 
-template <typename T, template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+template <typename T, template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 T &value_ref(wrap<IFaceT, Cfg, Args...> &w)
 {
     auto *ptr = value_ptr<T>(w);
     return ptr ? *ptr : throw std::bad_cast{};
 }
 
-template <typename T, template <typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+template <typename T, template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 bool value_isa(const wrap<IFaceT, Cfg, Args...> &w) noexcept
 {
     return value_ptr<T>(w) != nullptr;

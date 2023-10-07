@@ -453,8 +453,6 @@ struct config final : detail::config_base {
     bool pointer_interface = true;
     // Explicit constructor from value.
     bool explicit_value_ctor = true;
-    // Explicit conversion operators to interface reference/pointer.
-    bool explicit_iface_conversion = true;
     // Enable copy construction/assignment.
     bool copyable = true;
     // Enable move construction/assignment.
@@ -1130,32 +1128,6 @@ public:
         return *iface_ptr(*this);
     }
     iface_t &operator*() noexcept
-        requires(Cfg.pointer_interface)
-    {
-        return *iface_ptr(*this);
-    }
-
-    // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
-    explicit(Cfg.explicit_iface_conversion) operator const iface_t *() const noexcept
-        requires(Cfg.pointer_interface)
-    {
-        return iface_ptr(*this);
-    }
-    // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
-    explicit(Cfg.explicit_iface_conversion) operator iface_t *() noexcept
-        requires(Cfg.pointer_interface)
-    {
-        return iface_ptr(*this);
-    }
-
-    // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
-    explicit(Cfg.explicit_iface_conversion) operator const iface_t &() const noexcept
-        requires(Cfg.pointer_interface)
-    {
-        return *iface_ptr(*this);
-    }
-    // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
-    explicit(Cfg.explicit_iface_conversion) operator iface_t &() noexcept
         requires(Cfg.pointer_interface)
     {
         return *iface_ptr(*this);

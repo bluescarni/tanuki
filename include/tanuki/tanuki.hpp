@@ -604,6 +604,12 @@ template <typename T, template <typename, typename, typename...> typename IFaceT
 [[nodiscard]] T *value_ptr(wrap<IFaceT, Cfg, Args...> &) noexcept;
 
 template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+[[nodiscard]] const void *raw_ptr(const wrap<IFaceT, Cfg, Args...> &) noexcept;
+
+template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+[[nodiscard]] void *raw_ptr(wrap<IFaceT, Cfg, Args...> &) noexcept;
+
+template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 [[nodiscard]] bool has_static_storage(const wrap<IFaceT, Cfg, Args...> &) noexcept;
 
 template <template <typename, typename, typename...> typename IFaceT, auto Cfg = default_config, typename... Args>
@@ -629,6 +635,8 @@ class wrap : private detail::wrap_storage<IFaceT<void, void, Args...>, Cfg.stati
     friend const iface_t *iface_ptr<>(const wrap &) noexcept;
     friend iface_t *iface_ptr<>(wrap &) noexcept;
     friend bool has_static_storage<>(const wrap &) noexcept;
+    friend const void *raw_ptr<>(const wrap &) noexcept;
+    friend void *raw_ptr<>(wrap &) noexcept;
     // NOTE: need to declare fully generic friend, as friendship
     // does not support partial specialisation.
     template <typename T, template <typename, typename, typename...> typename IFaceT2, auto Cfg2, typename... Args2>
@@ -1326,6 +1334,18 @@ IFaceT<void, void, Args...> *iface_ptr(wrap<IFaceT, Cfg, Args...> &w) noexcept
     } else {
         return std::get<0>(w.stype());
     }
+}
+
+template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+const void *raw_ptr(const wrap<IFaceT, Cfg, Args...> &w) noexcept
+{
+    return w.m_pv_iface->value_ptr(detail::vtag{});
+}
+
+template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+void *raw_ptr(wrap<IFaceT, Cfg, Args...> &w) noexcept
+{
+    return w.m_pv_iface->value_ptr(detail::vtag{});
 }
 
 template <typename T, template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>

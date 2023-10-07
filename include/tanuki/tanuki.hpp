@@ -597,12 +597,6 @@ template <template <typename, typename, typename...> typename IFaceT, auto Cfg, 
 template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 [[nodiscard]] IFaceT<void, void, Args...> *iface_ptr(wrap<IFaceT, Cfg, Args...> &) noexcept;
 
-template <typename T, template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
-[[nodiscard]] const T *value_ptr(const wrap<IFaceT, Cfg, Args...> &) noexcept;
-
-template <typename T, template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
-[[nodiscard]] T *value_ptr(wrap<IFaceT, Cfg, Args...> &) noexcept;
-
 template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 [[nodiscard]] const void *raw_ptr(const wrap<IFaceT, Cfg, Args...> &) noexcept;
 
@@ -637,12 +631,6 @@ class wrap : private detail::wrap_storage<IFaceT<void, void, Args...>, Cfg.stati
     friend bool has_static_storage<>(const wrap &) noexcept;
     friend const void *raw_ptr<>(const wrap &) noexcept;
     friend void *raw_ptr<>(wrap &) noexcept;
-    // NOTE: need to declare fully generic friend, as friendship
-    // does not support partial specialisation.
-    template <typename T, template <typename, typename, typename...> typename IFaceT2, auto Cfg2, typename... Args2>
-    friend const T *value_ptr(const wrap<IFaceT2, Cfg2, Args2...> &) noexcept;
-    template <typename T, template <typename, typename, typename...> typename IFaceT2, auto Cfg2, typename... Args2>
-    friend T *value_ptr(wrap<IFaceT2, Cfg2, Args2...> &) noexcept;
 
     // The default value type.
     using default_value_t = typename decltype(Cfg)::default_value_type;
@@ -1239,11 +1227,9 @@ bool has_dynamic_storage(const wrap<IFaceT, Cfg, Args...> &w) noexcept
 template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 std::type_index value_type_index(const wrap<IFaceT, Cfg, Args...> &w) noexcept
 {
-    if constexpr (Cfg.static_size == 0u) {
-        return w.m_pv_iface->value_type_index(detail::vtag{});
-    } else {
-        return std::get<1>(w.stype())->value_type_index(detail::vtag{});
-    }
+    // NOTE: the value interface pointer can be accessed regardless of whether
+    // or not static storage is enabled.
+    return w.m_pv_iface->value_type_index(detail::vtag{});
 }
 
 template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
@@ -1351,41 +1337,13 @@ void *raw_ptr(wrap<IFaceT, Cfg, Args...> &w) noexcept
 template <typename T, template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 const T *value_ptr(const wrap<IFaceT, Cfg, Args...> &w) noexcept
 {
-    if constexpr (Cfg.static_size == 0u) {
-        if (w.m_pv_iface->value_type_index(detail::vtag{}) == typeid(T)) {
-            return static_cast<const T *>(w.m_pv_iface->value_ptr(detail::vtag{}));
-        } else {
-            return nullptr;
-        }
-    } else {
-        const auto [_1, pv_iface, _2] = w.stype();
-
-        if (pv_iface->value_type_index(detail::vtag{}) == typeid(T)) {
-            return static_cast<const T *>(pv_iface->value_ptr(detail::vtag{}));
-        } else {
-            return nullptr;
-        }
-    }
+    return value_type_index(w) == typeid(T) ? static_cast<const T *>(raw_ptr(w)) : nullptr;
 }
 
 template <typename T, template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 T *value_ptr(wrap<IFaceT, Cfg, Args...> &w) noexcept
 {
-    if constexpr (Cfg.static_size == 0u) {
-        if (w.m_pv_iface->value_type_index(detail::vtag{}) == typeid(T)) {
-            return static_cast<T *>(w.m_pv_iface->value_ptr(detail::vtag{}));
-        } else {
-            return nullptr;
-        }
-    } else {
-        const auto [_1, pv_iface, _2] = w.stype();
-
-        if (pv_iface->value_type_index(detail::vtag{}) == typeid(T)) {
-            return static_cast<T *>(pv_iface->value_ptr(detail::vtag{}));
-        } else {
-            return nullptr;
-        }
-    }
+    return value_type_index(w) == typeid(T) ? static_cast<T *>(raw_ptr(w)) : nullptr;
 }
 
 template <typename T, template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>

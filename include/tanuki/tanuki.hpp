@@ -160,11 +160,11 @@ struct value_iface {
     [[nodiscard]] virtual std::pair<IFace *, value_iface *> clone(vtag) const = 0;
     [[nodiscard]] virtual std::pair<IFace *, value_iface *> copy_init_holder(void *, vtag) const = 0;
     [[nodiscard]] virtual std::pair<IFace *, value_iface *> move_init_holder(void *, vtag) && noexcept = 0;
-    virtual void copy_assign_value_to(void *, vtag) const = 0;
-    virtual void move_assign_value_to(void *, vtag) && noexcept = 0;
+    virtual void copy_assign_value_to(value_iface *, vtag) const = 0;
+    virtual void move_assign_value_to(value_iface *, vtag) && noexcept = 0;
     virtual void copy_assign_value_from(const void *, vtag) = 0;
     virtual void move_assign_value_from(void *, vtag) noexcept = 0;
-    virtual void swap_value(void *, vtag) noexcept = 0;
+    virtual void swap_value(value_iface *, vtag) noexcept = 0;
 
 #if defined(TANUKI_WITH_BOOST_S11N)
 
@@ -312,27 +312,28 @@ private:
             throw std::invalid_argument("Attempting to move-construct a non-movable value type"); // LCOV_EXCL_LINE
         }
     }
-    // Copy-assign m_value into the object of type T assumed to be stored in ptr.
-    void copy_assign_value_to(void *ptr, vtag) const final
+    // Copy-assign m_value into the m_value of v_iface.
+    void copy_assign_value_to(value_iface<IFaceT<void, void, Args...>> *v_iface, vtag) const final
     {
         if constexpr (std::is_copy_assignable_v<T>) {
             // NOTE: I don't think it is necessary to invoke launder here,
-            // as ptr is always supposed to come from an invocation of value_ptr(),
-            // which just does a static cast to void *. Since we are assuming that
+            // as value_ptr() just does a static cast to void *. Since we are assuming that
             // copy_assign_value_to() is called only when assigning holders containing
             // the same T, the conversion chain should boil down to T * -> void * -> T *, which
             // does not require laundering.
-            *static_cast<T *>(ptr) = m_value;
+            assert(value_type_index(vtag{}) == v_iface->value_type_index(vtag{}));
+            *static_cast<T *>(v_iface->value_ptr(vtag{})) = m_value;
         } else {
             throw std::invalid_argument("Attempting to copy-assign a non-copyable value type");
         }
     }
-    // Move-assign m_value into the object of type T assumed to be stored in ptr.
+    // Move-assign m_value into the m_value of v_iface.
     // NOLINTNEXTLINE(bugprone-exception-escape)
-    void move_assign_value_to(void *ptr, vtag) && noexcept final
+    void move_assign_value_to(value_iface<IFaceT<void, void, Args...>> *v_iface, vtag) && noexcept final
     {
         if constexpr (std::is_move_assignable_v<T>) {
-            *static_cast<T *>(ptr) = std::move(m_value);
+            assert(value_type_index(vtag{}) == v_iface->value_type_index(vtag{}));
+            *static_cast<T *>(v_iface->value_ptr(vtag{})) = std::move(m_value);
         } else {
             throw std::invalid_argument("Attempting to move-assign a non-movable value type"); // LCOV_EXCL_LINE
         }
@@ -355,13 +356,15 @@ private:
             throw std::invalid_argument("Attempting to move-assign a non-movable value type"); // LCOV_EXCL_LINE
         }
     }
-    // Swap m_value with the object of type T assumed to be stored in ptr.
+    // Swap m_value with the m_value of v_iface.
     // NOLINTNEXTLINE(bugprone-exception-escape)
-    void swap_value(void *ptr, vtag) noexcept final
+    void swap_value(value_iface<IFaceT<void, void, Args...>> *v_iface, vtag) noexcept final
     {
         if constexpr (std::swappable<T>) {
+            assert(value_type_index(vtag{}) == v_iface->value_type_index(vtag{}));
+
             using std::swap;
-            swap(m_value, *static_cast<T *>(ptr));
+            swap(m_value, *static_cast<T *>(v_iface->value_ptr(vtag{})));
         } else {
             throw std::invalid_argument("Attempting to swap a non-swappable value type"); // LCOV_EXCL_LINE
         }
@@ -992,7 +995,7 @@ public:
 
             if (st0) {
                 // For static storage, directly move assign the internal value.
-                std::move(*pv_iface1).move_assign_value_to(pv_iface0->value_ptr(detail::vtag{}), detail::vtag{});
+                std::move(*pv_iface1).move_assign_value_to(pv_iface0, detail::vtag{});
             } else {
                 // For dynamic storage, swap the pointers.
                 assert(this->m_p_iface == nullptr);
@@ -1025,7 +1028,7 @@ public:
         // The internal types are the same.
         if constexpr (Cfg.static_size == 0u) {
             // Assign the internal value.
-            other.m_pv_iface->copy_assign_value_to(this->m_pv_iface->value_ptr(detail::vtag{}), detail::vtag{});
+            other.m_pv_iface->copy_assign_value_to(this->m_pv_iface, detail::vtag{});
         } else {
             const auto [p_iface0, pv_iface0, st0] = stype();
             const auto [p_iface1, pv_iface1, st1] = other.stype();
@@ -1035,7 +1038,7 @@ public:
             assert(st0 == st1);
 
             // Assign the internal value.
-            pv_iface1->copy_assign_value_to(pv_iface0->value_ptr(detail::vtag{}), detail::vtag{});
+            pv_iface1->copy_assign_value_to(pv_iface0, detail::vtag{});
         }
 
         return *this;
@@ -1287,7 +1290,7 @@ void swap(wrap<IFaceT, Cfg, Args...> &w1, wrap<IFaceT, Cfg, Args...> &w2) noexce
 
         if (st1) {
             // For static storage, directly swap the internal values.
-            pv_iface2->swap_value(pv_iface1->value_ptr(detail::vtag{}), detail::vtag{});
+            pv_iface2->swap_value(pv_iface1, detail::vtag{});
         } else {
             // For dynamic storage, swap the pointers.
             assert(w1.m_p_iface == nullptr);

@@ -1276,6 +1276,13 @@ struct is_any_wrap_impl<wrap<IFaceT, Cfg, Args...>> : std::true_type {
 template <typename T>
 concept any_wrap = detail::is_any_wrap_impl<T>::value;
 
+#if defined(_MSC_VER)
+
+#pragma warning(push)
+#pragma warning(disable : 4250)
+
+#endif
+
 namespace detail
 {
 
@@ -1306,6 +1313,7 @@ struct iface_impl_from_wrap_impl<wrap<IFaceT, Cfg, Args...>> {
 template <any_wrap Wrap, typename Holder, typename T>
 using wrap_interface_impl_t = typename detail::iface_impl_from_wrap_impl<Wrap>::template type<Holder, T>;
 
+// Machinery for the definition of the composite wrap.
 template <typename, typename, typename, typename, typename...>
 struct composite_wrap_iface_impl;
 
@@ -1342,6 +1350,12 @@ using composite_wrap = wrap<detail::composite_wrap_iface_selector<Wrap0, Wrap1, 
 template <auto Cfg, any_wrap Wrap0, any_wrap Wrap1, any_wrap... WrapN>
     requires detail::valid_config<Cfg>
 using composite_cwrap = wrap<detail::composite_wrap_iface_selector<Wrap0, Wrap1, WrapN...>::template type, Cfg>;
+
+#if defined(_MSC_VER)
+
+#pragma warning(pop)
+
+#endif
 
 // Helper that can be used to reduce typing in an
 // interface implementation. This implements value()

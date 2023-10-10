@@ -1,6 +1,6 @@
-#include <concepts>
 #include <functional>
-#include <type_traits>
+#include <iostream>
+#include <string>
 
 #include <tanuki/tanuki.hpp>
 
@@ -13,88 +13,91 @@
 
 #endif
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-multiple-inheritance)
 
-template <typename T, typename U>
-struct is_reference_wrapper_for : std::false_type {
-};
-
-template <typename T, typename U>
-struct is_reference_wrapper_for<std::reference_wrapper<T>, U>
-    : std::bool_constant<std::same_as<std::remove_cv_t<T>, U>> {
-};
-
-template <typename T, typename U>
-concept ref_wrapper_for = is_reference_wrapper_for<T, U>::value;
-
+// Fwd-declaration of the interface template.
 template <typename, typename>
-struct foo_iface;
+struct summary_iface;
 
+// Trait definition.
 template <>
 // NOLINTNEXTLINE
-struct foo_iface<void, void> {
-    virtual ~foo_iface() = default;
-    virtual void foo() const = 0;
-};
-
-template <typename, typename>
-struct bar_iface;
-
-template <>
-// NOLINTNEXTLINE
-struct bar_iface<void, void> {
-    virtual ~bar_iface() = default;
-    virtual void bar() const = 0;
-};
-
-using foo_wrap = tanuki::wrap<foo_iface, tanuki::config<>{.explicit_value_ctor = false}>;
-using bar_wrap = tanuki::wrap<foo_iface, tanuki::config<>{.explicit_value_ctor = false}>;
-
-struct my_class {
-    void foo() const {}
-    void bar() const {}
-};
-
-template <typename Holder, typename T>
-    requires std::same_as<T, my_class> || ref_wrapper_for<T, my_class>
-struct foo_iface<Holder, T> : foo_iface<void, void>, tanuki::iface_impl_helper<Holder, T> {
-    void foo() const final
+struct summary_iface<void, void> {
+    virtual ~summary_iface() = default;
+    [[nodiscard]] virtual std::string summarize() const
     {
-        this->value().foo();
+        return "(Read more...)";
+    }
+};
+
+// A couple of classes for which we might want to
+// implement the trait.
+struct news_article {
+    std::string headline;
+    std::string location;
+    std::string author;
+    std::string content;
+};
+
+struct tweet {
+    std::string username;
+    std::string content;
+    bool reply = false;
+    bool retweet = false;
+};
+
+// Default implementation of the trait.
+template <typename Holder, typename T>
+struct summary_iface : summary_iface<void, void> {
+};
+
+// Implement the summary trait for news_article and tweet.
+template <typename Holder, typename T>
+    requires tanuki::same_or_ref_for<T, news_article>
+struct summary_iface<Holder, T> : summary_iface<void, void>, tanuki::iface_impl_helper<Holder, T> {
+    [[nodiscard]] std::string summarize() const final
+    {
+        return this->value().headline + ", by " + this->value().author + " (" + this->value().location + ")";
     }
 };
 
 template <typename Holder, typename T>
-    requires std::same_as<T, my_class> || ref_wrapper_for<T, my_class>
-struct bar_iface<Holder, T> : bar_iface<void, void>, tanuki::iface_impl_helper<Holder, my_class> {
-    void bar() const final
+    requires tanuki::same_or_ref_for<T, tweet>
+struct summary_iface<Holder, T> : summary_iface<void, void>, tanuki::iface_impl_helper<Holder, T> {
+    [[nodiscard]] std::string summarize() const final
     {
-        this->value().bar();
+        return this->value().username + ": " + this->value().content;
     }
 };
 
-auto foo_func(const foo_wrap &w)
+// Definition of the wrapper.
+using summary = tanuki::wrap<summary_iface, tanuki::config<>{.generic_ctor = tanuki::always_implicit}>;
+
+// A function with summary input param.
+void notify(const summary &s)
 {
-    return w;
+    std::cout << "Breaking news! " << s->summarize() << '\n';
 }
 
-auto bar_func(const bar_wrap &w)
+TEST_CASE("summary example")
 {
-    return w;
+    struct foo {
+    };
+
+    notify(news_article{.headline = "Aliens!", .location = "New York", .author = "Goofy"});
+    notify(tweet{.username = "Donald Duck", .content = "Big, if true!"});
+    notify(foo{});
+
+    news_article na{.headline = "Aliens!", .location = "New York", .author = "Goofy"};
+    tweet t{.username = "Donald Duck", .content = "Big, if true!"};
+    foo f;
+
+    notify(std::ref(na));
+    notify(std::ref(t));
+    notify(std::ref(f));
 }
 
-TEST_CASE("trait like")
-{
-    my_class c;
-
-    REQUIRE(&value_ref<my_class>(foo_func(c)) != &c);
-    REQUIRE(&value_ref<my_class>(bar_func(c)) != &c);
-
-    REQUIRE(&value_ref<std::reference_wrapper<const my_class>>(foo_func(std::cref(c))).get() == &c);
-    REQUIRE(&value_ref<std::reference_wrapper<const my_class>>(bar_func(std::cref(c))).get() == &c);
-}
-
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-multiple-inheritance)
 
 #if defined(__GNUC__)
 

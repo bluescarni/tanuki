@@ -133,6 +133,15 @@ using detected_t = typename detector<nonesuch, void, Op, Args...>::type;
 struct vtag {
 };
 
+// Type-trait to detect instances of std::reference_wrapper.
+template <typename T>
+struct is_reference_wrapper : std::false_type {
+};
+
+template <typename T>
+struct is_reference_wrapper<std::reference_wrapper<T>> : std::true_type {
+};
+
 // Interface containing methods to interact
 // with the value in the holder class.
 // NOTE: templating this on IFace is not strictly necessary,
@@ -155,6 +164,7 @@ struct value_iface {
     [[nodiscard]] virtual const void *value_ptr(vtag) const noexcept = 0;
     [[nodiscard]] virtual void *value_ptr(vtag) noexcept = 0;
     [[nodiscard]] virtual std::type_index value_type_index(vtag) const noexcept = 0;
+    [[nodiscard]] virtual bool is_reference(vtag) const noexcept = 0;
 
     // Methods to implement virtual copy/move primitives for the holder class.
     [[nodiscard]] virtual std::pair<IFace *, value_iface *> clone(vtag) const = 0;
@@ -271,6 +281,11 @@ private:
     [[nodiscard]] void *value_ptr(vtag) noexcept final
     {
         return std::addressof(m_value);
+    }
+
+    [[nodiscard]] bool is_reference(vtag) const noexcept final
+    {
+        return is_reference_wrapper<T>::value;
     }
 
     // Clone this, and cast the result to the two bases.
@@ -438,6 +453,12 @@ inline constexpr auto holder_size = sizeof(detail::holder<T, IFaceT, Args...>);
 template <typename T, template <typename, typename, typename...> typename IFaceT, typename... Args>
 inline constexpr auto holder_align = alignof(detail::holder<T, IFaceT, Args...>);
 
+// Enum for specifying the explicitness of the generic constructor.
+enum class ctor_explicitness { always_explicit, ref_implicit, always_implicit };
+
+// Bring the enumerators into scope.
+using enum ctor_explicitness;
+
 // Configuration settings for the wrap class.
 // NOTE: the DefaultValueType is subject to the constraints
 // for valid value types.
@@ -454,8 +475,8 @@ struct config final : detail::config_base {
     bool invalid_default_ctor = false;
     // Provide pointer interface.
     bool pointer_interface = true;
-    // Explicit constructor from value.
-    bool explicit_value_ctor = true;
+    // Explicitness of the generic ctor.
+    ctor_explicitness generic_ctor = always_explicit;
     // Enable copy construction/assignment.
     bool copyable = true;
     // Enable move construction/assignment.
@@ -479,7 +500,9 @@ concept valid_config =
     // This checks that decltype(Cfg) is a specialisation from the primary config template.
     std::derived_from<std::remove_const_t<decltype(Cfg)>, config_base> &&
     // The static alignment value must be a power of 2.
-    power_of_two<Cfg.static_alignment>;
+    power_of_two<Cfg.static_alignment> &&
+    // The generic_ctor enum must have one of the allowed enumerators.
+    (Cfg.generic_ctor >= always_explicit && Cfg.generic_ctor <= always_implicit);
 
 } // namespace detail
 
@@ -576,7 +599,25 @@ template <typename T>
 struct is_in_place_type<in_place_type<T>> : std::true_type {
 };
 
+// Type trait to check if T is a reference wrapper
+// whose type, after the removal of cv-qualifiers, is U.
+template <typename T, typename U>
+struct is_reference_wrapper_for : std::false_type {
+};
+
+template <typename T, typename U>
+struct is_reference_wrapper_for<std::reference_wrapper<T>, U>
+    : std::bool_constant<std::same_as<std::remove_cv_t<T>, U>> {
+};
+
 } // namespace detail
+
+// Concept to detect if either:
+// - T is the same as U, or
+// - T is a reference wrapper whose type, after the
+//   removal of cv-qualifiers, is U.
+template <typename T, typename U>
+concept same_or_ref_for = std::same_as<T, U> || detail::is_reference_wrapper_for<T, U>::value;
 
 // Fwd declarations.
 template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
@@ -836,7 +877,8 @@ public:
                  detail::wrappable<detail::value_t_from_arg<T &&>, IFaceT, Args...> &&
                  // We must be able to construct a holder from x.
                  detail::ctible_holder<holder_t<detail::value_t_from_arg<T &&>>, iface_t, Cfg, T &&>
-    explicit(Cfg.explicit_value_ctor)
+    explicit(Cfg.generic_ctor == always_explicit
+             || (Cfg.generic_ctor == ref_implicit && !detail::is_reference_wrapper<std::remove_cvref_t<T>>::value))
         // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,cppcoreguidelines-pro-type-member-init,hicpp-member-init,google-explicit-constructor,hicpp-explicit-conversions)
         wrap(T &&x) noexcept(noexcept(this->ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x)))
                              && detail::nothrow_default_initializable<ref_iface_t>)
@@ -1142,15 +1184,6 @@ struct is_any_wrap_impl : std::false_type {
 
 template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
 struct is_any_wrap_impl<wrap<IFaceT, Cfg, Args...>> : std::true_type {
-};
-
-// Type-trait to detect instances of std::reference_wrapper.
-template <typename T>
-struct is_reference_wrapper : std::false_type {
-};
-
-template <typename T>
-struct is_reference_wrapper<std::reference_wrapper<T>> : std::true_type {
 };
 
 } // namespace detail

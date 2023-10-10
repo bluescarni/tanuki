@@ -132,7 +132,7 @@ fooable_summary notify_fooable(const fooable_summary &s)
     return s;
 }
 
-TEST_CASE("blaf")
+TEST_CASE("composite wrap")
 {
     notify_fooable(tweet{.username = "Donald Duck", .content = "Big, if true!"});
 

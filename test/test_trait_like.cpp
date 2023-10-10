@@ -13,7 +13,7 @@
 
 #endif
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-multiple-inheritance)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-multiple-inheritance,fuchsia-virtual-inheritance)
 
 // Fwd-declaration of the interface template.
 template <typename, typename>
@@ -48,13 +48,13 @@ struct tweet {
 
 // Default implementation of the trait.
 template <typename Holder, typename T>
-struct summary_iface : summary_iface<void, void> {
+struct summary_iface : virtual summary_iface<void, void> {
 };
 
 // Implement the summary trait for news_article and tweet.
 template <typename Holder, typename T>
     requires tanuki::same_or_ref_for<T, news_article>
-struct summary_iface<Holder, T> : summary_iface<void, void>, tanuki::iface_impl_helper<Holder, T> {
+struct summary_iface<Holder, T> : virtual summary_iface<void, void>, tanuki::iface_impl_helper<Holder, T> {
     [[nodiscard]] std::string summarize() const final
     {
         return this->value().headline + ", by " + this->value().author + " (" + this->value().location + ")";
@@ -63,7 +63,7 @@ struct summary_iface<Holder, T> : summary_iface<void, void>, tanuki::iface_impl_
 
 template <typename Holder, typename T>
     requires tanuki::same_or_ref_for<T, tweet>
-struct summary_iface<Holder, T> : summary_iface<void, void>, tanuki::iface_impl_helper<Holder, T> {
+struct summary_iface<Holder, T> : virtual summary_iface<void, void>, tanuki::iface_impl_helper<Holder, T> {
     [[nodiscard]] std::string summarize() const final
     {
         return this->value().username + ": " + this->value().content;
@@ -97,7 +97,34 @@ TEST_CASE("summary example")
     notify(std::ref(f));
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-multiple-inheritance)
+template <typename, typename>
+struct any_iface;
+
+template <>
+// NOLINTNEXTLINE
+struct any_iface<void, void> {
+    virtual ~any_iface() = default;
+};
+
+template <typename Holder, typename T>
+struct any_iface : virtual any_iface<void, void> {
+};
+
+using whatever = tanuki::wrap<any_iface, tanuki::config<>{.explicit_generic_ctor = false}>;
+
+TEST_CASE("blaf")
+{
+    using frip = tanuki::composite_wrap<summary, whatever>;
+
+    // (void)static_cast<frip *>(nullptr);
+
+    const frip f(tweet{});
+}
+
+// template <typename Wrap0, typename Wrap1, typename... WrapN>
+// requires any_wrap<Wrap0> && any_wrap<Wrap1> && (any_wrap<WrapN> && ...)
+
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-multiple-inheritance,fuchsia-virtual-inheritance)
 
 #if defined(__GNUC__)
 

@@ -1276,6 +1276,67 @@ struct is_any_wrap_impl<wrap<IFaceT, Cfg, Args...>> : std::true_type {
 template <typename T>
 concept any_wrap = detail::is_any_wrap_impl<T>::value;
 
+namespace detail
+{
+
+// Machinery to detect the interface of a wrap.
+template <typename>
+struct iface_from_wrap_impl {
+};
+
+template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+struct iface_from_wrap_impl<wrap<IFaceT, Cfg, Args...>> {
+    using type = IFaceT<void, void, Args...>;
+};
+
+template <any_wrap Wrap>
+using wrap_interface_t = typename detail::iface_from_wrap_impl<Wrap>::type;
+
+// Machinery to detect the interface implementation of a wrap.
+template <typename>
+struct iface_impl_from_wrap_impl {
+};
+
+template <template <typename, typename, typename...> typename IFaceT, auto Cfg, typename... Args>
+struct iface_impl_from_wrap_impl<wrap<IFaceT, Cfg, Args...>> {
+    template <typename Holder, typename T>
+    using type = IFaceT<Holder, T, Args...>;
+};
+
+template <any_wrap Wrap, typename Holder, typename T>
+using wrap_interface_impl_t = typename detail::iface_impl_from_wrap_impl<Wrap>::template type<Holder, T>;
+
+template <typename, typename, typename, typename, typename...>
+struct composite_wrap_iface_impl;
+
+// Composite wrap interface template.
+template <typename, typename, typename, typename, typename...>
+struct composite_wrap_iface;
+
+template <typename Wrap0, typename Wrap1, typename... WrapN>
+struct composite_wrap_iface<void, void, Wrap0, Wrap1, WrapN...>
+    : virtual wrap_interface_t<Wrap0>, virtual wrap_interface_t<Wrap1>, virtual wrap_interface_t<WrapN>... {
+};
+
+template <typename Holder, typename T, typename Wrap0, typename Wrap1, typename... WrapN>
+struct composite_wrap_iface : composite_wrap_iface<void, void, Wrap0, Wrap1, WrapN...>,
+                              wrap_interface_impl_t<Wrap0, Holder, T>,
+                              wrap_interface_impl_t<Wrap1, Holder, T>,
+                              wrap_interface_impl_t<WrapN, Holder, T>... {
+};
+
+template <typename Wrap0, typename Wrap1, typename... WrapN>
+struct composite_wrap_iface_selector {
+    template <typename Holder, typename T>
+    using type = composite_wrap_iface<Holder, T, Wrap0, Wrap1, WrapN...>;
+};
+
+} // namespace detail
+
+// Composite wrap.
+template <typename Wrap0, typename Wrap1, typename... WrapN>
+using composite_wrap = wrap<detail::composite_wrap_iface_selector<Wrap0, Wrap1, WrapN...>::template type>;
+
 // Helper that can be used to reduce typing in an
 // interface implementation. This implements value()
 // helpers for fetching the value held in Holder,

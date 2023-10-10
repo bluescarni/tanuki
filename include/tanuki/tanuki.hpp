@@ -1314,15 +1314,16 @@ template <typename, typename, typename, typename, typename...>
 struct composite_wrap_iface;
 
 template <typename Wrap0, typename Wrap1, typename... WrapN>
-struct composite_wrap_iface<void, void, Wrap0, Wrap1, WrapN...>
-    : virtual wrap_interface_t<Wrap0>, virtual wrap_interface_t<Wrap1>, virtual wrap_interface_t<WrapN>... {
+struct composite_wrap_iface<void, void, Wrap0, Wrap1, WrapN...> : virtual public wrap_interface_t<Wrap0>,
+                                                                  virtual public wrap_interface_t<Wrap1>,
+                                                                  virtual public wrap_interface_t<WrapN>... {
 };
 
 template <typename Holder, typename T, typename Wrap0, typename Wrap1, typename... WrapN>
 struct composite_wrap_iface : composite_wrap_iface<void, void, Wrap0, Wrap1, WrapN...>,
-                              wrap_interface_impl_t<Wrap0, Holder, T>,
-                              wrap_interface_impl_t<Wrap1, Holder, T>,
-                              wrap_interface_impl_t<WrapN, Holder, T>... {
+                              public wrap_interface_impl_t<Wrap0, Holder, T>,
+                              public wrap_interface_impl_t<Wrap1, Holder, T>,
+                              public wrap_interface_impl_t<WrapN, Holder, T>... {
 };
 
 template <typename Wrap0, typename Wrap1, typename... WrapN>
@@ -1334,8 +1335,13 @@ struct composite_wrap_iface_selector {
 } // namespace detail
 
 // Composite wrap.
-template <typename Wrap0, typename Wrap1, typename... WrapN>
+template <any_wrap Wrap0, any_wrap Wrap1, any_wrap... WrapN>
 using composite_wrap = wrap<detail::composite_wrap_iface_selector<Wrap0, Wrap1, WrapN...>::template type>;
+
+// Composite wrap with custom config.
+template <auto Cfg, any_wrap Wrap0, any_wrap Wrap1, any_wrap... WrapN>
+    requires detail::valid_config<Cfg>
+using composite_cwrap = wrap<detail::composite_wrap_iface_selector<Wrap0, Wrap1, WrapN...>::template type, Cfg>;
 
 // Helper that can be used to reduce typing in an
 // interface implementation. This implements value()

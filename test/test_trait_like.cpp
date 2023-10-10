@@ -74,9 +74,11 @@ struct summary_iface<Holder, T> : virtual summary_iface<void, void>, tanuki::ifa
 using summary = tanuki::wrap<summary_iface, tanuki::config<>{.explicit_generic_ctor = false}>;
 
 // A function with summary input param.
-void notify(const summary &s)
+summary notify(const summary &s)
 {
     std::cout << "Breaking news! " << s->summarize() << '\n';
+
+    return s;
 }
 
 TEST_CASE("summary example")
@@ -95,34 +97,49 @@ TEST_CASE("summary example")
     notify(std::ref(na));
     notify(std::ref(t));
     notify(std::ref(f));
+
+    REQUIRE(&value_ref<std::reference_wrapper<news_article>>(notify(std::ref(na))).get() == &na);
+    REQUIRE(&value_ref<std::reference_wrapper<tweet>>(notify(std::ref(t))).get() == &t);
+    REQUIRE(&value_ref<std::reference_wrapper<foo>>(notify(std::ref(f))).get() == &f);
 }
 
 template <typename, typename>
-struct any_iface;
+struct fooable_iface;
 
 template <>
 // NOLINTNEXTLINE
-struct any_iface<void, void> {
-    virtual ~any_iface() = default;
+struct fooable_iface<void, void> {
+    virtual ~fooable_iface() = default;
+    [[nodiscard]] virtual std::string foo() const
+    {
+        return "default foo!";
+    }
 };
 
 template <typename Holder, typename T>
-struct any_iface : virtual any_iface<void, void> {
+struct fooable_iface : virtual fooable_iface<void, void> {
 };
 
-using whatever = tanuki::wrap<any_iface, tanuki::config<>{.explicit_generic_ctor = false}>;
+using fooable = tanuki::wrap<fooable_iface, tanuki::config<>{.explicit_generic_ctor = false}>;
+
+using fooable_summary = tanuki::composite_cwrap<tanuki::config<>{.explicit_generic_ctor = false}, summary, fooable>;
+
+fooable_summary notify_fooable(const fooable_summary &s)
+{
+    std::cout << "Breaking news! " << s->summarize() << '\n';
+    std::cout << "About to foo: " << s->foo() << '\n';
+
+    return s;
+}
 
 TEST_CASE("blaf")
 {
-    using frip = tanuki::composite_wrap<summary, whatever>;
+    notify_fooable(tweet{.username = "Donald Duck", .content = "Big, if true!"});
 
-    // (void)static_cast<frip *>(nullptr);
+    tweet t{.username = "Donald Duck", .content = "Big, if true!"};
 
-    const frip f(tweet{});
+    REQUIRE(&value_ref<std::reference_wrapper<tweet>>(notify_fooable(std::ref(t))).get() == &t);
 }
-
-// template <typename Wrap0, typename Wrap1, typename... WrapN>
-// requires any_wrap<Wrap0> && any_wrap<Wrap1> && (any_wrap<WrapN> && ...)
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-multiple-inheritance,fuchsia-virtual-inheritance)
 

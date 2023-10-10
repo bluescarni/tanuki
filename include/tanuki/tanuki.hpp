@@ -1257,6 +1257,11 @@ public:
     {
         return w.m_pv_iface->value_ptr(detail::vtag{});
     }
+
+    [[nodiscard]] friend bool contains_reference(const wrap &w) noexcept
+    {
+        return w.m_pv_iface->is_reference(detail::vtag{});
+    }
 };
 
 namespace detail

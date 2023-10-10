@@ -114,6 +114,9 @@ TEST_CASE("misc utils")
     {
         using wrap_foo_t = tanuki::wrap<foo_iface, tanuki::config<>{.pointer_interface = false}>;
         wrap_foo_t wf0{fooer{}}, wf0_ref{std::ref(wf0)}, wf0_cref{std::cref(wf0)};
+        REQUIRE(!contains_reference(wf0));
+        REQUIRE(contains_reference(wf0_ref));
+        REQUIRE(contains_reference(wf0_cref));
         REQUIRE(static_cast<void *>(&value_ref<std::reference_wrapper<wrap_foo_t>>(wf0_ref).get())
                 == static_cast<void *>(&wf0));
         REQUIRE(static_cast<const void *>(&value_ref<std::reference_wrapper<const wrap_foo_t>>(wf0_cref).get())
@@ -128,6 +131,17 @@ TEST_CASE("misc utils")
         REQUIRE(static_cast<void *>(&value_ref<std::reference_wrapper<wrap_bar_t>>(wf0_ref).get())
                 == static_cast<void *>(&wf0));
         REQUIRE_NOTHROW(wf0_ref.bar());
+    }
+
+    {
+        // Test the same_or_ref_for concept.
+        REQUIRE(tanuki::same_or_ref_for<int, int>);
+        REQUIRE(!tanuki::same_or_ref_for<int, double>);
+        REQUIRE(tanuki::same_or_ref_for<std::reference_wrapper<int>, int>);
+        REQUIRE(tanuki::same_or_ref_for<std::reference_wrapper<const int>, int>);
+        REQUIRE(tanuki::same_or_ref_for<std::reference_wrapper<volatile int>, int>);
+        REQUIRE(tanuki::same_or_ref_for<std::reference_wrapper<const volatile int>, int>);
+        REQUIRE(!tanuki::same_or_ref_for<std::reference_wrapper<const volatile int>, double>);
     }
 }
 

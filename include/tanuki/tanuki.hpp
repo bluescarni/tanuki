@@ -453,16 +453,6 @@ inline constexpr auto holder_size = sizeof(detail::holder<T, IFaceT, Args...>);
 template <typename T, template <typename, typename, typename...> typename IFaceT, typename... Args>
 inline constexpr auto holder_align = alignof(detail::holder<T, IFaceT, Args...>);
 
-// Enum for specifying the explicitness of the generic constructor.
-enum class ctor_explicitness { always_explicit, ref_implicit, always_implicit };
-
-#if __cpp_using_enum == 201907L
-
-// Bring the enumerators into scope.
-using enum ctor_explicitness;
-
-#endif
-
 // Configuration settings for the wrap class.
 // NOTE: the DefaultValueType is subject to the constraints
 // for valid value types.
@@ -480,7 +470,7 @@ struct config final : detail::config_base {
     // Provide pointer interface.
     bool pointer_interface = true;
     // Explicitness of the generic ctor.
-    ctor_explicitness generic_ctor = ctor_explicitness::always_explicit;
+    bool explicit_generic_ctor = true;
     // Enable copy construction/assignment.
     bool copyable = true;
     // Enable move construction/assignment.
@@ -504,9 +494,7 @@ concept valid_config =
     // This checks that decltype(Cfg) is a specialisation from the primary config template.
     std::derived_from<std::remove_const_t<decltype(Cfg)>, config_base> &&
     // The static alignment value must be a power of 2.
-    power_of_two<Cfg.static_alignment> &&
-    // The generic_ctor enum must have one of the allowed enumerators.
-    (Cfg.generic_ctor >= ctor_explicitness::always_explicit && Cfg.generic_ctor <= ctor_explicitness::always_implicit);
+    power_of_two<Cfg.static_alignment>;
 
 } // namespace detail
 
@@ -841,9 +829,7 @@ public:
                  detail::wrappable<detail::value_t_from_arg<T &&>, IFaceT, Args...> &&
                  // We must be able to construct a holder from x.
                  detail::ctible_holder<holder_t<detail::value_t_from_arg<T &&>>, iface_t, Cfg, T &&>
-    explicit(Cfg.generic_ctor == ctor_explicitness::always_explicit
-             || (Cfg.generic_ctor == ctor_explicitness::ref_implicit
-                 && !detail::is_reference_wrapper<std::remove_cvref_t<T>>::value))
+    explicit(Cfg.explicit_generic_ctor)
         // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,cppcoreguidelines-pro-type-member-init,hicpp-member-init,google-explicit-constructor,hicpp-explicit-conversions)
         wrap(T &&x) noexcept(noexcept(this->ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x)))
                              && detail::nothrow_default_initializable<ref_iface_t>)

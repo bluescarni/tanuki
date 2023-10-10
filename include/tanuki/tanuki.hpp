@@ -456,8 +456,12 @@ inline constexpr auto holder_align = alignof(detail::holder<T, IFaceT, Args...>)
 // Enum for specifying the explicitness of the generic constructor.
 enum class ctor_explicitness { always_explicit, ref_implicit, always_implicit };
 
+#if __cpp_using_enum == 201907L
+
 // Bring the enumerators into scope.
 using enum ctor_explicitness;
+
+#endif
 
 // Configuration settings for the wrap class.
 // NOTE: the DefaultValueType is subject to the constraints
@@ -476,7 +480,7 @@ struct config final : detail::config_base {
     // Provide pointer interface.
     bool pointer_interface = true;
     // Explicitness of the generic ctor.
-    ctor_explicitness generic_ctor = always_explicit;
+    ctor_explicitness generic_ctor = ctor_explicitness::always_explicit;
     // Enable copy construction/assignment.
     bool copyable = true;
     // Enable move construction/assignment.
@@ -502,7 +506,7 @@ concept valid_config =
     // The static alignment value must be a power of 2.
     power_of_two<Cfg.static_alignment> &&
     // The generic_ctor enum must have one of the allowed enumerators.
-    (Cfg.generic_ctor >= always_explicit && Cfg.generic_ctor <= always_implicit);
+    (Cfg.generic_ctor >= ctor_explicitness::always_explicit && Cfg.generic_ctor <= ctor_explicitness::always_implicit);
 
 } // namespace detail
 

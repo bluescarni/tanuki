@@ -71,7 +71,8 @@ struct summary_iface<Holder, T> : summary_iface<void, void>, tanuki::iface_impl_
 };
 
 // Definition of the wrapper.
-using summary = tanuki::wrap<summary_iface, tanuki::config<>{.generic_ctor = tanuki::always_implicit}>;
+using summary
+    = tanuki::wrap<summary_iface, tanuki::config<>{.generic_ctor = tanuki::ctor_explicitness::always_implicit}>;
 
 // A function with summary input param.
 void notify(const summary &s)

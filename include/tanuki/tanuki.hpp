@@ -1289,7 +1289,7 @@ struct iface_from_wrap_impl<wrap<IFaceT, Cfg, Args...>> {
     using type = IFaceT<void, void, Args...>;
 };
 
-template <any_wrap Wrap>
+template <typename Wrap>
 using wrap_interface_t = typename detail::iface_from_wrap_impl<Wrap>::type;
 
 // Machinery to detect the interface implementation of a wrap.
@@ -1303,14 +1303,10 @@ struct iface_impl_from_wrap_impl<wrap<IFaceT, Cfg, Args...>> {
     using type = IFaceT<Holder, T, Args...>;
 };
 
-template <any_wrap Wrap, typename Holder, typename T>
+template <typename Wrap, typename Holder, typename T>
 using wrap_interface_impl_t = typename detail::iface_impl_from_wrap_impl<Wrap>::template type<Holder, T>;
 
 // Machinery for the definition of the composite wrap.
-template <typename, typename, typename, typename, typename...>
-struct composite_wrap_iface_impl;
-
-// Composite wrap interface template.
 template <typename, typename, typename, typename, typename...>
 struct composite_wrap_iface;
 

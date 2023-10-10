@@ -881,8 +881,9 @@ public:
                  detail::wrappable<detail::value_t_from_arg<T &&>, IFaceT, Args...> &&
                  // We must be able to construct a holder from x.
                  detail::ctible_holder<holder_t<detail::value_t_from_arg<T &&>>, iface_t, Cfg, T &&>
-    explicit(Cfg.generic_ctor == always_explicit
-             || (Cfg.generic_ctor == ref_implicit && !detail::is_reference_wrapper<std::remove_cvref_t<T>>::value))
+    explicit(Cfg.generic_ctor == ctor_explicitness::always_explicit
+             || (Cfg.generic_ctor == ctor_explicitness::ref_implicit
+                 && !detail::is_reference_wrapper<std::remove_cvref_t<T>>::value))
         // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,cppcoreguidelines-pro-type-member-init,hicpp-member-init,google-explicit-constructor,hicpp-explicit-conversions)
         wrap(T &&x) noexcept(noexcept(this->ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x)))
                              && detail::nothrow_default_initializable<ref_iface_t>)

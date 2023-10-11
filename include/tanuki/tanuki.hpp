@@ -1350,10 +1350,20 @@ using composite_cwrap = wrap<detail::composite_wrap_iface_selector<Wrap0, Wrap1,
 // helpers for fetching the value held in Holder,
 // automatically unwrapping it in case it is
 // a std::reference_wrapper.
-template <typename Holder, typename T>
+// NOTE: the IFaceT and Args... arguments are the interface
+// template and its arguments. They are unused in the implementation
+// of this class, but it is useful to have them because they
+// will allow to disambiguate iface_impl_helper bases when
+// implementing composite wrappers.
+template <typename Holder, typename T, template <typename, typename, typename...> typename IFaceT, typename... Args>
 struct iface_impl_helper {
     auto &value() noexcept
     {
+        // NOTE: check to make sure that iface_impl_helper is used as a base of the
+        // interface implementation.
+        static_assert(std::is_base_of_v<iface_impl_helper, IFaceT<Holder, T, Args...>>,
+                      "iface_impl_helper must be used as a base for the interface implementation.");
+
         auto &val = static_cast<Holder *>(this)->m_value;
 
         if constexpr (detail::is_reference_wrapper<T>::value) {
@@ -1364,6 +1374,9 @@ struct iface_impl_helper {
     }
     const auto &value() const noexcept
     {
+        static_assert(std::is_base_of_v<iface_impl_helper, IFaceT<Holder, T, Args...>>,
+                      "iface_impl_helper must be used as a base for the interface implementation.");
+
         const auto &val = static_cast<const Holder *>(this)->m_value;
 
         if constexpr (detail::is_reference_wrapper<T>::value) {

@@ -39,7 +39,7 @@ struct foo_iface<void, void> {
 };
 
 template <typename Holder, typename T>
-struct foo_iface : foo_iface<void, void>, tanuki::iface_impl_helper<Holder, T> {
+struct foo_iface : foo_iface<void, void>, tanuki::iface_impl_helper<Holder, T, foo_iface> {
     void foo() const final
     {
         this->value().foo();
@@ -57,7 +57,7 @@ struct bar_iface<void, void> {
 };
 
 template <typename Holder, typename T>
-struct bar_iface : bar_iface<void, void>, tanuki::iface_impl_helper<Holder, T> {
+struct bar_iface : bar_iface<void, void>, tanuki::iface_impl_helper<Holder, T, bar_iface> {
     void bar() final
     {
         this->value().bar();

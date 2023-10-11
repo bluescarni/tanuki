@@ -54,7 +54,8 @@ struct summary_iface : virtual summary_iface<void, void> {
 // Implement the summary trait for news_article and tweet.
 template <typename Holder, typename T>
     requires tanuki::same_or_ref_for<T, news_article>
-struct summary_iface<Holder, T> : virtual summary_iface<void, void>, tanuki::iface_impl_helper<Holder, T> {
+struct summary_iface<Holder, T> : virtual summary_iface<void, void>,
+                                  tanuki::iface_impl_helper<Holder, T, summary_iface> {
     [[nodiscard]] std::string summarize() const final
     {
         return this->value().headline + ", by " + this->value().author + " (" + this->value().location + ")";
@@ -63,7 +64,8 @@ struct summary_iface<Holder, T> : virtual summary_iface<void, void>, tanuki::ifa
 
 template <typename Holder, typename T>
     requires tanuki::same_or_ref_for<T, tweet>
-struct summary_iface<Holder, T> : virtual summary_iface<void, void>, tanuki::iface_impl_helper<Holder, T> {
+struct summary_iface<Holder, T> : virtual summary_iface<void, void>,
+                                  tanuki::iface_impl_helper<Holder, T, summary_iface> {
     [[nodiscard]] std::string summarize() const final
     {
         return this->value().username + ": " + this->value().content;

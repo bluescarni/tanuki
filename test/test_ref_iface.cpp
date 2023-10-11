@@ -28,7 +28,7 @@ struct foobar_iface<void, void> {
 };
 
 template <typename Holder, typename T>
-struct foobar_iface : foobar_iface<void, void>, tanuki::iface_impl_helper<Holder, T> {
+struct foobar_iface : foobar_iface<void, void>, tanuki::iface_impl_helper<Holder, T, foobar_iface> {
     void foo() const noexcept final
     {
         this->value().foo();

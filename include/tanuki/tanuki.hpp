@@ -192,7 +192,8 @@ private:
 // Concept to detect if a type is default initialisable without throwing.
 template <typename T>
 concept nothrow_default_initializable
-    = std::default_initializable<T> && noexcept(::new (static_cast<void *>(nullptr)) T);
+    = std::default_initializable<T> && noexcept(::new (static_cast<void *>(nullptr)) T)
+      && std::is_nothrow_constructible_v<T> && noexcept(T{});
 
 // Concept to detect if T is an rvalue reference without cv qualifications.
 template <typename T>
@@ -216,9 +217,7 @@ concept noncv_rvalue_reference
 
 #endif
 
-// NOTE: constrain value types to be non-cv qualified objects for the time being.
-// References and cv-qualified objects might be useful as future extensions,
-// but we must thread carefully as typeid() removes them.
+// NOTE: constrain value types to be non-cv qualified objects.
 template <typename T>
 concept valid_value_type = std::is_object_v<T> && (!std::is_const_v<T>)&&(!std::is_volatile_v<T>)&&std::destructible<T>;
 
@@ -336,7 +335,7 @@ private:
             // copy_assign_value_to() is called only when assigning holders containing
             // the same T, the conversion chain should boil down to T * -> void * -> T *, which
             // does not require laundering.
-            assert(value_type_index(vtag{}) == v_iface->value_type_index(vtag{}));
+            assert(typeid(T) == v_iface->value_type_index(vtag{}));
             *static_cast<T *>(v_iface->value_ptr(vtag{})) = m_value;
         } else {
             throw std::invalid_argument("Attempting to copy-assign a non-copyable value type");
@@ -347,7 +346,7 @@ private:
     void move_assign_value_to(value_iface<IFaceT<void, void, Args...>> *v_iface, vtag) && noexcept final
     {
         if constexpr (std::is_move_assignable_v<T>) {
-            assert(value_type_index(vtag{}) == v_iface->value_type_index(vtag{}));
+            assert(typeid(T) == v_iface->value_type_index(vtag{}));
             *static_cast<T *>(v_iface->value_ptr(vtag{})) = std::move(m_value);
         } else {
             throw std::invalid_argument("Attempting to move-assign a non-movable value type"); // LCOV_EXCL_LINE
@@ -376,7 +375,7 @@ private:
     void swap_value(value_iface<IFaceT<void, void, Args...>> *v_iface, vtag) noexcept final
     {
         if constexpr (std::swappable<T>) {
-            assert(value_type_index(vtag{}) == v_iface->value_type_index(vtag{}));
+            assert(typeid(T) == v_iface->value_type_index(vtag{}));
 
             using std::swap;
             swap(m_value, *static_cast<T *>(v_iface->value_ptr(vtag{})));

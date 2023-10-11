@@ -37,7 +37,7 @@ struct func_iface<void, void, R, Args...> {
 };
 
 template <typename Holder, typename T, typename R, typename... Args>
-struct func_iface : func_iface<void, void, R, Args...>, tanuki::iface_impl_helper<Holder, T> {
+struct func_iface : func_iface<void, void, R, Args...>, tanuki::iface_impl_helper<Holder, T, func_iface, R, Args...> {
     R operator()(Args... args) const final
     {
         if constexpr (std::is_pointer_v<T> || std::is_member_pointer_v<T>) {

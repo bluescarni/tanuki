@@ -39,7 +39,7 @@ struct foo_iface<void, void> {
 };
 
 template <typename Holder, typename T>
-struct foo_iface : foo_iface<void, void>, tanuki::iface_impl_helper<Holder, T> {
+struct foo_iface : foo_iface<void, void>, tanuki::iface_impl_helper<Holder, T, foo_iface> {
     void foo() const final
     {
         this->value().foo();
@@ -57,7 +57,7 @@ struct bar_iface<void, void> {
 };
 
 template <typename Holder, typename T>
-struct bar_iface : bar_iface<void, void>, tanuki::iface_impl_helper<Holder, T> {
+struct bar_iface : bar_iface<void, void>, tanuki::iface_impl_helper<Holder, T, bar_iface> {
     void bar() final
     {
         this->value().bar();
@@ -114,6 +114,9 @@ TEST_CASE("misc utils")
     {
         using wrap_foo_t = tanuki::wrap<foo_iface, tanuki::config<>{.pointer_interface = false}>;
         wrap_foo_t wf0{fooer{}}, wf0_ref{std::ref(wf0)}, wf0_cref{std::cref(wf0)};
+        REQUIRE(!contains_reference(wf0));
+        REQUIRE(contains_reference(wf0_ref));
+        REQUIRE(contains_reference(wf0_cref));
         REQUIRE(static_cast<void *>(&value_ref<std::reference_wrapper<wrap_foo_t>>(wf0_ref).get())
                 == static_cast<void *>(&wf0));
         REQUIRE(static_cast<const void *>(&value_ref<std::reference_wrapper<const wrap_foo_t>>(wf0_cref).get())
@@ -128,6 +131,17 @@ TEST_CASE("misc utils")
         REQUIRE(static_cast<void *>(&value_ref<std::reference_wrapper<wrap_bar_t>>(wf0_ref).get())
                 == static_cast<void *>(&wf0));
         REQUIRE_NOTHROW(wf0_ref.bar());
+    }
+
+    {
+        // Test the same_or_ref_for concept.
+        REQUIRE(tanuki::same_or_ref_for<int, int>);
+        REQUIRE(!tanuki::same_or_ref_for<int, double>);
+        REQUIRE(tanuki::same_or_ref_for<std::reference_wrapper<int>, int>);
+        REQUIRE(tanuki::same_or_ref_for<std::reference_wrapper<const int>, int>);
+        REQUIRE(tanuki::same_or_ref_for<std::reference_wrapper<volatile int>, int>);
+        REQUIRE(tanuki::same_or_ref_for<std::reference_wrapper<const volatile int>, int>);
+        REQUIRE(!tanuki::same_or_ref_for<std::reference_wrapper<const volatile int>, double>);
     }
 }
 

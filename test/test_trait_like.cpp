@@ -118,8 +118,23 @@ struct fooable_iface<void, void> {
     }
 };
 
+struct foo_capable {
+    std::string foo;
+};
+
 template <typename Holder, typename T>
 struct fooable_iface : virtual fooable_iface<void, void> {
+};
+
+// Implement the summary trait for news_article and tweet.
+template <typename Holder, typename T>
+    requires tanuki::same_or_ref_for<T, foo_capable>
+struct fooable_iface<Holder, T> : virtual fooable_iface<void, void>,
+                                  tanuki::iface_impl_helper<Holder, T, fooable_iface> {
+    [[nodiscard]] std::string foo() const final
+    {
+        return this->value().foo;
+    }
 };
 
 using fooable = tanuki::wrap<fooable_iface, tanuki::config<>{.explicit_generic_ctor = false}>;
@@ -141,6 +156,10 @@ TEST_CASE("composite wrap")
     tweet t{.username = "Donald Duck", .content = "Big, if true!"};
 
     REQUIRE(&value_ref<std::reference_wrapper<tweet>>(notify_fooable(std::ref(t))).get() == &t);
+
+    foo_capable f{.foo = "frob the niz"};
+
+    REQUIRE(&value_ref<std::reference_wrapper<foo_capable>>(notify_fooable(std::ref(f))).get() == &f);
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-multiple-inheritance,fuchsia-virtual-inheritance)

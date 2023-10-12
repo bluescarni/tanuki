@@ -222,6 +222,20 @@ template <typename T>
 concept valid_value_type = std::is_object_v<T> && (!std::is_const_v<T>)&&(!std::is_volatile_v<T>)&&std::destructible<T>;
 
 template <typename T, template <typename, typename, typename...> typename IFaceT, typename... Args>
+// NOTE: ideally, we would like to put here the checks about IFaceT, e.g,
+// the interface implementation must derive from the interface. However,
+// because we are using the CRTP and passing the holder as a template
+// parameter to the interface impl, the checks cannot go here because holder
+// is still an incomplete type. Thus, the interface checks are placed in
+// the ctible_holder concept instead (defined elsewhere). As an unfortunate
+// consequence, a holder with an invalid IFaceT might end up being instantiated,
+// and we must thus take care of coping with an invalid IFaceT throughout
+// the implementation of this class (see for instance the static checks
+// in clone() and friends).
+// NOTE: this situation might be resolved in C++23 with the "deducing this"
+// feature, which should allow us to avoid passing the holder as a template
+// parameter to the interface implementation when implementing the CRTP. See here:
+// https://devblogs.microsoft.com/cppblog/cpp23-deducing-this/
     requires valid_value_type<T>
 struct holder final : public value_iface<IFaceT<void, void, Args...>>,
                       public IFaceT<holder<T, IFaceT, Args...>, T, Args...> {
@@ -291,6 +305,8 @@ private:
     [[nodiscard]] std::pair<IFaceT<void, void, Args...> *, value_iface<IFaceT<void, void, Args...>> *>
     clone(vtag) const final
     {
+        // NOTE: the std::convertible_to check is to avoid a hard error when instantiating a holder
+        // with an invalid interface implementation.
         if constexpr (std::copy_constructible<T> && std::convertible_to<holder *, IFaceT<void, void, Args...> *>) {
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
             auto *ret = new holder(m_value);

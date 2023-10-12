@@ -527,6 +527,14 @@ struct ref_iface {
         -> decltype(std::move(*iface_ptr(*static_cast<JustWrap *>(this))).name(std::forward<MemFunArgs>(args)...))     \
     {                                                                                                                  \
         return std::move(*iface_ptr(*static_cast<Wrap *>(this))).name(std::forward<MemFunArgs>(args)...);              \
+    }                                                                                                                  \
+    template <typename JustWrap = Wrap, typename... MemFunArgs>                                                        \
+    auto name(MemFunArgs &&...args) const && noexcept(                                                                 \
+        noexcept(std::move(*iface_ptr(*static_cast<const JustWrap *>(this))).name(std::forward<MemFunArgs>(args)...))) \
+        -> decltype(std::move(*iface_ptr(*static_cast<const JustWrap *>(this)))                                        \
+                        .name(std::forward<MemFunArgs>(args)...))                                                      \
+    {                                                                                                                  \
+        return std::move(*iface_ptr(*static_cast<const Wrap *>(this))).name(std::forward<MemFunArgs>(args)...);        \
     }
 
 namespace detail

@@ -21,8 +21,12 @@
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
+struct nonwrappable {
+};
+
 template <typename, typename>
-struct any_iface;
+struct any_iface {
+};
 
 template <>
 // NOLINTNEXTLINE
@@ -31,7 +35,8 @@ struct any_iface<void, void> {
 };
 
 template <typename Holder, typename T>
-struct any_iface : any_iface<void, void> {
+    requires(!std::same_as<T, nonwrappable>)
+struct any_iface<Holder, T> : any_iface<void, void> {
 };
 
 struct large {
@@ -42,17 +47,6 @@ struct large {
 struct small {
     std::string s = "42";
 };
-
-struct nonwrappable {
-};
-
-namespace tanuki
-{
-
-template <template <typename, typename, typename...> typename IFaceT, typename... Args>
-inline constexpr bool is_wrappable<nonwrappable, IFaceT, Args...> = false;
-
-} // namespace tanuki
 
 void my_func(int) {}
 

@@ -13,8 +13,16 @@
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
+struct foo {
+};
+
+struct bar {
+    bar() = delete;
+};
+
 template <typename, typename>
-struct any_iface;
+struct any_iface {
+};
 
 template <>
 // NOLINTNEXTLINE
@@ -23,7 +31,8 @@ struct any_iface<void, void> {
 };
 
 template <typename Holder, typename T>
-struct any_iface : any_iface<void, void> {
+    requires(!std::same_as<T, foo>)
+struct any_iface<Holder, T> : any_iface<void, void> {
 };
 
 TEST_CASE("def invalid")
@@ -44,21 +53,6 @@ TEST_CASE("def invalid")
     const wrap1_t w2;
     REQUIRE(is_invalid(w2));
 }
-
-struct foo {
-};
-
-struct bar {
-    bar() = delete;
-};
-
-namespace tanuki
-{
-
-template <>
-inline constexpr bool is_wrappable<foo, any_iface> = false;
-
-} // namespace tanuki
 
 TEST_CASE("def value type")
 {

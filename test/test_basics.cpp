@@ -31,8 +31,12 @@
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
+struct nonwrappable {
+};
+
 template <typename, typename>
-struct any_iface;
+struct any_iface {
+};
 
 template <>
 // NOLINTNEXTLINE
@@ -41,7 +45,8 @@ struct any_iface<void, void> {
 };
 
 template <typename Holder, typename T>
-struct any_iface : any_iface<void, void> {
+    requires(!std::same_as<T, nonwrappable>)
+struct any_iface<Holder, T> : any_iface<void, void> {
 };
 
 struct large {
@@ -73,9 +78,6 @@ TANUKI_S11N_WRAP_EXPORT(small, any_iface)
 
 #endif
 
-struct nonwrappable {
-};
-
 struct copythrow {
     copythrow() = default;
     // NOLINTNEXTLINE
@@ -85,14 +87,6 @@ struct copythrow {
     copythrow &operator=(copythrow &&) noexcept = delete;
     ~copythrow() = default;
 };
-
-namespace tanuki
-{
-
-template <template <typename, typename, typename...> typename IFaceT, typename... Args>
-inline constexpr bool is_wrappable<nonwrappable, IFaceT, Args...> = false;
-
-} // namespace tanuki
 
 void my_func(int) {}
 

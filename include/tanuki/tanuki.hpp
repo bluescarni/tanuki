@@ -161,7 +161,6 @@ struct value_iface {
     virtual ~value_iface() = default;
 
     // Access to the value and its type.
-    [[nodiscard]] virtual const void *value_ptr(vtag) const noexcept = 0;
     [[nodiscard]] virtual void *value_ptr(vtag) noexcept = 0;
     [[nodiscard]] virtual std::type_index value_type_index(vtag) const noexcept = 0;
     [[nodiscard]] virtual bool is_reference(vtag) const noexcept = 0;
@@ -286,10 +285,6 @@ private:
     [[nodiscard]] std::type_index value_type_index(vtag) const noexcept final
     {
         return typeid(T);
-    }
-    [[nodiscard]] const void *value_ptr(vtag) const noexcept final
-    {
-        return std::addressof(m_value);
     }
     [[nodiscard]] void *value_ptr(vtag) noexcept final
     {

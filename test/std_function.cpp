@@ -26,7 +26,8 @@ struct is_any_function<std::function<R(Args...)>> : std::true_type {
 };
 
 template <typename, typename, typename, typename...>
-struct func_iface;
+struct func_iface {
+};
 
 template <typename R, typename... Args>
 // NOLINTNEXTLINE
@@ -37,7 +38,9 @@ struct func_iface<void, void, R, Args...> {
 };
 
 template <typename Holder, typename T, typename R, typename... Args>
-struct func_iface : func_iface<void, void, R, Args...>, tanuki::iface_impl_helper<Holder, T, func_iface, R, Args...> {
+    requires std::is_invocable_r_v<R, const T &, Args...>
+struct func_iface<Holder, T, R, Args...> : func_iface<void, void, R, Args...>,
+                                           tanuki::iface_impl_helper<Holder, T, func_iface, R, Args...> {
     R operator()(Args... args) const final
     {
         if constexpr (std::is_pointer_v<T> || std::is_member_pointer_v<T>) {
@@ -102,9 +105,6 @@ struct ref_iface<Wrap, func_iface, R, Args...> {
     }
 };
 
-template <typename T, typename R, typename... Args>
-inline constexpr bool is_wrappable<T, func_iface, R, Args...> = std::is_invocable_r_v<R, const T &, Args...>;
-
 } // namespace tanuki
 
 template <typename>
@@ -135,6 +135,9 @@ struct large_func {
 
 TEST_CASE("std_function")
 {
+    REQUIRE(!std::constructible_from<std_func<double(int)>, void>);
+    REQUIRE(!std::constructible_from<std_func<void(int)>, int>);
+
     {
         std_func<double(int)> sf;
         REQUIRE(!sf);

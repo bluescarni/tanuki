@@ -497,10 +497,6 @@ concept valid_config =
 
 } // namespace detail
 
-// Default implementation of value type checking.
-template <typename, template <typename, typename, typename...> typename, typename...>
-inline constexpr bool is_wrappable = true;
-
 // Default reference interface implementation.
 template <typename, template <typename, typename, typename...> typename, typename...>
 struct ref_iface {
@@ -567,12 +563,6 @@ concept ctible_holder =
     // as new() takes care of proper alignment; otherwise, we need to ensure that the static
     // storage is sufficiently aligned.
     (sizeof(Holder) > Cfg.static_size || alignof(Holder) <= Cfg.static_alignment);
-
-// Utility concept to check if the type T satisfies the is_wrappable type trait (which must
-// have been implemented correctly).
-template <typename T, template <typename, typename, typename...> typename IFaceT, typename... Args>
-concept wrappable
-    = std::same_as<const bool, decltype(is_wrappable<T, IFaceT, Args...>)> && is_wrappable<T, IFaceT, Args...>;
 
 } // namespace detail
 
@@ -809,8 +799,6 @@ public:
                 // A default value type must have been specified
                 // in the configuration.
                 (!std::same_as<void, default_value_t>) &&
-                // default_value_t must pass the is_wrappable check.
-                detail::wrappable<default_value_t, IFaceT, Args...> &&
                 // We must be able to value-init the holder.
                 detail::ctible_holder<
 #if defined(TANUKI_CLANG_BUGGY_CONCEPTS)
@@ -832,8 +820,6 @@ public:
                  (!detail::is_in_place_type<std::remove_cvref_t<T>>::value) &&
                  // Must not compete with copy/move.
                  (!std::same_as<std::remove_cvref_t<T>, wrap>) &&
-                 // The value type must pass the is_wrappable check.
-                 detail::wrappable<detail::value_t_from_arg<T &&>, IFaceT, Args...> &&
                  // We must be able to construct a holder from x.
                  detail::ctible_holder<holder_t<detail::value_t_from_arg<T &&>>, iface_t, Cfg, T &&>
     explicit(Cfg.explicit_generic_ctor)
@@ -850,8 +836,6 @@ public:
         requires std::default_initializable<ref_iface_t> &&
                  // Forbid emplacing a wrap inside a wrap.
                  (!std::same_as<T, wrap>) &&
-                 // The value type must pass the is_wrappable check.
-                 detail::wrappable<T, IFaceT, Args...> &&
                  // We must be able to construct a holder from args.
                  detail::ctible_holder<holder_t<T>, iface_t, Cfg, U &&...>
     explicit wrap(in_place_type<T>, U &&...args) noexcept(noexcept(this->ctor_impl<T>(std::forward<U>(args)...))
@@ -1053,8 +1037,6 @@ public:
         (Cfg.copyable) && (Cfg.movable) &&
         // Must not compete with copy/move assignment.
         (!std::same_as<std::remove_cvref_t<T>, wrap>) &&
-        // The value type must pass the is_wrappable check.
-        detail::wrappable<detail::value_t_from_arg<T &&>, IFaceT, Args...> &&
         // We must be able to construct a holder from x.
         detail::ctible_holder<holder_t<detail::value_t_from_arg<T &&>>, iface_t, Cfg, T &&>
         wrap &operator=(T &&x)

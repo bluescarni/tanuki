@@ -29,5 +29,10 @@ ctest -V -j4
 # Create lcov report
 lcov --capture --directory . --output-file coverage.info
 
+# Upload coverage data.
+curl -Os https://uploader.codecov.io/latest/linux/codecov
+chmod +x codecov
+./codecov -f coverage.info -g --gx $deps_dir/bin/gcov
+
 set +e
 set +x

@@ -221,16 +221,20 @@ template <typename T>
 concept valid_value_type = std::is_object_v<T> && (!std::is_const_v<T>)&&(!std::is_volatile_v<T>)&&std::destructible<T>;
 
 template <typename T, template <typename, typename, typename...> typename IFaceT, typename... Args>
-// NOTE: ideally, we would like to put here the checks about IFaceT, e.g,
-// the interface implementation must derive from the interface. However,
-// because we are using the CRTP and passing the holder as a template
-// parameter to the interface impl, the checks cannot go here because holder
+// NOTE: ideally, we would like to put here the checks about IFaceT, e.g.,
+// the interface implementation must derive from the interface, it must
+// be destructible, etc. However, because we are using the CRTP
+// and passing the holder as a template parameter to the interface
+// impl, the checks cannot go here because holder
 // is still an incomplete type. Thus, the interface checks are placed in
 // the ctible_holder concept instead (defined elsewhere). As an unfortunate
 // consequence, a holder with an invalid IFaceT might end up being instantiated,
 // and we must thus take care of coping with an invalid IFaceT throughout
 // the implementation of this class (see for instance the static checks
-// in clone() and friends).
+// in clone() and friends). This is not 100% foolproof as we cannot put
+// static checks on the destructor (since it is virtual), thus a non-dtible
+// interface impl will still trigger a hard-error - however this is a corner case
+// I think we can live with for the time being.
 // NOTE: this situation might be resolved in C++23 with the "deducing this"
 // feature, which should allow us to avoid passing the holder as a template
 // parameter to the interface implementation when implementing the CRTP. See here:

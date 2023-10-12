@@ -291,7 +291,7 @@ private:
     [[nodiscard]] std::pair<IFaceT<void, void, Args...> *, value_iface<IFaceT<void, void, Args...>> *>
     clone(vtag) const final
     {
-        if constexpr (std::copy_constructible<T>) {
+        if constexpr (std::copy_constructible<T> && std::convertible_to<holder *, IFaceT<void, void, Args...> *>) {
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
             auto *ret = new holder(m_value);
             return {ret, ret};
@@ -304,7 +304,7 @@ private:
     [[nodiscard]] std::pair<IFaceT<void, void, Args...> *, value_iface<IFaceT<void, void, Args...>> *>
     copy_init_holder(void *ptr, vtag) const final
     {
-        if constexpr (std::copy_constructible<T>) {
+        if constexpr (std::copy_constructible<T> && std::convertible_to<holder *, IFaceT<void, void, Args...> *>) {
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
             auto *ret = ::new (ptr) holder(m_value);
             return {ret, ret};
@@ -318,7 +318,7 @@ private:
     // NOLINTNEXTLINE(bugprone-exception-escape)
     move_init_holder(void *ptr, vtag) && noexcept final
     {
-        if constexpr (std::move_constructible<T>) {
+        if constexpr (std::move_constructible<T> && std::convertible_to<holder *, IFaceT<void, void, Args...> *>) {
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
             auto *ret = ::new (ptr) holder(std::move(m_value));
             return {ret, ret};

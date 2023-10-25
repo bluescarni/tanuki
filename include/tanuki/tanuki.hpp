@@ -240,7 +240,7 @@ template <typename T, template <typename, typename, typename...> typename IFaceT
 // parameter to the interface implementation when implementing the CRTP. See here:
 // https://devblogs.microsoft.com/cppblog/cpp23-deducing-this/
 // NOTE: it seems like "deducing this" may also help with the interface template
-// nd with iface_impl_helper (no more Holder parameter?).
+// and with iface_impl_helper (no more Holder parameter?).
     requires valid_value_type<T>
 struct holder final : public value_iface<IFaceT<void, void, Args...>>,
                       public IFaceT<holder<T, IFaceT, Args...>, T, Args...> {

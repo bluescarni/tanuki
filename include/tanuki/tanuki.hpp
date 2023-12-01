@@ -199,6 +199,10 @@ template <typename T>
 concept noncv_rvalue_reference
     = std::is_rvalue_reference_v<T> && std::same_as<std::remove_cvref_t<T>, std::remove_reference_t<T>>;
 
+// NOTE: constrain value types to be non-cv qualified objects.
+template <typename T>
+concept valid_value_type = std::is_object_v<T> && (!std::is_const_v<T>)&&(!std::is_volatile_v<T>)&&std::destructible<T>;
+
 #if defined(__clang__)
 
 #pragma GCC diagnostic push
@@ -215,10 +219,6 @@ concept noncv_rvalue_reference
 #pragma warning(disable : 4297)
 
 #endif
-
-// NOTE: constrain value types to be non-cv qualified objects.
-template <typename T>
-concept valid_value_type = std::is_object_v<T> && (!std::is_const_v<T>)&&(!std::is_volatile_v<T>)&&std::destructible<T>;
 
 template <typename T, template <typename, typename, typename...> typename IFaceT, typename... Args>
 // NOTE: ideally, we would like to put here the checks about IFaceT, e.g.,
@@ -239,6 +239,8 @@ template <typename T, template <typename, typename, typename...> typename IFaceT
 // feature, which should allow us to avoid passing the holder as a template
 // parameter to the interface implementation when implementing the CRTP. See here:
 // https://devblogs.microsoft.com/cppblog/cpp23-deducing-this/
+// NOTE: it seems like "deducing this" may also help with the interface template
+// and with iface_impl_helper (no more Holder parameter?).
     requires valid_value_type<T>
 struct holder final : public value_iface<IFaceT<void, void, Args...>>,
                       public IFaceT<holder<T, IFaceT, Args...>, T, Args...> {

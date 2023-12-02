@@ -89,6 +89,21 @@
 
 #endif
 
+// Visibility setup.
+#if defined(_WIN32) || defined(__CYGWIN__)
+
+#define TANUKI_VISIBLE
+
+#elif defined(__clang__) || defined(__GNUC__) || defined(__INTEL_COMPILER)
+
+#define TANUKI_VISIBLE __attribute__((visibility("default")))
+
+#else
+
+#define TANUKI_VISIBLE
+
+#endif
+
 TANUKI_BEGIN_NAMESPACE
 
 namespace detail
@@ -152,7 +167,7 @@ struct is_reference_wrapper<std::reference_wrapper<T>> : std::true_type {
 // does enough memory shenanigans). Perhaps in the future
 // we can reconsider if we want to reduce binary bloat.
 template <typename IFace>
-struct value_iface {
+struct TANUKI_VISIBLE value_iface {
     value_iface() = default;
     value_iface(const value_iface &) = delete;
     value_iface(value_iface &&) noexcept = delete;
@@ -242,8 +257,8 @@ template <typename T, template <typename, typename, typename...> typename IFaceT
 // NOTE: it seems like "deducing this" may also help with the interface template
 // and with iface_impl_helper (no more Holder parameter?).
     requires valid_value_type<T>
-struct holder final : public value_iface<IFaceT<void, void, Args...>>,
-                      public IFaceT<holder<T, IFaceT, Args...>, T, Args...> {
+struct TANUKI_VISIBLE holder final : public value_iface<IFaceT<void, void, Args...>>,
+                                     public IFaceT<holder<T, IFaceT, Args...>, T, Args...> {
     TANUKI_NO_UNIQUE_ADDRESS T m_value;
 
     // Make sure we don't end up accidentally copying/moving
@@ -427,7 +442,7 @@ private:
 
 // Implementation of basic storage for the wrap class.
 template <typename IFace, std::size_t StaticStorageSize, std::size_t StaticStorageAlignment>
-struct wrap_storage {
+struct TANUKI_VISIBLE wrap_storage {
     // NOTE: static storage optimisation enabled. The m_p_iface member is used as a flag:
     // if it is null, then the current storage type is dynamic and the interface pointer
     // (which may be null for the invalid state) is stored in static_storage. If m_p_iface
@@ -449,7 +464,7 @@ struct wrap_storage {
 };
 
 template <typename IFace, std::size_t StaticStorageAlignment>
-struct wrap_storage<IFace, 0, StaticStorageAlignment> {
+struct TANUKI_VISIBLE wrap_storage<IFace, 0, StaticStorageAlignment> {
     IFace *m_p_iface;
     value_iface<IFace> *m_pv_iface;
 };
@@ -629,11 +644,12 @@ concept same_or_ref_for = std::same_as<T, U> || detail::is_reference_wrapper_for
 template <template <typename, typename, typename...> typename IFaceT, auto Cfg = default_config, typename... Args>
     requires std::is_polymorphic_v<IFaceT<void, void, Args...>>
                  && std::has_virtual_destructor_v<IFaceT<void, void, Args...>> && detail::valid_config<Cfg>
-class wrap : private detail::wrap_storage<IFaceT<void, void, Args...>, Cfg.static_size, Cfg.static_alignment>,
-             // NOTE: the reference interface is not supposed to hold any data: it will always
-             // be def-inited (even when copying/moving a wrap object), its assignment operators
-             // will never be invoked, it will never be swapped, etc. This needs to be documented.
-             public ref_iface<wrap<IFaceT, Cfg, Args...>, IFaceT, Args...>
+class TANUKI_VISIBLE wrap
+    : private detail::wrap_storage<IFaceT<void, void, Args...>, Cfg.static_size, Cfg.static_alignment>,
+      // NOTE: the reference interface is not supposed to hold any data: it will always
+      // be def-inited (even when copying/moving a wrap object), its assignment operators
+      // will never be invoked, it will never be swapped, etc. This needs to be documented.
+      public ref_iface<wrap<IFaceT, Cfg, Args...>, IFaceT, Args...>
 {
     // Aliases for the two interfaces.
     using iface_t = IFaceT<void, void, Args...>;
@@ -1459,43 +1475,62 @@ struct tracking_level<tanuki::detail::value_iface<IFace>> {
 
 } // namespace boost::serialization
 
-// NOTE: these are verbatim re-implementations of the BOOST_CLASS_EXPORT_KEY
+// NOTE: these are verbatim re-implementations of the BOOST_CLASS_EXPORT_KEY(2)
 // and BOOST_CLASS_EXPORT_IMPLEMENT macros, which do not work well with class templates.
-#define TANUKI_S11N_WRAP_EXPORT_KEY(...)                                                                               \
+#define TANUKI_S11N_WRAP_EXPORT_KEY(ud_type, ...)                                                                      \
     namespace boost::serialization                                                                                     \
     {                                                                                                                  \
     template <>                                                                                                        \
-    struct guid_defined<tanuki::detail::holder<__VA_ARGS__>> : boost::mpl::true_ {                                     \
+    struct guid_defined<tanuki::detail::holder<ud_type, __VA_ARGS__>> : boost::mpl::true_ {                            \
     };                                                                                                                 \
     template <>                                                                                                        \
-    inline const char *guid<tanuki::detail::holder<__VA_ARGS__>>()                                                     \
+    inline const char *guid<tanuki::detail::holder<ud_type, __VA_ARGS__>>()                                            \
     {                                                                                                                  \
         /* NOTE: the stringize here will produce a name enclosed by brackets. */                                       \
-        return BOOST_PP_STRINGIZE((tanuki::detail::holder<__VA_ARGS__>));                                              \
+        return BOOST_PP_STRINGIZE((tanuki::detail::holder<ud_type, __VA_ARGS__>));                                     \
     }                                                                                                                  \
     }
 
-#define TANUKI_S11N_WRAP_EXPORT_IMPLEMENT(...)                                                                         \
+#define TANUKI_S11N_WRAP_EXPORT_KEY2(ud_type, gid, ...)                                                                \
+    namespace boost::serialization                                                                                     \
+    {                                                                                                                  \
+    template <>                                                                                                        \
+    struct guid_defined<tanuki::detail::holder<ud_type, __VA_ARGS__>> : boost::mpl::true_ {                            \
+    };                                                                                                                 \
+    template <>                                                                                                        \
+    inline const char *guid<tanuki::detail::holder<ud_type, __VA_ARGS__>>()                                            \
+    {                                                                                                                  \
+        return gid;                                                                                                    \
+    }                                                                                                                  \
+    }
+
+#define TANUKI_S11N_WRAP_EXPORT_IMPLEMENT(ud_type, ...)                                                                \
     namespace boost::archive::detail::extra_detail                                                                     \
     {                                                                                                                  \
     template <>                                                                                                        \
-    struct init_guid<tanuki::detail::holder<__VA_ARGS__>> {                                                            \
-        static guid_initializer<tanuki::detail::holder<__VA_ARGS__>> const &g;                                         \
+    struct init_guid<tanuki::detail::holder<ud_type, __VA_ARGS__>> {                                                   \
+        static guid_initializer<tanuki::detail::holder<ud_type, __VA_ARGS__>> const &g;                                \
     };                                                                                                                 \
-    guid_initializer<tanuki::detail::holder<__VA_ARGS__>> const &init_guid<tanuki::detail::holder<__VA_ARGS__>>::g     \
+    guid_initializer<tanuki::detail::holder<ud_type, __VA_ARGS__>> const                                               \
+        &init_guid<tanuki::detail::holder<ud_type, __VA_ARGS__>>::g                                                    \
         = ::boost::serialization::singleton<                                                                           \
-              guid_initializer<tanuki::detail::holder<__VA_ARGS__>>>::get_mutable_instance()                           \
+              guid_initializer<tanuki::detail::holder<ud_type, __VA_ARGS__>>>::get_mutable_instance()                  \
               .export_guid();                                                                                          \
     }
 
-#define TANUKI_S11N_WRAP_EXPORT(...)                                                                                   \
-    TANUKI_S11N_WRAP_EXPORT_KEY(__VA_ARGS__)                                                                           \
-    TANUKI_S11N_WRAP_EXPORT_IMPLEMENT(__VA_ARGS__)
+#define TANUKI_S11N_WRAP_EXPORT(ud_type, ...)                                                                          \
+    TANUKI_S11N_WRAP_EXPORT_KEY(ud_type, __VA_ARGS__)                                                                  \
+    TANUKI_S11N_WRAP_EXPORT_IMPLEMENT(ud_type, __VA_ARGS__)
+
+#define TANUKI_S11N_WRAP_EXPORT2(ud_type, gid, ...)                                                                    \
+    TANUKI_S11N_WRAP_EXPORT_KEY2(ud_type, gid, __VA_ARGS__)                                                            \
+    TANUKI_S11N_WRAP_EXPORT_IMPLEMENT(ud_type, __VA_ARGS__)
 
 #endif
 
 #undef TANUKI_ABI_TAG_ATTR
 #undef TANUKI_NO_UNIQUE_ADDRESS
+#undef TANUKI_VISIBLE
 
 #if defined(TANUKI_CLANG_BUGGY_CONCEPTS)
 

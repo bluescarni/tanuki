@@ -25,7 +25,7 @@ template <typename R, typename... Args>
 struct is_any_function<std::function<R(Args...)>> : std::true_type {
 };
 
-template <typename, typename, typename, typename...>
+template <typename, typename, typename...>
 struct func_iface {
 };
 

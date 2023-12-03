@@ -1306,7 +1306,6 @@ concept any_wrap = detail::is_any_wrap_impl<T>::value;
 namespace detail
 {
 
-// Machinery to detect the interface of a wrap.
 template <typename>
 struct iface_from_wrap_impl {
 };

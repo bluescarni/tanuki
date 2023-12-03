@@ -160,6 +160,10 @@ TEST_CASE("composite wrap")
     foo_capable f{.foo = "frob the niz"};
 
     REQUIRE(&value_ref<std::reference_wrapper<foo_capable>>(notify_fooable(std::ref(f))).get() == &f);
+
+    REQUIRE(std::is_same_v<const tanuki::wrap_interface_t<fooable_summary> *,
+                           decltype(iface_ptr(
+                               fooable_summary{tweet{.username = "Donald Duck", .content = "Big, if true!"}}))>);
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-multiple-inheritance,fuchsia-virtual-inheritance)

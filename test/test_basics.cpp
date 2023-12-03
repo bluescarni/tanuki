@@ -71,10 +71,21 @@ struct small {
     }
 };
 
+struct small2 {
+    std::string s = "42";
+
+    template <typename Archive>
+    void serialize(Archive &ar, unsigned)
+    {
+        ar & s;
+    }
+};
+
 #if defined(TANUKI_WITH_BOOST_S11N)
 
 TANUKI_S11N_WRAP_EXPORT(large, any_iface)
 TANUKI_S11N_WRAP_EXPORT(small, any_iface)
+TANUKI_S11N_WRAP_EXPORT2(small2, "small2", any_iface)
 
 #endif
 
@@ -161,6 +172,9 @@ TEST_CASE("basics")
     const wrap_t wfunc2(&my_func);
     REQUIRE(value_isa<void (*)(int)>(wfunc1));
     REQUIRE(value_isa<void (*)(int)>(wfunc2));
+
+    // Test for wrap_interface_t.
+    REQUIRE(std::is_same_v<tanuki::wrap_interface_t<wrap_t>, any_iface<void, void>>);
 }
 
 TEST_CASE("assignment")
@@ -353,6 +367,31 @@ TEST_CASE("s11n small")
 
     REQUIRE(value_type_index(w) == typeid(small));
     REQUIRE(value_ptr<small>(w)->s == "-42");
+}
+
+TEST_CASE("s11n small2")
+{
+    using wrap_t = tanuki::wrap<any_iface>;
+
+    wrap_t w(small2{});
+    value_ptr<small2>(w)->s = "-42";
+
+    std::stringstream ss;
+
+    {
+        boost::archive::binary_oarchive oa(ss);
+        oa << w;
+    }
+
+    w = wrap_t(3);
+
+    {
+        boost::archive::binary_iarchive ia(ss);
+        ia >> w;
+    }
+
+    REQUIRE(value_type_index(w) == typeid(small2));
+    REQUIRE(value_ptr<small2>(w)->s == "-42");
 }
 
 #endif

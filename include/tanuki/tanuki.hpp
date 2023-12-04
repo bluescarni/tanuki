@@ -1340,37 +1340,44 @@ using wrap_interface_impl_t = typename detail::iface_impl_from_wrap_impl<Wrap>::
 
 // Machinery for the definition of the composite wrap.
 template <typename, typename, typename, typename, typename...>
-struct composite_wrap_iface;
+struct TANUKI_VISIBLE composite_wrap_iface;
 
+// The composite interface.
 template <typename Wrap0, typename Wrap1, typename... WrapN>
-struct composite_wrap_iface<void, void, Wrap0, Wrap1, WrapN...> : virtual public wrap_interface_t<Wrap0>,
-                                                                  virtual public wrap_interface_t<Wrap1>,
-                                                                  virtual public wrap_interface_t<WrapN>... {
+struct TANUKI_VISIBLE composite_wrap_iface<void, void, Wrap0, Wrap1, WrapN...>
+    : virtual public wrap_interface_t<Wrap0>,
+      virtual public wrap_interface_t<Wrap1>,
+      virtual public wrap_interface_t<WrapN>... {
 };
 
+// The composite interface implementation.
 template <typename Holder, typename T, typename Wrap0, typename Wrap1, typename... WrapN>
-struct composite_wrap_iface : composite_wrap_iface<void, void, Wrap0, Wrap1, WrapN...>,
-                              public wrap_interface_impl_t<Wrap0, Holder, T>,
-                              public wrap_interface_impl_t<Wrap1, Holder, T>,
-                              public wrap_interface_impl_t<WrapN, Holder, T>... {
+struct TANUKI_VISIBLE composite_wrap_iface : composite_wrap_iface<void, void, Wrap0, Wrap1, WrapN...>,
+                                             public wrap_interface_impl_t<Wrap0, Holder, T>,
+                                             public wrap_interface_impl_t<Wrap1, Holder, T>,
+                                             public wrap_interface_impl_t<WrapN, Holder, T>... {
 };
 
 template <typename Wrap0, typename Wrap1, typename... WrapN>
-struct composite_wrap_iface_selector {
+struct composite_wrap_ifaceT_selector {
     template <typename Holder, typename T>
     using type = composite_wrap_iface<Holder, T, Wrap0, Wrap1, WrapN...>;
 };
 
 } // namespace detail
 
+// Helper to define the interface template of a composite wrap.
+template <any_wrap Wrap0, any_wrap Wrap1, any_wrap... WrapN>
+using composite_wrap_interfaceT = detail::composite_wrap_ifaceT_selector<Wrap0, Wrap1, WrapN...>;
+
 // Composite wrap.
 template <any_wrap Wrap0, any_wrap Wrap1, any_wrap... WrapN>
-using composite_wrap = wrap<detail::composite_wrap_iface_selector<Wrap0, Wrap1, WrapN...>::template type>;
+using composite_wrap = wrap<composite_wrap_interfaceT<Wrap0, Wrap1, WrapN...>::template type>;
 
 // Composite wrap with custom config.
 template <auto Cfg, any_wrap Wrap0, any_wrap Wrap1, any_wrap... WrapN>
     requires detail::valid_config<Cfg>
-using composite_cwrap = wrap<detail::composite_wrap_iface_selector<Wrap0, Wrap1, WrapN...>::template type, Cfg>;
+using composite_cwrap = wrap<composite_wrap_interfaceT<Wrap0, Wrap1, WrapN...>::template type, Cfg>;
 
 // Helper that can be used to reduce typing in an
 // interface implementation. This implements value()

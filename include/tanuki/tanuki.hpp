@@ -90,6 +90,16 @@
 #endif
 
 // Visibility setup.
+// NOTE: the idea here is as follows:
+// - on Windows there is apparently no need to set up
+//   dllimport/dllexport on class templates;
+// - on non-Windows platforms with known compilers,
+//   we mark several class templates as visible. This is apparently
+//   necessary at least in some situations involving, for
+//   instance, the export/registration macros in Boost
+//   serialisation. libc++ also, for instance, usually marks
+//   public class templates as visible;
+// - otherwise, we do not implement any visibility attribute.
 #if defined(_WIN32) || defined(__CYGWIN__)
 
 #define TANUKI_VISIBLE

@@ -668,8 +668,9 @@ class TANUKI_VISIBLE wrap
     using value_iface_t = detail::value_iface<iface_t>;
 
     // Alias for the reference interface.
-    using ref_iface_t
-        = detail::cfg_ref_type<std::remove_const_t<decltype(Cfg)>>::template type<wrap<IFaceT, Cfg, Args...>>;
+    using ref_iface_t =
+        // NOTE: clang 14 needs the typename here, hopefully this is not harmful to other compilers.
+        typename detail::cfg_ref_type<std::remove_const_t<decltype(Cfg)>>::template type<wrap<IFaceT, Cfg, Args...>>;
 
     // The default value type.
     using default_value_t = typename decltype(Cfg)::default_value_type;

@@ -19,7 +19,7 @@
 
 #endif
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance,fuchsia-multiple-inheritance)
 
 template <typename, typename>
 struct foo_iface {
@@ -195,36 +195,28 @@ struct barT_iface<Holder, T, U> : virtual barT_iface<void, void, U>,
 template <typename U>
 using barT_wrap = tanuki::wrap<barT_iface, tanuki::default_config, U>;
 
+template <typename Wrap, typename U>
+struct foobarT_ref_iface_impl {
+    TANUKI_REF_IFACE_MEMFUN(foo)
+    TANUKI_REF_IFACE_MEMFUN(bar)
+};
+
 template <typename U>
-using foobarT_wrap = tanuki::composite_cwrap<tanuki::config<>{.pointer_interface = false}, fooT_wrap<U>, barT_wrap<U>>;
+struct foobarT_ref_iface {
+    template <typename Wrap>
+    using type = foobarT_ref_iface_impl<Wrap, U>;
+};
+
+template <typename U>
+using foobarT_wrap
+    = tanuki::composite_cwrap<tanuki::config<void, foobarT_ref_iface<U>::template type>{.pointer_interface = false},
+                              fooT_wrap<U>, barT_wrap<U>>;
 
 #if defined(TANUKI_WITH_BOOST_S11N)
 
 TANUKI_S11N_WRAP_EXPORT(foobar_model, tanuki::composite_wrap_interfaceT<fooT_wrap<int>, barT_wrap<int>>::type)
 
 #endif
-
-#if 0
-
-// template <typename U>
-// struct fuffo {
-//     template <typename Holder, typename T>
-//     using type = tanuki::detail::composite_wrap_iface<Holder, T, fooT_wrap<U>, barT_wrap<U>>;
-// };
-
-// template <typename Holder, typename T, typename U>
-// using cacco = tanuki::composite_wrap_interfaceT<fooT_wrap<U>, barT_wrap<U>>::template type;
-
-namespace tanuki
-{
-
-template <typename Wrap, typename U>
-struct ref_iface<Wrap, composite_wrap_interfaceT<fooT_wrap<U>, barT_wrap<U>>::template type, U> {
-    TANUKI_REF_IFACE_MEMFUN(foo)
-    TANUKI_REF_IFACE_MEMFUN(bar)
-};
-
-} // namespace tanuki
 
 TEST_CASE("template")
 {
@@ -258,9 +250,7 @@ TEST_CASE("template")
 #endif
 }
 
-#endif
-
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance,fuchsia-multiple-inheritance)
 
 #if defined(__GNUC__)
 

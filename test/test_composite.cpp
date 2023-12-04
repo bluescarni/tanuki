@@ -237,7 +237,7 @@ TEST_CASE("template")
         oa << fb;
     }
 
-    fb = foobar_wrap{foobar_model{}};
+    fb = foobarT_wrap<int>{foobar_model{}};
 
     {
         boost::archive::binary_iarchive ia(ss);

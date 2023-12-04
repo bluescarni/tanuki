@@ -25,7 +25,7 @@ template <typename R, typename... Args>
 struct is_any_function<std::function<R(Args...)>> : std::true_type {
 };
 
-template <typename, typename, typename, typename...>
+template <typename, typename, typename...>
 struct func_iface {
 };
 
@@ -77,11 +77,8 @@ struct func_iface<Holder, T, R, Args...> : func_iface<void, void, R, Args...>,
     }
 };
 
-namespace tanuki
-{
-
 template <typename Wrap, typename R, typename... Args>
-struct ref_iface<Wrap, func_iface, R, Args...> {
+struct std_func_ref_iface_impl {
     using result_type = R;
 
     template <typename JustWrap = Wrap, typename... FArgs>
@@ -105,7 +102,11 @@ struct ref_iface<Wrap, func_iface, R, Args...> {
     }
 };
 
-} // namespace tanuki
+template <typename R, typename... Args>
+struct std_func_ref_iface {
+    template <typename Wrap>
+    using type = std_func_ref_iface_impl<Wrap, R, Args...>;
+};
 
 template <typename>
 struct std_func_impl {
@@ -113,7 +114,10 @@ struct std_func_impl {
 
 template <typename R, typename... Args>
 struct std_func_impl<R(Args...)> {
-    using type = tanuki::wrap<func_iface, tanuki::config<R (*)(Args...)>{.pointer_interface = false}, R, Args...>;
+    using type = tanuki::wrap<func_iface,
+                              tanuki::config<R (*)(Args...), std_func_ref_iface<R, Args...>::template type>{
+                                  .pointer_interface = false},
+                              R, Args...>;
 };
 
 template <typename T>

@@ -89,6 +89,31 @@
 
 #endif
 
+// Visibility setup.
+// NOTE: the idea here is as follows:
+// - on Windows there is apparently no need to set up
+//   dllimport/dllexport on class templates;
+// - on non-Windows platforms with known compilers,
+//   we mark several class templates as visible. This is apparently
+//   necessary at least in some situations involving, for
+//   instance, the export/registration macros in Boost
+//   serialisation. libc++ also, for instance, usually marks
+//   public class templates as visible;
+// - otherwise, we do not implement any visibility attribute.
+#if defined(_WIN32) || defined(__CYGWIN__)
+
+#define TANUKI_VISIBLE
+
+#elif defined(__clang__) || defined(__GNUC__) || defined(__INTEL_COMPILER)
+
+#define TANUKI_VISIBLE __attribute__((visibility("default")))
+
+#else
+
+#define TANUKI_VISIBLE
+
+#endif
+
 TANUKI_BEGIN_NAMESPACE
 
 namespace detail
@@ -152,7 +177,7 @@ struct is_reference_wrapper<std::reference_wrapper<T>> : std::true_type {
 // does enough memory shenanigans). Perhaps in the future
 // we can reconsider if we want to reduce binary bloat.
 template <typename IFace>
-struct value_iface {
+struct TANUKI_VISIBLE value_iface {
     value_iface() = default;
     value_iface(const value_iface &) = delete;
     value_iface(value_iface &&) noexcept = delete;
@@ -242,8 +267,8 @@ template <typename T, template <typename, typename, typename...> typename IFaceT
 // NOTE: it seems like "deducing this" may also help with the interface template
 // and with iface_impl_helper (no more Holder parameter?).
     requires valid_value_type<T>
-struct holder final : public value_iface<IFaceT<void, void, Args...>>,
-                      public IFaceT<holder<T, IFaceT, Args...>, T, Args...> {
+struct TANUKI_VISIBLE holder final : public value_iface<IFaceT<void, void, Args...>>,
+                                     public IFaceT<holder<T, IFaceT, Args...>, T, Args...> {
     TANUKI_NO_UNIQUE_ADDRESS T m_value;
 
     // Make sure we don't end up accidentally copying/moving
@@ -427,7 +452,7 @@ private:
 
 // Implementation of basic storage for the wrap class.
 template <typename IFace, std::size_t StaticStorageSize, std::size_t StaticStorageAlignment>
-struct wrap_storage {
+struct TANUKI_VISIBLE wrap_storage {
     // NOTE: static storage optimisation enabled. The m_p_iface member is used as a flag:
     // if it is null, then the current storage type is dynamic and the interface pointer
     // (which may be null for the invalid state) is stored in static_storage. If m_p_iface
@@ -449,7 +474,7 @@ struct wrap_storage {
 };
 
 template <typename IFace, std::size_t StaticStorageAlignment>
-struct wrap_storage<IFace, 0, StaticStorageAlignment> {
+struct TANUKI_VISIBLE wrap_storage<IFace, 0, StaticStorageAlignment> {
     IFace *m_p_iface;
     value_iface<IFace> *m_pv_iface;
 };
@@ -469,10 +494,15 @@ inline constexpr auto holder_size = sizeof(detail::holder<T, IFaceT, Args...>);
 template <typename T, template <typename, typename, typename...> typename IFaceT, typename... Args>
 inline constexpr auto holder_align = alignof(detail::holder<T, IFaceT, Args...>);
 
+// Default implementation of the reference interface.
+template <typename>
+struct no_ref_iface {
+};
+
 // Configuration settings for the wrap class.
 // NOTE: the DefaultValueType is subject to the constraints
 // for valid value types.
-template <typename DefaultValueType = void>
+template <typename DefaultValueType = void, template <typename> typename RefIFace = no_ref_iface>
     requires std::same_as<DefaultValueType, void> || detail::valid_value_type<DefaultValueType>
 struct config final : detail::config_base {
     using default_value_type = DefaultValueType;
@@ -512,13 +542,20 @@ concept valid_config =
     // The static alignment value must be a power of 2.
     power_of_two<Cfg.static_alignment>;
 
-} // namespace detail
-
-// Default reference interface implementation.
-template <typename, template <typename, typename, typename...> typename, typename...>
-struct ref_iface {
+// Machinery to infer the reference interface from a config instance.
+template <typename>
+struct cfg_ref_type {
 };
 
+template <typename DefaultValueType, template <typename> typename RefIFace>
+struct cfg_ref_type<config<DefaultValueType, RefIFace>> {
+    template <typename T>
+    using type = RefIFace<T>;
+};
+
+} // namespace detail
+
+// Helpers to ease the definition of a reference interface.
 #define TANUKI_REF_IFACE_MEMFUN(name)                                                                                  \
     template <typename JustWrap = Wrap, typename... MemFunArgs>                                                        \
     auto name(MemFunArgs &&...args) & noexcept(                                                                        \
@@ -629,18 +666,21 @@ concept same_or_ref_for = std::same_as<T, U> || detail::is_reference_wrapper_for
 template <template <typename, typename, typename...> typename IFaceT, auto Cfg = default_config, typename... Args>
     requires std::is_polymorphic_v<IFaceT<void, void, Args...>>
                  && std::has_virtual_destructor_v<IFaceT<void, void, Args...>> && detail::valid_config<Cfg>
-class wrap : private detail::wrap_storage<IFaceT<void, void, Args...>, Cfg.static_size, Cfg.static_alignment>,
-             // NOTE: the reference interface is not supposed to hold any data: it will always
-             // be def-inited (even when copying/moving a wrap object), its assignment operators
-             // will never be invoked, it will never be swapped, etc. This needs to be documented.
-             public ref_iface<wrap<IFaceT, Cfg, Args...>, IFaceT, Args...>
+class TANUKI_VISIBLE wrap
+    : private detail::wrap_storage<IFaceT<void, void, Args...>, Cfg.static_size, Cfg.static_alignment>,
+      // NOTE: the reference interface is not supposed to hold any data: it will always
+      // be def-inited (even when copying/moving a wrap object), its assignment operators
+      // will never be invoked, it will never be swapped, etc. This needs to be documented.
+      public detail::cfg_ref_type<std::remove_const_t<decltype(Cfg)>>::template type<wrap<IFaceT, Cfg, Args...>>
 {
     // Aliases for the two interfaces.
     using iface_t = IFaceT<void, void, Args...>;
     using value_iface_t = detail::value_iface<iface_t>;
 
     // Alias for the reference interface.
-    using ref_iface_t = ref_iface<wrap<IFaceT, Cfg, Args...>, IFaceT, Args...>;
+    using ref_iface_t =
+        // NOTE: clang 14 needs the typename here, hopefully this is not harmful to other compilers.
+        typename detail::cfg_ref_type<std::remove_const_t<decltype(Cfg)>>::template type<wrap<IFaceT, Cfg, Args...>>;
 
     // The default value type.
     using default_value_t = typename decltype(Cfg)::default_value_type;
@@ -1290,7 +1330,6 @@ concept any_wrap = detail::is_any_wrap_impl<T>::value;
 namespace detail
 {
 
-// Machinery to detect the interface of a wrap.
 template <typename>
 struct iface_from_wrap_impl {
 };
@@ -1300,6 +1339,7 @@ struct iface_from_wrap_impl<wrap<IFaceT, Cfg, Args...>> {
     using type = IFaceT<void, void, Args...>;
 };
 
+// Helper to detect the interface of a wrap.
 template <typename Wrap>
 using wrap_interface_t = typename detail::iface_from_wrap_impl<Wrap>::type;
 
@@ -1319,37 +1359,44 @@ using wrap_interface_impl_t = typename detail::iface_impl_from_wrap_impl<Wrap>::
 
 // Machinery for the definition of the composite wrap.
 template <typename, typename, typename, typename, typename...>
-struct composite_wrap_iface;
+struct TANUKI_VISIBLE composite_wrap_iface;
 
+// The composite interface.
 template <typename Wrap0, typename Wrap1, typename... WrapN>
-struct composite_wrap_iface<void, void, Wrap0, Wrap1, WrapN...> : virtual public wrap_interface_t<Wrap0>,
-                                                                  virtual public wrap_interface_t<Wrap1>,
-                                                                  virtual public wrap_interface_t<WrapN>... {
+struct TANUKI_VISIBLE composite_wrap_iface<void, void, Wrap0, Wrap1, WrapN...>
+    : virtual public wrap_interface_t<Wrap0>,
+      virtual public wrap_interface_t<Wrap1>,
+      virtual public wrap_interface_t<WrapN>... {
 };
 
+// The composite interface implementation.
 template <typename Holder, typename T, typename Wrap0, typename Wrap1, typename... WrapN>
-struct composite_wrap_iface : composite_wrap_iface<void, void, Wrap0, Wrap1, WrapN...>,
-                              public wrap_interface_impl_t<Wrap0, Holder, T>,
-                              public wrap_interface_impl_t<Wrap1, Holder, T>,
-                              public wrap_interface_impl_t<WrapN, Holder, T>... {
+struct TANUKI_VISIBLE composite_wrap_iface : composite_wrap_iface<void, void, Wrap0, Wrap1, WrapN...>,
+                                             public wrap_interface_impl_t<Wrap0, Holder, T>,
+                                             public wrap_interface_impl_t<Wrap1, Holder, T>,
+                                             public wrap_interface_impl_t<WrapN, Holder, T>... {
 };
 
 template <typename Wrap0, typename Wrap1, typename... WrapN>
-struct composite_wrap_iface_selector {
+struct composite_wrap_ifaceT_selector {
     template <typename Holder, typename T>
     using type = composite_wrap_iface<Holder, T, Wrap0, Wrap1, WrapN...>;
 };
 
 } // namespace detail
 
+// Helper to define the interface template of a composite wrap.
+template <any_wrap Wrap0, any_wrap Wrap1, any_wrap... WrapN>
+using composite_wrap_interfaceT = detail::composite_wrap_ifaceT_selector<Wrap0, Wrap1, WrapN...>;
+
 // Composite wrap.
 template <any_wrap Wrap0, any_wrap Wrap1, any_wrap... WrapN>
-using composite_wrap = wrap<detail::composite_wrap_iface_selector<Wrap0, Wrap1, WrapN...>::template type>;
+using composite_wrap = wrap<composite_wrap_interfaceT<Wrap0, Wrap1, WrapN...>::template type>;
 
 // Composite wrap with custom config.
 template <auto Cfg, any_wrap Wrap0, any_wrap Wrap1, any_wrap... WrapN>
     requires detail::valid_config<Cfg>
-using composite_cwrap = wrap<detail::composite_wrap_iface_selector<Wrap0, Wrap1, WrapN...>::template type, Cfg>;
+using composite_cwrap = wrap<composite_wrap_interfaceT<Wrap0, Wrap1, WrapN...>::template type, Cfg>;
 
 // Helper that can be used to reduce typing in an
 // interface implementation. This implements value()
@@ -1459,43 +1506,62 @@ struct tracking_level<tanuki::detail::value_iface<IFace>> {
 
 } // namespace boost::serialization
 
-// NOTE: these are verbatim re-implementations of the BOOST_CLASS_EXPORT_KEY
+// NOTE: these are verbatim re-implementations of the BOOST_CLASS_EXPORT_KEY(2)
 // and BOOST_CLASS_EXPORT_IMPLEMENT macros, which do not work well with class templates.
-#define TANUKI_S11N_WRAP_EXPORT_KEY(...)                                                                               \
+#define TANUKI_S11N_WRAP_EXPORT_KEY(ud_type, ...)                                                                      \
     namespace boost::serialization                                                                                     \
     {                                                                                                                  \
     template <>                                                                                                        \
-    struct guid_defined<tanuki::detail::holder<__VA_ARGS__>> : boost::mpl::true_ {                                     \
+    struct guid_defined<tanuki::detail::holder<ud_type, __VA_ARGS__>> : boost::mpl::true_ {                            \
     };                                                                                                                 \
     template <>                                                                                                        \
-    inline const char *guid<tanuki::detail::holder<__VA_ARGS__>>()                                                     \
+    inline const char *guid<tanuki::detail::holder<ud_type, __VA_ARGS__>>()                                            \
     {                                                                                                                  \
         /* NOTE: the stringize here will produce a name enclosed by brackets. */                                       \
-        return BOOST_PP_STRINGIZE((tanuki::detail::holder<__VA_ARGS__>));                                              \
+        return BOOST_PP_STRINGIZE((tanuki::detail::holder<ud_type, __VA_ARGS__>));                                     \
     }                                                                                                                  \
     }
 
-#define TANUKI_S11N_WRAP_EXPORT_IMPLEMENT(...)                                                                         \
+#define TANUKI_S11N_WRAP_EXPORT_KEY2(ud_type, gid, ...)                                                                \
+    namespace boost::serialization                                                                                     \
+    {                                                                                                                  \
+    template <>                                                                                                        \
+    struct guid_defined<tanuki::detail::holder<ud_type, __VA_ARGS__>> : boost::mpl::true_ {                            \
+    };                                                                                                                 \
+    template <>                                                                                                        \
+    inline const char *guid<tanuki::detail::holder<ud_type, __VA_ARGS__>>()                                            \
+    {                                                                                                                  \
+        return gid;                                                                                                    \
+    }                                                                                                                  \
+    }
+
+#define TANUKI_S11N_WRAP_EXPORT_IMPLEMENT(ud_type, ...)                                                                \
     namespace boost::archive::detail::extra_detail                                                                     \
     {                                                                                                                  \
     template <>                                                                                                        \
-    struct init_guid<tanuki::detail::holder<__VA_ARGS__>> {                                                            \
-        static guid_initializer<tanuki::detail::holder<__VA_ARGS__>> const &g;                                         \
+    struct init_guid<tanuki::detail::holder<ud_type, __VA_ARGS__>> {                                                   \
+        static guid_initializer<tanuki::detail::holder<ud_type, __VA_ARGS__>> const &g;                                \
     };                                                                                                                 \
-    guid_initializer<tanuki::detail::holder<__VA_ARGS__>> const &init_guid<tanuki::detail::holder<__VA_ARGS__>>::g     \
+    guid_initializer<tanuki::detail::holder<ud_type, __VA_ARGS__>> const                                               \
+        &init_guid<tanuki::detail::holder<ud_type, __VA_ARGS__>>::g                                                    \
         = ::boost::serialization::singleton<                                                                           \
-              guid_initializer<tanuki::detail::holder<__VA_ARGS__>>>::get_mutable_instance()                           \
+              guid_initializer<tanuki::detail::holder<ud_type, __VA_ARGS__>>>::get_mutable_instance()                  \
               .export_guid();                                                                                          \
     }
 
-#define TANUKI_S11N_WRAP_EXPORT(...)                                                                                   \
-    TANUKI_S11N_WRAP_EXPORT_KEY(__VA_ARGS__)                                                                           \
-    TANUKI_S11N_WRAP_EXPORT_IMPLEMENT(__VA_ARGS__)
+#define TANUKI_S11N_WRAP_EXPORT(ud_type, ...)                                                                          \
+    TANUKI_S11N_WRAP_EXPORT_KEY(ud_type, __VA_ARGS__)                                                                  \
+    TANUKI_S11N_WRAP_EXPORT_IMPLEMENT(ud_type, __VA_ARGS__)
+
+#define TANUKI_S11N_WRAP_EXPORT2(ud_type, gid, ...)                                                                    \
+    TANUKI_S11N_WRAP_EXPORT_KEY2(ud_type, gid, __VA_ARGS__)                                                            \
+    TANUKI_S11N_WRAP_EXPORT_IMPLEMENT(ud_type, __VA_ARGS__)
 
 #endif
 
 #undef TANUKI_ABI_TAG_ATTR
 #undef TANUKI_NO_UNIQUE_ADDRESS
+#undef TANUKI_VISIBLE
 
 #if defined(TANUKI_CLANG_BUGGY_CONCEPTS)
 

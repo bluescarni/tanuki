@@ -172,9 +172,6 @@ TEST_CASE("basics")
     const wrap_t wfunc2(&my_func);
     REQUIRE(value_isa<void (*)(int)>(wfunc1));
     REQUIRE(value_isa<void (*)(int)>(wfunc2));
-
-    // Test for wrap_interface_t.
-    REQUIRE(std::is_same_v<tanuki::wrap_interface_t<wrap_t>, any_iface<void, void>>);
 }
 
 TEST_CASE("assignment")

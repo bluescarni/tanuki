@@ -1330,7 +1330,7 @@ struct iface_from_wrap_impl<wrap<IFaceT, Cfg, Args...>> {
 };
 
 // Helper to detect the interface of a wrap.
-template <any_wrap Wrap>
+template <typename Wrap>
 using wrap_interface_t = typename detail::iface_from_wrap_impl<Wrap>::type;
 
 // Machinery to detect the interface implementation of a wrap.

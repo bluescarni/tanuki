@@ -41,25 +41,20 @@ struct fooer {
     void foo() const {}
 };
 
-namespace tanuki
-{
-
 template <typename Wrap>
-struct ref_iface<Wrap, foobar_iface> {
+struct foobar_ref_iface {
     // NOLINTNEXTLINE
-    ref_iface() {}
+    foobar_ref_iface() {}
 
     TANUKI_REF_IFACE_MEMFUN(foo)
     TANUKI_REF_IFACE_MEMFUN(bar)
     TANUKI_REF_IFACE_MEMFUN(fuzz)
 };
 
-} // namespace tanuki
-
 TEST_CASE("ref_iface basics")
 {
-    using wrap1_t = tanuki::wrap<foobar_iface, tanuki::config<>{.invalid_default_ctor = true}>;
-    using wrap2_t = tanuki::wrap<foobar_iface, tanuki::config<fooer>{}>;
+    using wrap1_t = tanuki::wrap<foobar_iface, tanuki::config<void, foobar_ref_iface>{.invalid_default_ctor = true}>;
+    using wrap2_t = tanuki::wrap<foobar_iface, tanuki::config<fooer, foobar_ref_iface>{}>;
 
     // NOLINTNEXTLINE
     wrap1_t w1{fooer{}};
@@ -87,25 +82,20 @@ template <typename Holder, typename>
 struct any_iface : any_iface<void, void> {
 };
 
-namespace tanuki
-{
-
 template <typename Wrap>
-struct ref_iface<Wrap, any_iface> {
+struct any_ref_iface {
     // NOLINTNEXTLINE
-    ref_iface() = delete;
+    any_ref_iface() = delete;
 
     TANUKI_REF_IFACE_MEMFUN(foo)
     TANUKI_REF_IFACE_MEMFUN(bar)
     TANUKI_REF_IFACE_MEMFUN(fuzz)
 };
 
-} // namespace tanuki
-
 TEST_CASE("ref_iface noinit")
 {
-    using wrap1_t = tanuki::wrap<any_iface, tanuki::config<>{.invalid_default_ctor = true}>;
-    using wrap2_t = tanuki::wrap<any_iface, tanuki::config<fooer>{}>;
+    using wrap1_t = tanuki::wrap<any_iface, tanuki::config<void, any_ref_iface>{.invalid_default_ctor = true}>;
+    using wrap2_t = tanuki::wrap<any_iface, tanuki::config<fooer, any_ref_iface>{}>;
 
     REQUIRE(!std::constructible_from<wrap1_t>);
     REQUIRE(!std::constructible_from<wrap2_t>);

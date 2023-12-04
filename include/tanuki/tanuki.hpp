@@ -484,10 +484,15 @@ inline constexpr auto holder_size = sizeof(detail::holder<T, IFaceT, Args...>);
 template <typename T, template <typename, typename, typename...> typename IFaceT, typename... Args>
 inline constexpr auto holder_align = alignof(detail::holder<T, IFaceT, Args...>);
 
+// Default implementation of the reference interface.
+template <typename>
+struct no_ref_iface {
+};
+
 // Configuration settings for the wrap class.
 // NOTE: the DefaultValueType is subject to the constraints
 // for valid value types.
-template <typename DefaultValueType = void>
+template <typename DefaultValueType = void, template <typename> typename RefIFace = no_ref_iface>
     requires std::same_as<DefaultValueType, void> || detail::valid_value_type<DefaultValueType>
 struct config final : detail::config_base {
     using default_value_type = DefaultValueType;
@@ -527,13 +532,20 @@ concept valid_config =
     // The static alignment value must be a power of 2.
     power_of_two<Cfg.static_alignment>;
 
-} // namespace detail
-
-// Default reference interface implementation.
-template <typename, template <typename, typename, typename...> typename, typename...>
-struct ref_iface {
+// Machinery to infer the reference interface from a config instance.
+template <typename>
+struct cfg_ref_type {
 };
 
+template <typename DefaultValueType, template <typename> typename RefIFace>
+struct cfg_ref_type<config<DefaultValueType, RefIFace>> {
+    template <typename T>
+    using type = RefIFace<T>;
+};
+
+} // namespace detail
+
+// Helpers to ease the definition of a reference interface.
 #define TANUKI_REF_IFACE_MEMFUN(name)                                                                                  \
     template <typename JustWrap = Wrap, typename... MemFunArgs>                                                        \
     auto name(MemFunArgs &&...args) & noexcept(                                                                        \
@@ -649,14 +661,15 @@ class TANUKI_VISIBLE wrap
       // NOTE: the reference interface is not supposed to hold any data: it will always
       // be def-inited (even when copying/moving a wrap object), its assignment operators
       // will never be invoked, it will never be swapped, etc. This needs to be documented.
-      public ref_iface<wrap<IFaceT, Cfg, Args...>, IFaceT, Args...>
+      public detail::cfg_ref_type<std::remove_const_t<decltype(Cfg)>>::template type<wrap<IFaceT, Cfg, Args...>>
 {
     // Aliases for the two interfaces.
     using iface_t = IFaceT<void, void, Args...>;
     using value_iface_t = detail::value_iface<iface_t>;
 
     // Alias for the reference interface.
-    using ref_iface_t = ref_iface<wrap<IFaceT, Cfg, Args...>, IFaceT, Args...>;
+    using ref_iface_t
+        = detail::cfg_ref_type<std::remove_const_t<decltype(Cfg)>>::template type<wrap<IFaceT, Cfg, Args...>>;
 
     // The default value type.
     using default_value_t = typename decltype(Cfg)::default_value_type;

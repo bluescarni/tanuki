@@ -79,7 +79,14 @@ struct bar_iface<Holder, T> : virtual bar_iface<void, void>, tanuki::iface_impl_
 
 using bar_wrap = tanuki::wrap<bar_iface>;
 
-using foobar_wrap = tanuki::composite_cwrap<tanuki::config<>{.pointer_interface = false}, foo_wrap, bar_wrap>;
+template <typename Wrap>
+struct foobar_ref_iface {
+    TANUKI_REF_IFACE_MEMFUN(foo)
+    TANUKI_REF_IFACE_MEMFUN(bar)
+};
+
+using foobar_wrap
+    = tanuki::composite_cwrap<tanuki::config<void, foobar_ref_iface>{.pointer_interface = false}, foo_wrap, bar_wrap>;
 
 struct foobar_model {
     mutable int n_foo = 0;
@@ -107,17 +114,6 @@ struct foobar_model {
 TANUKI_S11N_WRAP_EXPORT(foobar_model, tanuki::composite_wrap_interfaceT<foo_wrap, bar_wrap>::type)
 
 #endif
-
-namespace tanuki
-{
-
-template <typename Wrap>
-struct ref_iface<Wrap, composite_wrap_interfaceT<foo_wrap, bar_wrap>::type> {
-    TANUKI_REF_IFACE_MEMFUN(foo)
-    TANUKI_REF_IFACE_MEMFUN(bar)
-};
-
-} // namespace tanuki
 
 TEST_CASE("basic")
 {

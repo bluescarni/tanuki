@@ -77,20 +77,15 @@ struct barer {
     void bar() {}
 };
 
-namespace tanuki
-{
-
 template <typename Wrap>
-struct ref_iface<Wrap, foo_iface> {
+struct foo_ref_iface {
     TANUKI_REF_IFACE_MEMFUN(foo)
 };
 
 template <typename Wrap>
-struct ref_iface<Wrap, bar_iface> {
+struct bar_ref_iface {
     TANUKI_REF_IFACE_MEMFUN(bar)
 };
-
-} // namespace tanuki
 
 TEST_CASE("misc utils")
 {
@@ -112,7 +107,7 @@ TEST_CASE("misc utils")
 
     // Test the unwrapping in iface_impl_helper.
     {
-        using wrap_foo_t = tanuki::wrap<foo_iface, tanuki::config<>{.pointer_interface = false}>;
+        using wrap_foo_t = tanuki::wrap<foo_iface, tanuki::config<void, foo_ref_iface>{.pointer_interface = false}>;
         wrap_foo_t wf0{fooer{}}, wf0_ref{std::ref(wf0)}, wf0_cref{std::cref(wf0)};
         REQUIRE(!contains_reference(wf0));
         REQUIRE(contains_reference(wf0_ref));
@@ -126,7 +121,7 @@ TEST_CASE("misc utils")
     }
 
     {
-        using wrap_bar_t = tanuki::wrap<bar_iface, tanuki::config<>{.pointer_interface = false}>;
+        using wrap_bar_t = tanuki::wrap<bar_iface, tanuki::config<void, bar_ref_iface>{.pointer_interface = false}>;
         wrap_bar_t wf0{barer{}}, wf0_ref{std::ref(wf0)};
         REQUIRE(static_cast<void *>(&value_ref<std::reference_wrapper<wrap_bar_t>>(wf0_ref).get())
                 == static_cast<void *>(&wf0));

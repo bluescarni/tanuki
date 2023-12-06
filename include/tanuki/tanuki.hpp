@@ -496,7 +496,7 @@ inline constexpr auto holder_align = alignof(detail::holder<T, IFaceT, Args...>)
 
 // Default implementation of the reference interface.
 template <typename>
-struct no_ref_iface {
+struct TANUKI_VISIBLE no_ref_iface {
 };
 
 // Configuration settings for the wrap class.
@@ -504,7 +504,7 @@ struct no_ref_iface {
 // for valid value types.
 template <typename DefaultValueType = void, template <typename> typename RefIFace = no_ref_iface>
     requires std::same_as<DefaultValueType, void> || detail::valid_value_type<DefaultValueType>
-struct config final : detail::config_base {
+struct TANUKI_VISIBLE config final : detail::config_base {
     using default_value_type = DefaultValueType;
 
     // Size of the static storage.
@@ -1330,6 +1330,7 @@ concept any_wrap = detail::is_any_wrap_impl<T>::value;
 namespace detail
 {
 
+// Machinery to detect the interface of a wrap.
 template <typename>
 struct iface_from_wrap_impl {
 };
@@ -1339,7 +1340,6 @@ struct iface_from_wrap_impl<wrap<IFaceT, Cfg, Args...>> {
     using type = IFaceT<void, void, Args...>;
 };
 
-// Helper to detect the interface of a wrap.
 template <typename Wrap>
 using wrap_interface_t = typename detail::iface_from_wrap_impl<Wrap>::type;
 
@@ -1378,7 +1378,7 @@ struct TANUKI_VISIBLE composite_wrap_iface : composite_wrap_iface<void, void, Wr
 };
 
 template <typename Wrap0, typename Wrap1, typename... WrapN>
-struct composite_wrap_ifaceT_selector {
+struct TANUKI_VISIBLE composite_wrap_ifaceT_selector {
     template <typename Holder, typename T>
     using type = composite_wrap_iface<Holder, T, Wrap0, Wrap1, WrapN...>;
 };

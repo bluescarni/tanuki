@@ -139,7 +139,8 @@ struct fooable_iface<Holder, T> : virtual fooable_iface<void, void>,
 
 using fooable = tanuki::wrap<fooable_iface, tanuki::config<>{.explicit_generic_ctor = false}>;
 
-using fooable_summary = tanuki::composite_cwrap<tanuki::config<>{.explicit_generic_ctor = false}, summary, fooable>;
+using fooable_summary = tanuki::wrap<tanuki::composite_wrap_interfaceT<summary, fooable>::type,
+                                     tanuki::config<>{.explicit_generic_ctor = false}>;
 
 fooable_summary notify_fooable(const fooable_summary &s)
 {

@@ -1389,15 +1389,6 @@ struct TANUKI_VISIBLE composite_wrap_ifaceT_selector {
 template <any_wrap Wrap0, any_wrap Wrap1, any_wrap... WrapN>
 using composite_wrap_interfaceT = detail::composite_wrap_ifaceT_selector<Wrap0, Wrap1, WrapN...>;
 
-// Composite wrap.
-template <any_wrap Wrap0, any_wrap Wrap1, any_wrap... WrapN>
-using composite_wrap = wrap<composite_wrap_interfaceT<Wrap0, Wrap1, WrapN...>::template type>;
-
-// Composite wrap with custom config.
-template <auto Cfg, any_wrap Wrap0, any_wrap Wrap1, any_wrap... WrapN>
-    requires detail::valid_config<Cfg>
-using composite_cwrap = wrap<composite_wrap_interfaceT<Wrap0, Wrap1, WrapN...>::template type, Cfg>;
-
 // Helper that can be used to reduce typing in an
 // interface implementation. This implements value()
 // helpers for fetching the value held in Holder,

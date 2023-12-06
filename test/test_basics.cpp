@@ -106,6 +106,11 @@ TEST_CASE("basics")
     using tanuki::wrap;
     using wrap_t = wrap<any_iface>;
 
+    // Version macro check.
+    REQUIRE(TANUKI_VERSION_STRING
+            == std::to_string(TANUKI_VERSION_MAJOR) + "." + std::to_string(TANUKI_VERSION_MINOR) + "."
+                   + std::to_string(TANUKI_VERSION_PATCH));
+
     // A few simple initialisations from values.
     wrap_t w1(3.), w2(large{}), w3(std::function<void()>{});
     REQUIRE(has_static_storage(w1));

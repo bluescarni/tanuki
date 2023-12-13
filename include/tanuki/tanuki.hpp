@@ -663,6 +663,33 @@ struct is_reference_wrapper_for<std::reference_wrapper<T>, U>
     : std::bool_constant<std::same_as<std::remove_cv_t<T>, U>> {
 };
 
+// Implementation of the pointer interface for the wrap
+// class, conditionally-enabled depending on the configuration.
+template <bool Enable, typename Wrap, typename IFace>
+struct wrap_pointer_iface {
+    const IFace *operator->() const noexcept
+    {
+        return iface_ptr(*static_cast<const Wrap *>(this));
+    }
+    IFace *operator->() noexcept
+    {
+        return iface_ptr(*static_cast<Wrap *>(this));
+    }
+
+    const IFace &operator*() const noexcept
+    {
+        return *iface_ptr(*static_cast<const Wrap *>(this));
+    }
+    IFace &operator*() noexcept
+    {
+        return *iface_ptr(*static_cast<Wrap *>(this));
+    }
+};
+
+template <typename Wrap, typename IFace>
+struct wrap_pointer_iface<false, Wrap, IFace> {
+};
+
 } // namespace detail
 
 // Concept to detect if either:
@@ -681,7 +708,8 @@ class TANUKI_VISIBLE wrap
       // NOTE: the reference interface is not supposed to hold any data: it will always
       // be def-inited (even when copying/moving a wrap object), its assignment operators
       // will never be invoked, it will never be swapped, etc. This needs to be documented.
-      public detail::cfg_ref_type<std::remove_const_t<decltype(Cfg)>>::template type<wrap<IFaceT, Cfg, Args...>>
+      public detail::cfg_ref_type<std::remove_const_t<decltype(Cfg)>>::template type<wrap<IFaceT, Cfg, Args...>>,
+      public detail::wrap_pointer_iface<Cfg.pointer_interface, wrap<IFaceT, Cfg, Args...>, IFaceT<void, void, Args...>>
 {
     // Aliases for the two interfaces.
     using iface_t = IFaceT<void, void, Args...>;
@@ -1157,28 +1185,6 @@ public:
         }
 
         return *this;
-    }
-
-    const iface_t *operator->() const noexcept
-        requires(Cfg.pointer_interface)
-    {
-        return iface_ptr(*this);
-    }
-    iface_t *operator->() noexcept
-        requires(Cfg.pointer_interface)
-    {
-        return iface_ptr(*this);
-    }
-
-    const iface_t &operator*() const noexcept
-        requires(Cfg.pointer_interface)
-    {
-        return *iface_ptr(*this);
-    }
-    iface_t &operator*() noexcept
-        requires(Cfg.pointer_interface)
-    {
-        return *iface_ptr(*this);
     }
 
     // Free functions interface.

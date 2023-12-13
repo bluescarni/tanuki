@@ -618,6 +618,16 @@ struct TANUKI_VISIBLE no_ref_iface {
     };
 };
 
+// Composite reference interface.
+template <typename IFace0, typename IFace1, typename... IFaceN>
+struct TANUKI_VISIBLE composite_ref_iface {
+    template <typename Wrap>
+    struct impl : public IFace0::template impl<Wrap>,
+                  public IFace1::template impl<Wrap>,
+                  public IFaceN::template impl<Wrap>... {
+    };
+};
+
 // Configuration settings for the wrap class.
 // NOTE: the DefaultValueType is subject to the constraints
 // for valid value types.

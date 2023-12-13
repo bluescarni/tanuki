@@ -83,16 +83,23 @@ struct bar_iface_impl<Base, Holder, T> : Base, tanuki::iface_impl_helper<Base, H
 
 using bar_wrap = tanuki::wrap<bar_iface>;
 
-struct foobar_ref_iface {
+struct foo_ref_iface {
     template <typename Wrap>
     struct impl {
         TANUKI_REF_IFACE_MEMFUN(foo)
+    };
+};
+
+struct bar_ref_iface {
+    template <typename Wrap>
+    struct impl {
         TANUKI_REF_IFACE_MEMFUN(bar)
     };
 };
 
 using foobar_wrap = tanuki::wrap<tanuki::composite_iface<foo_iface, bar_iface>,
-                                 tanuki::config<void, foobar_ref_iface>{.pointer_interface = false}>;
+                                 tanuki::config<void, tanuki::composite_ref_iface<foo_ref_iface, bar_ref_iface>>{
+                                     .pointer_interface = false}>;
 
 struct foobar_model {
     mutable int n_foo = 0;
@@ -206,10 +213,17 @@ template <typename U>
 using barT_wrap = tanuki::wrap<barT_iface<U>, tanuki::default_config>;
 
 template <typename U>
-struct foobarT_ref_iface {
+struct fooT_ref_iface {
     template <typename Wrap>
     struct impl {
         TANUKI_REF_IFACE_MEMFUN(foo)
+    };
+};
+
+template <typename U>
+struct barT_ref_iface {
+    template <typename Wrap>
+    struct impl {
         TANUKI_REF_IFACE_MEMFUN(bar)
     };
 };
@@ -217,7 +231,7 @@ struct foobarT_ref_iface {
 template <typename U>
 using foobarT_wrap
     = tanuki::wrap<tanuki::composite_iface<fooT_iface<U>, barT_iface<U>>,
-                   tanuki::config<void, foobarT_ref_iface<U>>{
+                   tanuki::config<void, tanuki::composite_ref_iface<fooT_ref_iface<U>, barT_ref_iface<U>>>{
                        // Test passing a custom static size.
                        .static_size
                        = tanuki::holder_size<foobar_model, tanuki::composite_iface<fooT_iface<U>, barT_iface<U>>>,

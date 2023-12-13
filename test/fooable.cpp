@@ -10,5 +10,12 @@
 
 #include "fooable.hpp"
 
+namespace fooable
+{
+
+void foo_model::foo() const {}
+
+} // namespace fooable
+
 // NOLINTNEXTLINE(cert-err58-cpp)
 TANUKI_S11N_WRAP_EXPORT_IMPLEMENT(fooable::foo_model, fooable::foo_iface<int>)

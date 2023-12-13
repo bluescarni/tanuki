@@ -20,7 +20,6 @@ TEST_CASE("basic")
     {
         int arr[] = {1, 2, 3};
         int_iter it(std::begin(arr));
-        // static_assert(facade::is_blaffo<int_iter>::value);
         facade::iter_move(it);
         REQUIRE(*it == 1);
         REQUIRE(*++it == 2);

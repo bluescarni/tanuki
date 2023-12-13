@@ -19,16 +19,12 @@
 namespace facade
 {
 
-// Definition of the interface template for input iterators.
-template <typename, typename, typename, typename, typename>
-struct input_iterator_iface {
-};
+namespace detail
+{
 
-template <typename V, typename R, typename RR>
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions,hicpp-special-member-functions)
-struct input_iterator_iface<void, void, V, R, RR> {
-    virtual ~input_iterator_iface() = default;
-    virtual RR iter_move() const = 0;
+// Definition of the interface implementation for input iterators.
+template <typename, typename, typename, typename, typename, typename>
+struct input_iterator_iface_impl {
 };
 
 template <typename T, typename RR>
@@ -38,12 +34,10 @@ concept with_iter_move = requires(const T &x) {
     } -> std::same_as<RR>;
 };
 
-template <typename Holder, typename T, typename V, typename R, typename RR>
+template <typename Base, typename Holder, typename T, typename V, typename R, typename RR>
     requires with_iter_move<T, RR> && std::common_reference_with<R &&, V &> && std::common_reference_with<R &&, RR &&>
                  && std::common_reference_with<RR &&, const V &>
-struct input_iterator_iface<Holder, T, V, R, RR>
-    : virtual input_iterator_iface<void, void, V, R, RR>,
-      tanuki::iface_impl_helper<Holder, T, input_iterator_iface, V, R, RR> {
+struct input_iterator_iface_impl<Base, Holder, T, V, R, RR> : public Base, tanuki::iface_impl_helper<Base, Holder> {
     RR iter_move() const final
     {
         return std::ranges::iter_move(this->value());
@@ -51,45 +45,39 @@ struct input_iterator_iface<Holder, T, V, R, RR>
 };
 
 template <typename V, typename R, typename RR>
-using input_iterator_wrap = tanuki::wrap<input_iterator_iface, tanuki::default_config, V, R, RR>;
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions,hicpp-special-member-functions)
+struct input_iterator_iface {
+    virtual ~input_iterator_iface() = default;
+    virtual RR iter_move() const = 0;
 
-template <typename Wrap, typename V, typename R, typename RR>
-struct input_iterator_ref_iface_impl : io_iterator_ref_iface_impl<Wrap, R> {
-    using value_type = V;
+    template <typename Base, typename Holder, typename T>
+    using impl = input_iterator_iface_impl<Base, Holder, T, V, R, RR>;
 };
 
 template <typename V, typename R, typename RR>
 struct input_iterator_ref_iface {
     template <typename Wrap>
-    using type = input_iterator_ref_iface_impl<Wrap, V, R, RR>;
+    struct impl {
+        using value_type = V;
+        using iterator_concept = std::input_iterator_tag;
+    };
 };
 
 template <typename V, typename R, typename RR>
 inline constexpr auto input_iterator_config
-    = tanuki::config<void, input_iterator_ref_iface<V, R, RR>::template type>{.pointer_interface = false};
+    = tanuki::config<void, tanuki::composite_ref_iface<io_iterator_ref_iface<R>, input_iterator_ref_iface<V, R, RR>>>{
+        .pointer_interface = false};
+
+} // namespace detail
 
 template <typename V, typename R, typename RR>
-struct compoiface {
-    template <typename Holder, typename T>
-    using type
-        = tanuki::composite_wrap_interfaceT<io_iterator<R>, input_iterator_wrap<V, R, RR>>::template type<Holder, T>;
-};
-
-template <typename V, typename R, typename RR>
-using input_iterator = tanuki::wrap<compoiface<V, R, RR>::template type, input_iterator_config<V, R, RR>>;
-
-template <typename T>
-struct is_blaffo : std::false_type {
-};
-
-template <typename V, typename R, typename RR>
-struct is_blaffo<input_iterator<V, R, RR>> : std::true_type {
-};
+using input_iterator
+    = tanuki::wrap<tanuki::composite_iface<detail::io_iterator_iface<R>, detail::input_iterator_iface<V, R, RR>>,
+                   detail::input_iterator_config<V, R, RR>>;
 
 template <typename V, typename R, typename RR>
 RR iter_move(input_iterator<V, R, RR> it)
 {
-    // std::cout << "Calling iter move!\n";
     return iface_ptr(it)->iter_move();
 }
 

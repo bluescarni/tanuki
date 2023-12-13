@@ -15,19 +15,24 @@
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-multiple-inheritance,fuchsia-virtual-inheritance)
 
-// Fwd-declaration of the interface template.
-template <typename, typename>
-struct summary_iface;
+template <typename, typename, typename>
+struct summary_iface_impl;
 
 // Trait definition.
-template <>
 // NOLINTNEXTLINE
-struct summary_iface<void, void> {
+struct summary_iface {
     virtual ~summary_iface() = default;
     [[nodiscard]] virtual std::string summarize() const
     {
         return "(Read more...)";
     }
+
+    template <typename Base, typename Holder, typename T>
+    using impl = summary_iface_impl<Base, Holder, T>;
+};
+
+template <typename Base, typename, typename>
+struct summary_iface_impl : Base {
 };
 
 // A couple of classes for which we might want to
@@ -46,26 +51,19 @@ struct tweet {
     bool retweet = false;
 };
 
-// Default implementation of the trait.
-template <typename Holder, typename T>
-struct summary_iface : virtual summary_iface<void, void> {
-};
-
 // Implement the summary trait for news_article and tweet.
-template <typename Holder, typename T>
+template <typename Base, typename Holder, typename T>
     requires tanuki::same_or_ref_for<T, news_article>
-struct summary_iface<Holder, T> : virtual summary_iface<void, void>,
-                                  tanuki::iface_impl_helper<Holder, T, summary_iface> {
+struct summary_iface_impl<Base, Holder, T> : Base, tanuki::iface_impl_helper<Base, Holder> {
     [[nodiscard]] std::string summarize() const final
     {
         return this->value().headline + ", by " + this->value().author + " (" + this->value().location + ")";
     }
 };
 
-template <typename Holder, typename T>
+template <typename Base, typename Holder, typename T>
     requires tanuki::same_or_ref_for<T, tweet>
-struct summary_iface<Holder, T> : virtual summary_iface<void, void>,
-                                  tanuki::iface_impl_helper<Holder, T, summary_iface> {
+struct summary_iface_impl<Base, Holder, T> : Base, tanuki::iface_impl_helper<Base, Holder> {
     [[nodiscard]] std::string summarize() const final
     {
         return this->value().username + ": " + this->value().content;
@@ -105,32 +103,33 @@ TEST_CASE("summary example")
     REQUIRE(&value_ref<std::reference_wrapper<foo>>(notify(std::ref(f))).get() == &f);
 }
 
-template <typename, typename>
-struct fooable_iface;
+template <typename, typename, typename>
+struct fooable_iface_impl;
 
-template <>
 // NOLINTNEXTLINE
-struct fooable_iface<void, void> {
+struct fooable_iface {
     virtual ~fooable_iface() = default;
     [[nodiscard]] virtual std::string foo() const
     {
         return "default foo!";
     }
+
+    template <typename Base, typename Holder, typename T>
+    using impl = fooable_iface_impl<Base, Holder, T>;
+};
+
+template <typename Base, typename, typename>
+struct fooable_iface_impl : Base {
 };
 
 struct foo_capable {
     std::string foo;
 };
 
-template <typename Holder, typename T>
-struct fooable_iface : virtual fooable_iface<void, void> {
-};
-
 // Implement the summary trait for news_article and tweet.
-template <typename Holder, typename T>
+template <typename Base, typename Holder, typename T>
     requires tanuki::same_or_ref_for<T, foo_capable>
-struct fooable_iface<Holder, T> : virtual fooable_iface<void, void>,
-                                  tanuki::iface_impl_helper<Holder, T, fooable_iface> {
+struct fooable_iface_impl<Base, Holder, T> : Base, tanuki::iface_impl_helper<Base, Holder> {
     [[nodiscard]] std::string foo() const final
     {
         return this->value().foo;
@@ -139,7 +138,7 @@ struct fooable_iface<Holder, T> : virtual fooable_iface<void, void>,
 
 using fooable = tanuki::wrap<fooable_iface, tanuki::config<>{.explicit_generic_ctor = false}>;
 
-using fooable_summary = tanuki::wrap<tanuki::composite_wrap_interfaceT<summary, fooable>::type,
+using fooable_summary = tanuki::wrap<tanuki::composite_iface<summary_iface, fooable_iface>,
                                      tanuki::config<>{.explicit_generic_ctor = false}>;
 
 fooable_summary notify_fooable(const fooable_summary &s)

@@ -24,19 +24,21 @@
 struct nonwrappable {
 };
 
-template <typename, typename>
-struct any_iface {
+template <typename, typename, typename>
+struct any_iface_impl {
 };
 
-template <>
 // NOLINTNEXTLINE
-struct any_iface<void, void> {
+struct any_iface {
     virtual ~any_iface() = default;
+
+    template <typename Base, typename Holder, typename T>
+    using impl = any_iface_impl<Base, Holder, T>;
 };
 
-template <typename Holder, typename T>
+template <typename Base, typename Holder, typename T>
     requires(!std::same_as<T, nonwrappable>)
-struct any_iface<Holder, T> : any_iface<void, void> {
+struct any_iface_impl<Base, Holder, T> : Base {
 };
 
 struct large {

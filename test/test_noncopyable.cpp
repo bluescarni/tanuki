@@ -14,17 +14,16 @@
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
-template <typename, typename>
-struct any_iface;
-
-template <>
-// NOLINTNEXTLINE
-struct any_iface<void, void> {
-    virtual ~any_iface() = default;
+template <typename Base, typename, typename>
+struct any_iface_impl : Base {
 };
 
-template <typename Holder, typename T>
-struct any_iface : any_iface<void, void> {
+// NOLINTNEXTLINE
+struct any_iface {
+    virtual ~any_iface() = default;
+
+    template <typename Base, typename Holder, typename T>
+    using impl = any_iface_impl<Base, Holder, T>;
 };
 
 template <int N>

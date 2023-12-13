@@ -21,15 +21,17 @@
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance,fuchsia-multiple-inheritance)
 
-template <typename, typename>
-struct foo_iface {
+template <typename, typename, typename>
+struct foo_iface_impl {
 };
 
-template <>
 // NOLINTNEXTLINE
-struct foo_iface<void, void> {
+struct foo_iface {
     virtual ~foo_iface() = default;
     virtual void foo() const = 0;
+
+    template <typename Base, typename Holder, typename T>
+    using impl = foo_iface_impl<Base, Holder, T>;
 };
 
 template <typename T>
@@ -39,9 +41,9 @@ concept fooable = requires(const T &x) {
     } -> std::same_as<void>;
 };
 
-template <typename Holder, typename T>
+template <typename Base, typename Holder, typename T>
     requires fooable<T>
-struct foo_iface<Holder, T> : virtual foo_iface<void, void>, tanuki::iface_impl_helper<Holder, T, foo_iface> {
+struct foo_iface_impl<Base, Holder, T> : Base, tanuki::iface_impl_helper<Base, Holder> {
     void foo() const final
     {
         this->value().foo();
@@ -50,15 +52,17 @@ struct foo_iface<Holder, T> : virtual foo_iface<void, void>, tanuki::iface_impl_
 
 using foo_wrap = tanuki::wrap<foo_iface>;
 
-template <typename, typename>
-struct bar_iface {
+template <typename, typename, typename>
+struct bar_iface_impl {
 };
 
-template <>
 // NOLINTNEXTLINE
-struct bar_iface<void, void> {
+struct bar_iface {
     virtual ~bar_iface() = default;
     virtual void bar() const = 0;
+
+    template <typename Base, typename Holder, typename T>
+    using impl = bar_iface_impl<Base, Holder, T>;
 };
 
 template <typename T>
@@ -68,9 +72,9 @@ concept barable = requires(const T &x) {
     } -> std::same_as<void>;
 };
 
-template <typename Holder, typename T>
+template <typename Base, typename Holder, typename T>
     requires barable<T>
-struct bar_iface<Holder, T> : virtual bar_iface<void, void>, tanuki::iface_impl_helper<Holder, T, bar_iface> {
+struct bar_iface_impl<Base, Holder, T> : Base, tanuki::iface_impl_helper<Base, Holder> {
     void bar() const final
     {
         this->value().bar();
@@ -79,13 +83,15 @@ struct bar_iface<Holder, T> : virtual bar_iface<void, void>, tanuki::iface_impl_
 
 using bar_wrap = tanuki::wrap<bar_iface>;
 
-template <typename Wrap>
 struct foobar_ref_iface {
-    TANUKI_REF_IFACE_MEMFUN(foo)
-    TANUKI_REF_IFACE_MEMFUN(bar)
+    template <typename Wrap>
+    struct impl {
+        TANUKI_REF_IFACE_MEMFUN(foo)
+        TANUKI_REF_IFACE_MEMFUN(bar)
+    };
 };
 
-using foobar_wrap = tanuki::wrap<tanuki::composite_wrap_interfaceT<foo_wrap, bar_wrap>::type,
+using foobar_wrap = tanuki::wrap<tanuki::composite_iface<foo_iface, bar_iface>,
                                  tanuki::config<void, foobar_ref_iface>{.pointer_interface = false}>;
 
 struct foobar_model {
@@ -111,7 +117,7 @@ struct foobar_model {
 
 #if defined(TANUKI_WITH_BOOST_S11N)
 
-TANUKI_S11N_WRAP_EXPORT(foobar_model, tanuki::composite_wrap_interfaceT<foo_wrap, bar_wrap>::type)
+TANUKI_S11N_WRAP_EXPORT(foobar_model, tanuki::composite_iface<foo_iface, bar_iface>)
 
 #endif
 
@@ -147,21 +153,23 @@ TEST_CASE("basic")
 #endif
 }
 
-template <typename, typename, typename>
-struct fooT_iface {
+template <typename, typename, typename, typename>
+struct fooT_iface_impl {
 };
 
 template <typename U>
 // NOLINTNEXTLINE
-struct fooT_iface<void, void, U> {
+struct fooT_iface {
     virtual ~fooT_iface() = default;
     virtual void foo() const = 0;
+
+    template <typename Base, typename Holder, typename T>
+    using impl = fooT_iface_impl<Base, Holder, T, U>;
 };
 
-template <typename Holder, typename T, typename U>
+template <typename Base, typename Holder, typename T, typename U>
     requires fooable<T>
-struct fooT_iface<Holder, T, U> : virtual fooT_iface<void, void, U>,
-                                  tanuki::iface_impl_helper<Holder, T, fooT_iface, U> {
+struct fooT_iface_impl<Base, Holder, T, U> : Base, tanuki::iface_impl_helper<Base, Holder> {
     void foo() const final
     {
         this->value().foo();
@@ -169,23 +177,25 @@ struct fooT_iface<Holder, T, U> : virtual fooT_iface<void, void, U>,
 };
 
 template <typename U>
-using fooT_wrap = tanuki::wrap<fooT_iface, tanuki::default_config, U>;
+using fooT_wrap = tanuki::wrap<fooT_iface<U>, tanuki::default_config>;
 
-template <typename, typename, typename>
-struct barT_iface {
+template <typename, typename, typename, typename>
+struct barT_iface_impl {
 };
 
 template <typename U>
 // NOLINTNEXTLINE
-struct barT_iface<void, void, U> {
+struct barT_iface {
     virtual ~barT_iface() = default;
     virtual void bar() const = 0;
+
+    template <typename Base, typename Holder, typename T>
+    using impl = barT_iface_impl<Base, Holder, T, U>;
 };
 
-template <typename Holder, typename T, typename U>
+template <typename Base, typename Holder, typename T, typename U>
     requires barable<T>
-struct barT_iface<Holder, T, U> : virtual barT_iface<void, void, U>,
-                                  tanuki::iface_impl_helper<Holder, T, barT_iface, U> {
+struct barT_iface_impl<Base, Holder, T, U> : Base, tanuki::iface_impl_helper<Base, Holder> {
     void bar() const final
     {
         this->value().bar();
@@ -193,32 +203,29 @@ struct barT_iface<Holder, T, U> : virtual barT_iface<void, void, U>,
 };
 
 template <typename U>
-using barT_wrap = tanuki::wrap<barT_iface, tanuki::default_config, U>;
-
-template <typename Wrap, typename U>
-struct foobarT_ref_iface_impl {
-    TANUKI_REF_IFACE_MEMFUN(foo)
-    TANUKI_REF_IFACE_MEMFUN(bar)
-};
+using barT_wrap = tanuki::wrap<barT_iface<U>, tanuki::default_config>;
 
 template <typename U>
 struct foobarT_ref_iface {
     template <typename Wrap>
-    using type = foobarT_ref_iface_impl<Wrap, U>;
+    struct impl {
+        TANUKI_REF_IFACE_MEMFUN(foo)
+        TANUKI_REF_IFACE_MEMFUN(bar)
+    };
 };
 
 template <typename U>
 using foobarT_wrap
-    = tanuki::wrap<tanuki::composite_wrap_interfaceT<fooT_wrap<U>, barT_wrap<U>>::template type,
-                   tanuki::config<void, foobarT_ref_iface<U>::template type>{
+    = tanuki::wrap<tanuki::composite_iface<fooT_iface<U>, barT_iface<U>>,
+                   tanuki::config<void, foobarT_ref_iface<U>>{
                        // Test passing a custom static size.
-                       .static_size = tanuki::holder_size<
-                           foobar_model, tanuki::composite_wrap_interfaceT<fooT_wrap<U>, barT_wrap<U>>::template type>,
+                       .static_size
+                       = tanuki::holder_size<foobar_model, tanuki::composite_iface<fooT_iface<U>, barT_iface<U>>>,
                        .pointer_interface = false}>;
 
 #if defined(TANUKI_WITH_BOOST_S11N)
 
-TANUKI_S11N_WRAP_EXPORT(foobar_model, tanuki::composite_wrap_interfaceT<fooT_wrap<int>, barT_wrap<int>>::type)
+TANUKI_S11N_WRAP_EXPORT(foobar_model, tanuki::composite_iface<fooT_iface<int>, barT_iface<int>>)
 
 #endif
 

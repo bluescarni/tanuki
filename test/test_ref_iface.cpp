@@ -15,20 +15,8 @@
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
-template <typename, typename>
-struct foobar_iface;
-
-template <>
-// NOLINTNEXTLINE
-struct foobar_iface<void, void> {
-    virtual ~foobar_iface() = default;
-    virtual void foo() const noexcept = 0;
-    virtual void bar() = 0;
-    virtual void fuzz() && = 0;
-};
-
-template <typename Holder, typename T>
-struct foobar_iface : foobar_iface<void, void>, tanuki::iface_impl_helper<Holder, T, foobar_iface> {
+template <typename Base, typename Holder, typename>
+struct foobar_iface_impl : Base, tanuki::iface_impl_helper<Base, Holder> {
     void foo() const noexcept final
     {
         this->value().foo();
@@ -37,18 +25,31 @@ struct foobar_iface : foobar_iface<void, void>, tanuki::iface_impl_helper<Holder
     void fuzz() && final {}
 };
 
+// NOLINTNEXTLINE
+struct foobar_iface {
+    virtual ~foobar_iface() = default;
+    virtual void foo() const noexcept = 0;
+    virtual void bar() = 0;
+    virtual void fuzz() && = 0;
+
+    template <typename Base, typename Holder, typename T>
+    using impl = foobar_iface_impl<Base, Holder, T>;
+};
+
 struct fooer {
     void foo() const {}
 };
 
-template <typename Wrap>
 struct foobar_ref_iface {
-    // NOLINTNEXTLINE
-    foobar_ref_iface() {}
+    template <typename Wrap>
+    struct impl {
+        // NOLINTNEXTLINE
+        impl() {}
 
-    TANUKI_REF_IFACE_MEMFUN(foo)
-    TANUKI_REF_IFACE_MEMFUN(bar)
-    TANUKI_REF_IFACE_MEMFUN(fuzz)
+        TANUKI_REF_IFACE_MEMFUN(foo)
+        TANUKI_REF_IFACE_MEMFUN(bar)
+        TANUKI_REF_IFACE_MEMFUN(fuzz)
+    };
 };
 
 TEST_CASE("ref_iface basics")
@@ -69,27 +70,28 @@ TEST_CASE("ref_iface basics")
     REQUIRE(!noexcept(wrap1_t{tanuki::in_place<fooer>}));
 }
 
-template <typename, typename>
-struct any_iface;
+template <typename, typename, typename>
+struct any_iface_impl {
+};
 
-template <>
 // NOLINTNEXTLINE
-struct any_iface<void, void> {
+struct any_iface {
     virtual ~any_iface() = default;
+
+    template <typename Base, typename Holder, typename T>
+    using impl = any_iface_impl<Base, Holder, T>;
 };
 
-template <typename Holder, typename>
-struct any_iface : any_iface<void, void> {
-};
-
-template <typename Wrap>
 struct any_ref_iface {
-    // NOLINTNEXTLINE
-    any_ref_iface() = delete;
+    template <typename Wrap>
+    struct impl {
+        // NOLINTNEXTLINE
+        impl() = delete;
 
-    TANUKI_REF_IFACE_MEMFUN(foo)
-    TANUKI_REF_IFACE_MEMFUN(bar)
-    TANUKI_REF_IFACE_MEMFUN(fuzz)
+        TANUKI_REF_IFACE_MEMFUN(foo)
+        TANUKI_REF_IFACE_MEMFUN(bar)
+        TANUKI_REF_IFACE_MEMFUN(fuzz)
+    };
 };
 
 TEST_CASE("ref_iface noinit")

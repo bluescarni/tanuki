@@ -281,8 +281,8 @@ struct iface_impl_base {
 } // namespace detail
 
 // Definition of the external interface implementation
-// customisation point. Derives from implementation detail
-// base in order to detect specialisations.
+// customisation point. Derives from detail::iface_impl_base
+// in order to detect specialisations.
 // NOTE: prohibit the definition of an external implementation
 // for the composite interface.
 template <typename IFace, typename Base, typename Holder, typename T>

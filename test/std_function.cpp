@@ -25,22 +25,24 @@ template <typename R, typename... Args>
 struct is_any_function<std::function<R(Args...)>> : std::true_type {
 };
 
-template <typename, typename, typename...>
-struct func_iface {
+template <typename, typename, typename, typename...>
+struct func_iface_impl {
 };
 
 template <typename R, typename... Args>
 // NOLINTNEXTLINE
-struct func_iface<void, void, R, Args...> {
+struct func_iface {
     virtual ~func_iface() = default;
     virtual R operator()(Args... args) const = 0;
     virtual explicit operator bool() const noexcept = 0;
+
+    template <typename Base, typename Holder, typename T>
+    using impl = func_iface_impl<Base, Holder, T, R, Args...>;
 };
 
-template <typename Holder, typename T, typename R, typename... Args>
+template <typename Base, typename Holder, typename T, typename R, typename... Args>
     requires std::is_invocable_r_v<R, const T &, Args...>
-struct func_iface<Holder, T, R, Args...> : func_iface<void, void, R, Args...>,
-                                           tanuki::iface_impl_helper<Holder, T, func_iface, R, Args...> {
+struct func_iface_impl<Base, Holder, T, R, Args...> : Base, tanuki::iface_impl_helper<Base, Holder> {
     R operator()(Args... args) const final
     {
         if constexpr (std::is_pointer_v<T> || std::is_member_pointer_v<T>) {
@@ -77,35 +79,32 @@ struct func_iface<Holder, T, R, Args...> : func_iface<void, void, R, Args...>,
     }
 };
 
-template <typename Wrap, typename R, typename... Args>
-struct std_func_ref_iface_impl {
-    using result_type = R;
-
-    template <typename JustWrap = Wrap, typename... FArgs>
-    auto operator()(FArgs &&...fargs) const
-        -> decltype(iface_ptr(*static_cast<const JustWrap *>(this))->operator()(std::forward<FArgs>(fargs)...))
-    {
-        if (is_invalid(*static_cast<const Wrap *>(this))) {
-            throw std::bad_function_call{};
-        }
-
-        return iface_ptr(*static_cast<const Wrap *>(this))->operator()(std::forward<FArgs>(fargs)...);
-    }
-
-    explicit operator bool() const noexcept
-    {
-        if (is_invalid(*static_cast<const Wrap *>(this))) {
-            return false;
-        } else {
-            return static_cast<bool>(*iface_ptr(*static_cast<const Wrap *>(this)));
-        }
-    }
-};
-
 template <typename R, typename... Args>
 struct std_func_ref_iface {
     template <typename Wrap>
-    using type = std_func_ref_iface_impl<Wrap, R, Args...>;
+    struct impl {
+        using result_type = R;
+
+        template <typename JustWrap = Wrap, typename... FArgs>
+        auto operator()(FArgs &&...fargs) const
+            -> decltype(iface_ptr(*static_cast<const JustWrap *>(this))->operator()(std::forward<FArgs>(fargs)...))
+        {
+            if (is_invalid(*static_cast<const Wrap *>(this))) {
+                throw std::bad_function_call{};
+            }
+
+            return iface_ptr(*static_cast<const Wrap *>(this))->operator()(std::forward<FArgs>(fargs)...);
+        }
+
+        explicit operator bool() const noexcept
+        {
+            if (is_invalid(*static_cast<const Wrap *>(this))) {
+                return false;
+            } else {
+                return static_cast<bool>(*iface_ptr(*static_cast<const Wrap *>(this)));
+            }
+        }
+    };
 };
 
 template <typename>
@@ -114,10 +113,9 @@ struct std_func_impl {
 
 template <typename R, typename... Args>
 struct std_func_impl<R(Args...)> {
-    using type = tanuki::wrap<func_iface,
-                              tanuki::config<R (*)(Args...), std_func_ref_iface<R, Args...>::template type>{
-                                  .pointer_interface = false},
-                              R, Args...>;
+    using type
+        = tanuki::wrap<func_iface<R, Args...>,
+                       tanuki::config<R (*)(Args...), std_func_ref_iface<R, Args...>>{.pointer_interface = false}>;
 };
 
 template <typename T>

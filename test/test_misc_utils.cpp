@@ -15,53 +15,50 @@
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
-template <typename, typename>
-struct any_iface;
+template <typename Base, typename, typename>
+struct any_iface_impl : Base {
+};
 
-template <>
 // NOLINTNEXTLINE
-struct any_iface<void, void> {
+struct any_iface {
     virtual ~any_iface() = default;
+
+    template <typename Base, typename Holder, typename T>
+    using impl = any_iface_impl<Base, Holder, T>;
 };
 
-template <typename Holder, typename>
-struct any_iface : any_iface<void, void> {
-};
-
-template <typename, typename>
-struct foo_iface;
-
-template <>
-// NOLINTNEXTLINE
-struct foo_iface<void, void> {
-    virtual ~foo_iface() = default;
-    virtual void foo() const = 0;
-};
-
-template <typename Holder, typename T>
-struct foo_iface : foo_iface<void, void>, tanuki::iface_impl_helper<Holder, T, foo_iface> {
+template <typename Base, typename Holder, typename>
+struct foo_iface_impl : Base, tanuki::iface_impl_helper<Base, Holder> {
     void foo() const final
     {
         this->value().foo();
     }
 };
 
-template <typename, typename>
-struct bar_iface;
-
-template <>
 // NOLINTNEXTLINE
-struct bar_iface<void, void> {
-    virtual ~bar_iface() = default;
-    virtual void bar() = 0;
+struct foo_iface {
+    virtual ~foo_iface() = default;
+    virtual void foo() const = 0;
+
+    template <typename Base, typename Holder, typename T>
+    using impl = foo_iface_impl<Base, Holder, T>;
 };
 
-template <typename Holder, typename T>
-struct bar_iface : bar_iface<void, void>, tanuki::iface_impl_helper<Holder, T, bar_iface> {
+template <typename Base, typename Holder, typename>
+struct bar_iface_impl : Base, tanuki::iface_impl_helper<Base, Holder> {
     void bar() final
     {
         this->value().bar();
     }
+};
+
+// NOLINTNEXTLINE
+struct bar_iface {
+    virtual ~bar_iface() = default;
+    virtual void bar() = 0;
+
+    template <typename Base, typename Holder, typename T>
+    using impl = bar_iface_impl<Base, Holder, T>;
 };
 
 struct large {
@@ -77,14 +74,18 @@ struct barer {
     void bar() {}
 };
 
-template <typename Wrap>
 struct foo_ref_iface {
-    TANUKI_REF_IFACE_MEMFUN(foo)
+    template <typename Wrap>
+    struct impl {
+        TANUKI_REF_IFACE_MEMFUN(foo)
+    };
 };
 
-template <typename Wrap>
 struct bar_ref_iface {
-    TANUKI_REF_IFACE_MEMFUN(bar)
+    template <typename Wrap>
+    struct impl {
+        TANUKI_REF_IFACE_MEMFUN(bar)
+    };
 };
 
 TEST_CASE("misc utils")

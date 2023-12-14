@@ -61,7 +61,8 @@ struct io_iterator_iface {
 };
 
 template <typename Base, typename Holder, typename T, typename R>
-    requires std::movable<T> && std::copyable<T> && dereferenceable<T, R> && pre_incrementable<T>
+    requires std::derived_from<Base, io_iterator_iface<R>> && std::movable<T> && std::copyable<T>
+                 && dereferenceable<T, R> && pre_incrementable<T>
 struct io_iterator_iface_impl<Base, Holder, T, R> : public Base, tanuki::iface_impl_helper<Base, Holder> {
     void operator++() final
     {

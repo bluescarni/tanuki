@@ -47,7 +47,8 @@ concept with_iter_move = requires(const T &x) {
 };
 
 template <typename Base, typename Holder, typename T, typename V, typename R, typename RR>
-    requires with_iter_move<T, RR> && std::common_reference_with<R &&, V &> && std::common_reference_with<R &&, RR &&>
+    requires std::derived_from<Base, input_iterator_iface<V, R, RR>> && with_iter_move<T, RR>
+                 && std::common_reference_with<R &&, V &> && std::common_reference_with<R &&, RR &&>
                  && std::common_reference_with<RR &&, const V &>
 struct input_iterator_iface_impl<Base, Holder, T, V, R, RR> : public Base, tanuki::iface_impl_helper<Base, Holder> {
     RR iter_move() const final
@@ -56,12 +57,12 @@ struct input_iterator_iface_impl<Base, Holder, T, V, R, RR> : public Base, tanuk
     }
 };
 
-template <typename V, typename R, typename RR>
-struct input_iterator_ref_iface {
+template <typename V, typename Tag>
+struct value_tag_ref_iface {
     template <typename Wrap>
     struct impl {
         using value_type = V;
-        using iterator_concept = std::input_iterator_tag;
+        using iterator_concept = Tag;
     };
 };
 
@@ -70,7 +71,7 @@ using input_iterator_c_iface = tanuki::composite_iface<io_iterator_iface<R>, inp
 
 template <typename V, typename R, typename RR>
 using input_iterator_c_ref_iface
-    = tanuki::composite_ref_iface<io_iterator_ref_iface<R>, input_iterator_ref_iface<V, R, RR>>;
+    = tanuki::composite_ref_iface<io_iterator_ref_iface<R>, value_tag_ref_iface<V, std::input_iterator_tag>>;
 
 template <typename V, typename R, typename RR>
 inline constexpr auto input_iterator_config

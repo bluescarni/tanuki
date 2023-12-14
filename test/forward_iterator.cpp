@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <iterator>
 #include <list>
+#include <stdexcept>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
@@ -23,6 +24,9 @@ TEST_CASE("basic")
     REQUIRE(std::same_as<int &, std::iter_reference_t<int_iter>>);
     REQUIRE(std::same_as<int &&, std::iter_rvalue_reference_t<int_iter>>);
     REQUIRE(std::same_as<std::forward_iterator_tag, int_iter::iterator_concept>);
+
+    // Tests for def constructed instances.
+    REQUIRE(int_iter{} == int_iter{});
 
 #if 0
     {

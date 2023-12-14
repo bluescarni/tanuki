@@ -71,13 +71,13 @@ struct forward_iterator_iface_impl<Base, Holder, T, V, R, RR> : public Base, tan
 struct forward_iterator_ref_iface {
     template <typename Wrap>
     struct impl {
-        bool operator==(const Wrap &other) const
+        friend bool operator==(const Wrap &a, const Wrap &b)
         {
-            return iface_ptr(*static_cast<Wrap *>(this))->equal_to(*iface_ptr(other));
+            return iface_ptr(a)->equal_to(*iface_ptr(b));
         }
-        bool operator!=(const Wrap &other) const
+        friend bool operator!=(const Wrap &a, const Wrap &b)
         {
-            return !(*this == other);
+            return !(a == b);
         }
     };
 };

@@ -1,9 +1,6 @@
 #include <concepts>
 #include <cstddef>
 #include <iterator>
-#include <list>
-#include <stdexcept>
-#include <vector>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -27,48 +24,45 @@ TEST_CASE("basic")
 
     // Tests for def constructed instances.
     REQUIRE(int_iter{} == int_iter{});
+}
 
-#if 0
-    {
-        int arr[] = {1, 2, 3};
-        int_iter it(std::begin(arr));
-        REQUIRE(*it == 1);
-        REQUIRE(*++it == 2);
-        REQUIRE(*it++ == 2);
-        REQUIRE(*it == 3);
-    }
+namespace ns
+{
 
+struct iter_move1 {
+    double operator*() const
     {
-        std::vector<int> vec = {1, 2, 3};
-        auto it = facade::make_input_iterator(std::begin(vec));
-        REQUIRE(std::same_as<decltype(it), int_iter>);
-        REQUIRE(*it == 1);
-        REQUIRE(*++it == 2);
-        REQUIRE(*it++ == 2);
-        REQUIRE(*it == 3);
+        return {};
     }
+    void operator++() {}
+};
 
-    {
-        // NOLINTNEXTLINE(misc-const-correctness)
-        std::vector<int> vec = {1, 2, 3};
-        auto it = facade::make_input_iterator(vec.cbegin());
-        REQUIRE(std::same_as<decltype(it), facade::input_iterator<int, const int &, const int &&>>);
-        REQUIRE(std::input_iterator<decltype(it)>);
-        REQUIRE(*it == 1);
-        REQUIRE(*++it == 2);
-        REQUIRE(*it++ == 2);
-        REQUIRE(*it == 3);
-    }
+bool operator==(const iter_move1 &, const iter_move1 &)
+{
+    return true;
+}
 
-    {
-        std::list<int> lst = {1, 2, 3};
-        int_iter it(std::begin(lst));
-        REQUIRE(*it == 1);
-        REQUIRE(*++it == 2);
-        REQUIRE(*it++ == 2);
-        REQUIRE(*it == 3);
-    }
-#endif
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+int iter_move1_counter = 0;
+
+double iter_move(const iter_move1 &)
+{
+    ++iter_move1_counter;
+
+    return 0;
+}
+
+} // namespace ns
+
+// A test to check that the iter_move() customisation
+// in the reference interface is picked up correctly.
+TEST_CASE("iter_move")
+{
+    auto nit = facade::forward_iterator<double, double, double>(ns::iter_move1{});
+    (void)std::ranges::iter_move(nit);
+    (void)std::ranges::iter_move(nit);
+    (void)std::ranges::iter_move(nit);
+    REQUIRE(ns::iter_move1_counter == 3);
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

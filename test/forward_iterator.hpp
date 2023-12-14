@@ -89,7 +89,7 @@ using forward_iterator_c_iface
 template <typename V, typename R, typename RR>
 using forward_iterator_c_ref_iface
     = tanuki::composite_ref_iface<io_iterator_ref_iface<R>, value_tag_ref_iface<V, std::forward_iterator_tag>,
-                                  forward_iterator_ref_iface>;
+                                  input_iterator_ref_iface<RR>, forward_iterator_ref_iface>;
 
 template <typename V, typename R, typename RR>
 struct forward_iterator_mock {
@@ -103,7 +103,7 @@ struct forward_iterator_mock {
     {
         throw std::runtime_error("Attempting to dereference a default-constructed forward_iterator");
     }
-    [[nodiscard]] bool operator==(const forward_iterator_mock &) const noexcept
+    [[nodiscard]] friend bool operator==(const forward_iterator_mock &, const forward_iterator_mock &) noexcept
     {
         return true;
     }

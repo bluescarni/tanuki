@@ -167,4 +167,39 @@ TEST_CASE("noniter")
     }
 }
 
+namespace ns
+{
+
+struct iter_move1 {
+    double operator*() const
+    {
+        return {};
+    }
+    void operator++() {}
+};
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+int iter_move1_counter = 0;
+
+double iter_move(const iter_move1 &)
+{
+    ++iter_move1_counter;
+
+    return 0;
+}
+
+} // namespace ns
+
+// A test to check that the iter_move() customisation
+// in the reference interface is picked up correctly.
+TEST_CASE("iter_move")
+{
+    auto nit = facade::make_input_iterator(ns::iter_move1{});
+    REQUIRE(std::same_as<facade::input_iterator<double, double, double>, decltype(nit)>);
+    (void)std::ranges::iter_move(nit);
+    (void)std::ranges::iter_move(nit);
+    (void)std::ranges::iter_move(nit);
+    REQUIRE(ns::iter_move1_counter == 3);
+}
+
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

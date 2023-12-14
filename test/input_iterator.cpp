@@ -65,4 +65,101 @@ TEST_CASE("basic")
     }
 }
 
+struct noniter1 {
+    double operator*() const
+    {
+        return {};
+    }
+    void operator++() {}
+};
+
+struct noniter2 {
+    double &operator*() const
+    {
+        static double x = 56;
+        return x;
+    }
+    void operator++() {}
+};
+
+struct noniter3 {
+    const double &operator*() const
+    {
+        static const double x = 56;
+        return x;
+    }
+    void operator++() {}
+};
+
+struct noniter4 {
+    double &&operator*() const
+    {
+        static double x = 56;
+        return static_cast<double &&>(x);
+    }
+    void operator++() {}
+};
+
+struct noniter5 {
+    const double &&operator*() const
+    {
+        static double x = 56;
+        return static_cast<double &&>(x);
+    }
+    void operator++() {}
+};
+
+TEST_CASE("noniter")
+{
+    {
+        using iter_t = facade::input_iterator<double, double, double>;
+
+        REQUIRE(std::same_as<iter_t, decltype(facade::make_input_iterator(noniter1{}))>);
+
+        REQUIRE(std::input_iterator<iter_t>);
+        REQUIRE(!std::default_initializable<iter_t>);
+        REQUIRE(!std::constructible_from<iter_t, int>);
+    }
+
+    {
+        using iter_t = facade::input_iterator<double, double &, double &&>;
+
+        REQUIRE(std::same_as<iter_t, decltype(facade::make_input_iterator(noniter2{}))>);
+
+        REQUIRE(std::input_iterator<iter_t>);
+        REQUIRE(!std::default_initializable<iter_t>);
+        REQUIRE(!std::constructible_from<iter_t, int>);
+    }
+
+    {
+        using iter_t = facade::input_iterator<double, const double &, const double &&>;
+
+        REQUIRE(std::same_as<iter_t, decltype(facade::make_input_iterator(noniter3{}))>);
+
+        REQUIRE(std::input_iterator<iter_t>);
+        REQUIRE(!std::default_initializable<iter_t>);
+        REQUIRE(!std::constructible_from<iter_t, int>);
+    }
+
+    {
+        using iter_t = facade::input_iterator<double, double &&, double &&>;
+
+        REQUIRE(std::same_as<iter_t, decltype(facade::make_input_iterator(noniter4{}))>);
+
+        REQUIRE(std::input_iterator<iter_t>);
+        REQUIRE(!std::default_initializable<iter_t>);
+        REQUIRE(!std::constructible_from<iter_t, int>);
+    }
+
+    {
+        using iter_t = facade::input_iterator<double, const double &&, const double &&>;
+
+        REQUIRE(std::same_as<iter_t, decltype(facade::make_input_iterator(noniter5{}))>);
+
+        REQUIRE(std::input_iterator<iter_t>);
+        REQUIRE(!std::default_initializable<iter_t>);
+        REQUIRE(!std::constructible_from<iter_t, int>);
+    }
+}
+
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

@@ -11,7 +11,6 @@
 
 #include <concepts>
 #include <cstddef>
-#include <type_traits>
 #include <utility>
 
 #include <tanuki/tanuki.hpp>
@@ -100,9 +99,7 @@ struct io_iterator_ref_iface {
 };
 
 template <typename R>
-inline constexpr auto io_iterator_config = tanuki::config<void, io_iterator_ref_iface<R>>{
-    .static_size = tanuki::holder_size<std::remove_reference_t<R> *, detail::io_iterator_iface<R>>,
-    .pointer_interface = false};
+inline constexpr auto io_iterator_config = tanuki::config<void, io_iterator_ref_iface<R>>{.pointer_interface = false};
 
 } // namespace detail
 

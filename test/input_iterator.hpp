@@ -73,9 +73,8 @@ using input_iterator_c_ref_iface
     = tanuki::composite_ref_iface<io_iterator_ref_iface<R>, input_iterator_ref_iface<V, R, RR>>;
 
 template <typename V, typename R, typename RR>
-inline constexpr auto input_iterator_config = tanuki::config<void, input_iterator_c_ref_iface<V, R, RR>>{
-    .static_size = tanuki::holder_size<std::remove_reference_t<R> *, input_iterator_c_iface<V, R, RR>>,
-    .pointer_interface = false};
+inline constexpr auto input_iterator_config
+    = tanuki::config<void, input_iterator_c_ref_iface<V, R, RR>>{.pointer_interface = false};
 
 } // namespace detail
 
@@ -105,10 +104,10 @@ auto make_input_iterator(T it)
 
 template <typename T>
 auto make_input_iterator(T it)
-    -> decltype(input_iterator<std::remove_reference_t<decltype(*it)>, decltype(*it),
+    -> decltype(input_iterator<std::remove_cvref_t<decltype(*it)>, decltype(*it),
                                decltype(std::ranges::iter_move(std::as_const(it)))>(std::move(it)))
 {
-    return input_iterator<std::remove_reference_t<decltype(*it)>, decltype(*it),
+    return input_iterator<std::remove_cvref_t<decltype(*it)>, decltype(*it),
                           decltype(std::ranges::iter_move(std::as_const(it)))>(std::move(it));
 }
 

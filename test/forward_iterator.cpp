@@ -45,6 +45,7 @@ TEST_CASE("basic")
     {
         int arr[] = {1, 2, 3};
         int_iter it(std::begin(arr));
+        REQUIRE(has_static_storage(it));
         REQUIRE(*it == 1);
         REQUIRE(*++it == 2);
         REQUIRE(*it++ == 2);

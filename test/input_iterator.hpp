@@ -88,8 +88,9 @@ using input_iterator_c_ref_iface
                                   input_iterator_ref_iface<RR>>;
 
 template <typename V, typename R, typename RR>
-inline constexpr auto input_iterator_config
-    = tanuki::config<void, input_iterator_c_ref_iface<V, R, RR>>{.pointer_interface = false};
+inline constexpr auto input_iterator_config = tanuki::config<void, input_iterator_c_ref_iface<V, R, RR>>{
+    .static_size = tanuki::holder_size<io_iterator_mock<R>, input_iterator_c_iface<V, R, RR>>,
+    .pointer_interface = false};
 
 } // namespace detail
 

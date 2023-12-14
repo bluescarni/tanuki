@@ -38,6 +38,7 @@ ADD_TANUKI_TESTCASE(test_composite)
 ADD_TANUKI_TESTCASE(std_function)
 ADD_TANUKI_TESTCASE(io_iterator)
 ADD_TANUKI_TESTCASE(input_iterator)
+ADD_TANUKI_TESTCASE(forward_iterator)
 
 if(TANUKI_WITH_BOOST_S11N)
   add_library(fooable SHARED fooable.cpp)

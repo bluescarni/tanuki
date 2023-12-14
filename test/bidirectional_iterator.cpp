@@ -33,6 +33,7 @@ TEST_CASE("basic")
     REQUIRE(!(int_iter{} != int_iter{}));
     int_iter def;
     REQUIRE_THROWS_MATCHES(++def, std::runtime_error, Message("Attempting to increase a default-constructed iterator"));
+    REQUIRE_THROWS_MATCHES(--def, std::runtime_error, Message("Attempting to decrease a default-constructed iterator"));
     REQUIRE_THROWS_MATCHES(*def, std::runtime_error,
                            Message("Attempting to dereference a default-constructed iterator"));
     REQUIRE_THROWS_MATCHES(std::ranges::iter_move(def), std::runtime_error,
@@ -91,8 +92,6 @@ TEST_CASE("basic")
     }
 }
 
-#if 0
-
 // LCOV_EXCL_START
 
 struct noniter1 {
@@ -101,6 +100,7 @@ struct noniter1 {
         return {};
     }
     void operator++() {}
+    void operator--() {}
     friend bool operator==(const noniter1 &, const noniter1 &)
     {
         return true;
@@ -114,6 +114,7 @@ struct noniter2 {
         return x;
     }
     void operator++() {}
+    void operator--() {}
     friend bool operator==(const noniter2 &, const noniter2 &)
     {
         return true;
@@ -127,6 +128,7 @@ struct noniter3 {
         return x;
     }
     void operator++() {}
+    void operator--() {}
     friend bool operator==(const noniter3 &, const noniter3 &)
     {
         return true;
@@ -140,6 +142,7 @@ struct noniter4 {
         return static_cast<double &&>(x);
     }
     void operator++() {}
+    void operator--() {}
     friend bool operator==(const noniter4 &, const noniter4 &)
     {
         return true;
@@ -153,6 +156,7 @@ struct noniter5 {
         return static_cast<const double &&>(x);
     }
     void operator++() {}
+    void operator--() {}
     friend bool operator==(const noniter5 &, const noniter5 &)
     {
         return true;
@@ -160,6 +164,64 @@ struct noniter5 {
 };
 
 // LCOV_EXCL_STOP
+
+TEST_CASE("noniter")
+{
+    {
+        using iter_t = facade::bidirectional_iterator<double, double, double>;
+
+        auto nit = facade::make_bidirectional_iterator(noniter1{});
+        REQUIRE(std::same_as<iter_t, decltype(nit)>);
+
+        REQUIRE(std::bidirectional_iterator<iter_t>);
+        REQUIRE(std::default_initializable<iter_t>);
+        REQUIRE(!std::constructible_from<iter_t, int>);
+    }
+
+    {
+        using iter_t = facade::bidirectional_iterator<double, double &, double &&>;
+
+        auto nit = facade::make_bidirectional_iterator(noniter2{});
+        REQUIRE(std::same_as<iter_t, decltype(nit)>);
+
+        REQUIRE(std::bidirectional_iterator<iter_t>);
+        REQUIRE(std::default_initializable<iter_t>);
+        REQUIRE(!std::constructible_from<iter_t, int>);
+    }
+
+    {
+        using iter_t = facade::bidirectional_iterator<double, const double &, const double &&>;
+
+        auto nit = facade::make_bidirectional_iterator(noniter3{});
+        REQUIRE(std::same_as<iter_t, decltype(nit)>);
+
+        REQUIRE(std::bidirectional_iterator<iter_t>);
+        REQUIRE(std::default_initializable<iter_t>);
+        REQUIRE(!std::constructible_from<iter_t, int>);
+    }
+
+    {
+        using iter_t = facade::bidirectional_iterator<double, double &&, double &&>;
+
+        auto nit = facade::make_bidirectional_iterator(noniter4{});
+        REQUIRE(std::same_as<iter_t, decltype(nit)>);
+
+        REQUIRE(std::bidirectional_iterator<iter_t>);
+        REQUIRE(std::default_initializable<iter_t>);
+        REQUIRE(!std::constructible_from<iter_t, int>);
+    }
+
+    {
+        using iter_t = facade::bidirectional_iterator<double, const double &&, const double &&>;
+
+        auto nit = facade::make_bidirectional_iterator(noniter5{});
+        REQUIRE(std::same_as<iter_t, decltype(nit)>);
+
+        REQUIRE(std::bidirectional_iterator<iter_t>);
+        REQUIRE(std::default_initializable<iter_t>);
+        REQUIRE(!std::constructible_from<iter_t, int>);
+    }
+}
 
 namespace ns
 {
@@ -172,6 +234,7 @@ struct iter_move1 {
         return {};
     }
     void operator++() {}
+    void operator--() {}
 };
 
 bool operator==(const iter_move1 &, const iter_move1 &)
@@ -180,64 +243,6 @@ bool operator==(const iter_move1 &, const iter_move1 &)
 }
 
 // LCOV_EXCL_STOP
-
-TEST_CASE("noniter")
-{
-    {
-        using iter_t = facade::forward_iterator<double, double, double>;
-
-        auto nit = facade::make_forward_iterator(noniter1{});
-        REQUIRE(std::same_as<iter_t, decltype(nit)>);
-
-        REQUIRE(std::forward_iterator<iter_t>);
-        REQUIRE(std::default_initializable<iter_t>);
-        REQUIRE(!std::constructible_from<iter_t, int>);
-    }
-
-    {
-        using iter_t = facade::forward_iterator<double, double &, double &&>;
-
-        auto nit = facade::make_forward_iterator(noniter2{});
-        REQUIRE(std::same_as<iter_t, decltype(nit)>);
-
-        REQUIRE(std::forward_iterator<iter_t>);
-        REQUIRE(std::default_initializable<iter_t>);
-        REQUIRE(!std::constructible_from<iter_t, int>);
-    }
-
-    {
-        using iter_t = facade::forward_iterator<double, const double &, const double &&>;
-
-        auto nit = facade::make_forward_iterator(noniter3{});
-        REQUIRE(std::same_as<iter_t, decltype(nit)>);
-
-        REQUIRE(std::forward_iterator<iter_t>);
-        REQUIRE(std::default_initializable<iter_t>);
-        REQUIRE(!std::constructible_from<iter_t, int>);
-    }
-
-    {
-        using iter_t = facade::forward_iterator<double, double &&, double &&>;
-
-        auto nit = facade::make_forward_iterator(noniter4{});
-        REQUIRE(std::same_as<iter_t, decltype(nit)>);
-
-        REQUIRE(std::forward_iterator<iter_t>);
-        REQUIRE(std::default_initializable<iter_t>);
-        REQUIRE(!std::constructible_from<iter_t, int>);
-    }
-
-    {
-        using iter_t = facade::forward_iterator<double, const double &&, const double &&>;
-
-        auto nit = facade::make_forward_iterator(noniter5{});
-        REQUIRE(std::same_as<iter_t, decltype(nit)>);
-
-        REQUIRE(std::forward_iterator<iter_t>);
-        REQUIRE(std::default_initializable<iter_t>);
-        REQUIRE(!std::constructible_from<iter_t, int>);
-    }
-}
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 int iter_move1_counter = 0;
@@ -255,13 +260,11 @@ double iter_move(const iter_move1 &)
 // in the reference interface is picked up correctly.
 TEST_CASE("iter_move")
 {
-    auto nit = facade::forward_iterator<double, double, double>(ns::iter_move1{});
+    auto nit = facade::bidirectional_iterator<double, double, double>(ns::iter_move1{});
     (void)std::ranges::iter_move(nit);
     (void)std::ranges::iter_move(nit);
     (void)std::ranges::iter_move(nit);
     REQUIRE(ns::iter_move1_counter == 3);
 }
-
-#endif
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

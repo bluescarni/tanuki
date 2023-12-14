@@ -151,26 +151,6 @@ struct noniter5 {
 
 // LCOV_EXCL_STOP
 
-namespace ns
-{
-
-// LCOV_EXCL_START
-
-struct iter_move1 {
-    double operator*() const
-    {
-        return {};
-    }
-    void operator++() {}
-};
-
-bool operator==(const iter_move1 &, const iter_move1 &)
-{
-    return true;
-}
-
-// LCOV_EXCL_STOP
-
 TEST_CASE("noniter")
 {
     {
@@ -228,6 +208,26 @@ TEST_CASE("noniter")
         REQUIRE(!std::constructible_from<iter_t, int>);
     }
 }
+
+namespace ns
+{
+
+// LCOV_EXCL_START
+
+struct iter_move1 {
+    double operator*() const
+    {
+        return {};
+    }
+    void operator++() {}
+};
+
+bool operator==(const iter_move1 &, const iter_move1 &)
+{
+    return true;
+}
+
+// LCOV_EXCL_STOP
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 int iter_move1_counter = 0;

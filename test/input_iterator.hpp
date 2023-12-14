@@ -29,6 +29,16 @@ template <typename, typename, typename, typename, typename, typename>
 struct input_iterator_iface_impl {
 };
 
+template <typename V, typename R, typename RR>
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions,hicpp-special-member-functions)
+struct input_iterator_iface {
+    virtual ~input_iterator_iface() = default;
+    virtual RR iter_move() const = 0;
+
+    template <typename Base, typename Holder, typename T>
+    using impl = input_iterator_iface_impl<Base, Holder, T, V, R, RR>;
+};
+
 template <typename T, typename RR>
 concept with_iter_move = requires(const T &x) {
     {
@@ -44,16 +54,6 @@ struct input_iterator_iface_impl<Base, Holder, T, V, R, RR> : public Base, tanuk
     {
         return std::ranges::iter_move(this->value());
     }
-};
-
-template <typename V, typename R, typename RR>
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions,hicpp-special-member-functions)
-struct input_iterator_iface {
-    virtual ~input_iterator_iface() = default;
-    virtual RR iter_move() const = 0;
-
-    template <typename Base, typename Holder, typename T>
-    using impl = input_iterator_iface_impl<Base, Holder, T, V, R, RR>;
 };
 
 template <typename V, typename R, typename RR>

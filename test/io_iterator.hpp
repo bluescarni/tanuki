@@ -48,6 +48,18 @@ template <typename Base, typename Holder, typename T, typename R>
 struct io_iterator_iface_impl {
 };
 
+// Definition of the interface.
+template <typename R>
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions,hicpp-special-member-functions)
+struct io_iterator_iface {
+    virtual ~io_iterator_iface() = default;
+    virtual void operator++() = 0;
+    virtual R operator*() const = 0;
+
+    template <typename Base, typename Holder, typename T>
+    using impl = io_iterator_iface_impl<Base, Holder, T, R>;
+};
+
 template <typename Base, typename Holder, typename T, typename R>
     requires std::movable<T> && std::copyable<T> && dereferenceable<T, R> && pre_incrementable<T>
 struct io_iterator_iface_impl<Base, Holder, T, R> : public Base, tanuki::iface_impl_helper<Base, Holder> {
@@ -59,18 +71,6 @@ struct io_iterator_iface_impl<Base, Holder, T, R> : public Base, tanuki::iface_i
     {
         return *(this->value());
     }
-};
-
-// Definition of the interface.
-template <typename R>
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions,hicpp-special-member-functions)
-struct io_iterator_iface {
-    virtual ~io_iterator_iface() = default;
-    virtual void operator++() = 0;
-    virtual R operator*() const = 0;
-
-    template <typename Base, typename Holder, typename T>
-    using impl = io_iterator_iface_impl<Base, Holder, T, R>;
 };
 
 // Implementation of the reference interface.

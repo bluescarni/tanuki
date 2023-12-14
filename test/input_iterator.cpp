@@ -103,8 +103,8 @@ struct noniter4 {
 struct noniter5 {
     const double &&operator*() const
     {
-        static double x = 56;
-        return static_cast<double &&>(x);
+        static const double x = 56;
+        return static_cast<const double &&>(x);
     }
     void operator++() {}
 };

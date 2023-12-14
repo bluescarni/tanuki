@@ -66,12 +66,26 @@ struct value_tag_ref_iface {
     };
 };
 
+template <typename RR>
+struct input_iterator_ref_iface {
+    template <typename Wrap>
+    struct impl {
+        // Implementation of the iter_move customisation point
+        // for input iterators.
+        friend RR iter_move(const impl &it)
+        {
+            return iface_ptr(*static_cast<const Wrap *>(&it))->iter_move();
+        }
+    };
+};
+
 template <typename V, typename R, typename RR>
 using input_iterator_c_iface = tanuki::composite_iface<io_iterator_iface<R>, input_iterator_iface<V, R, RR>>;
 
 template <typename V, typename R, typename RR>
 using input_iterator_c_ref_iface
-    = tanuki::composite_ref_iface<io_iterator_ref_iface<R>, value_tag_ref_iface<V, std::input_iterator_tag>>;
+    = tanuki::composite_ref_iface<io_iterator_ref_iface<R>, value_tag_ref_iface<V, std::input_iterator_tag>,
+                                  input_iterator_ref_iface<RR>>;
 
 template <typename V, typename R, typename RR>
 inline constexpr auto input_iterator_config
@@ -81,19 +95,6 @@ inline constexpr auto input_iterator_config
 
 template <typename V, typename R, typename RR>
 using input_iterator = tanuki::wrap<detail::input_iterator_c_iface<V, R, RR>, detail::input_iterator_config<V, R, RR>>;
-
-namespace detail
-{
-
-// Implementation of the iter_move customisation point
-// for input iterators.
-template <typename V, typename R, typename RR>
-RR iter_move(const input_iterator<V, R, RR> &it)
-{
-    return iface_ptr(it)->iter_move();
-}
-
-} // namespace detail
 
 template <typename T>
     requires std::input_iterator<T>

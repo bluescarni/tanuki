@@ -29,6 +29,8 @@ TEST_CASE("basic")
 namespace ns
 {
 
+// LCOV_EXCL_START
+
 struct iter_move1 {
     double operator*() const
     {
@@ -41,6 +43,8 @@ bool operator==(const iter_move1 &, const iter_move1 &)
 {
     return true;
 }
+
+// LCOV_EXCL_STOP
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 int iter_move1_counter = 0;

@@ -65,6 +65,8 @@ TEST_CASE("basic")
     }
 }
 
+// LCOV_EXCL_START
+
 struct noniter1 {
     double operator*() const
     {
@@ -108,6 +110,8 @@ struct noniter5 {
     }
     void operator++() {}
 };
+
+// LCOV_EXCL_STOP
 
 TEST_CASE("noniter")
 {
@@ -170,6 +174,8 @@ TEST_CASE("noniter")
 namespace ns
 {
 
+// LCOV_EXCL_START
+
 struct iter_move1 {
     double operator*() const
     {
@@ -177,6 +183,8 @@ struct iter_move1 {
     }
     void operator++() {}
 };
+
+// LCOV_EXCL_STOP
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 int iter_move1_counter = 0;

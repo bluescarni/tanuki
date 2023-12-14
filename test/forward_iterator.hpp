@@ -107,7 +107,6 @@ struct forward_iterator_mock {
     {
         return true;
     }
-
     [[noreturn]] friend RR iter_move(const forward_iterator_mock &)
     {
         throw std::runtime_error("Attempting to invoke iter_move() on a default-constructed forward_iterator");

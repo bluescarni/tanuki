@@ -40,6 +40,7 @@ TEST_CASE("basic")
     }
 
     {
+        // NOLINTNEXTLINE(misc-const-correctness)
         std::vector<int> vec = {1, 2, 3};
         auto it = facade::make_io_iterator(vec.cbegin());
         REQUIRE(std::same_as<decltype(it), facade::io_iterator<const int &>>);

@@ -53,6 +53,11 @@ if(TANUKI_WITH_BOOST_S11N)
   set_property(TARGET fooable PROPERTY CXX_EXTENSIONS NO)
   target_link_libraries(fooable PUBLIC tanuki tanuki_boost_s11n)
 
+  # Optional support for clang-tidy.
+  if(TANUKI_CLANG_TIDY)
+    set_property(TARGET fooable PROPERTY CXX_CLANG_TIDY "${TANUKI_CLANG_TIDY_PATH}")
+  endif()
+
   ADD_TANUKI_TESTCASE(test_lib_s11n)
   target_link_libraries(test_lib_s11n PRIVATE fooable)
 endif()

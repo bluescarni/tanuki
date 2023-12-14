@@ -125,6 +125,23 @@ template <typename V, typename R, typename RR>
 using forward_iterator
     = tanuki::wrap<detail::forward_iterator_c_iface<V, R, RR>, detail::forward_iterator_config<V, R, RR>>;
 
+template <typename T>
+    requires std::forward_iterator<T>
+auto make_forward_iterator(T it)
+{
+    return forward_iterator<std::iter_value_t<T>, std::iter_reference_t<T>, std::iter_rvalue_reference_t<T>>(
+        std::move(it));
+}
+
+template <typename T>
+auto make_forward_iterator(T it)
+    -> decltype(forward_iterator<std::remove_cvref_t<decltype(*it)>, decltype(*it),
+                                 decltype(std::ranges::iter_move(std::as_const(it)))>(std::move(it)))
+{
+    return forward_iterator<std::remove_cvref_t<decltype(*it)>, decltype(*it),
+                            decltype(std::ranges::iter_move(std::as_const(it)))>(std::move(it));
+}
+
 } // namespace facade
 
 #endif

@@ -1,15 +1,21 @@
 #include <concepts>
 #include <cstddef>
 #include <iterator>
+#include <list>
+#include <stdexcept>
+#include <vector>
 
 #include <catch2/catch_test_macros.hpp>
 
+#include "catch2/matchers/catch_matchers_exception.hpp"
 #include "forward_iterator.hpp"
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
 TEST_CASE("basic")
 {
+    using Catch::Matchers::Message;
+
     using int_iter = facade::forward_iterator<int, int &, int &&>;
 
     REQUIRE(std::forward_iterator<int_iter>);
@@ -24,6 +30,17 @@ TEST_CASE("basic")
 
     // Tests for def constructed instances.
     REQUIRE(int_iter{} == int_iter{});
+    REQUIRE(!(int_iter{} != int_iter{}));
+    int_iter def;
+    REQUIRE_THROWS_MATCHES(++def, std::runtime_error,
+                           Message("Attempting to increase a default-constructed forward_iterator"));
+    REQUIRE_THROWS_MATCHES(*def, std::runtime_error,
+                           Message("Attempting to dereference a default-constructed forward_iterator"));
+    REQUIRE_THROWS_MATCHES(std::ranges::iter_move(def), std::runtime_error,
+                           Message("Attempting to invoke iter_move() on a default-constructed forward_iterator"));
+
+    // Comparison between forward iterators containing different types.
+    REQUIRE(int_iter{std::vector<int>::iterator{}} != int_iter{std::list<int>::iterator{}});
 }
 
 namespace ns

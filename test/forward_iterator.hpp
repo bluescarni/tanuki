@@ -103,7 +103,7 @@ struct forward_iterator_mock {
     {
         throw std::runtime_error("Attempting to dereference a default-constructed forward_iterator");
     }
-    bool operator==(const forward_iterator_mock &) const noexcept
+    [[nodiscard]] bool operator==(const forward_iterator_mock &) const noexcept
     {
         return true;
     }

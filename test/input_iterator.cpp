@@ -114,7 +114,8 @@ TEST_CASE("noniter")
     {
         using iter_t = facade::input_iterator<double, double, double>;
 
-        REQUIRE(std::same_as<iter_t, decltype(facade::make_input_iterator(noniter1{}))>);
+        auto nit = facade::make_input_iterator(noniter1{});
+        REQUIRE(std::same_as<iter_t, decltype(nit)>);
 
         REQUIRE(std::input_iterator<iter_t>);
         REQUIRE(!std::default_initializable<iter_t>);
@@ -124,7 +125,8 @@ TEST_CASE("noniter")
     {
         using iter_t = facade::input_iterator<double, double &, double &&>;
 
-        REQUIRE(std::same_as<iter_t, decltype(facade::make_input_iterator(noniter2{}))>);
+        auto nit = facade::make_input_iterator(noniter2{});
+        REQUIRE(std::same_as<iter_t, decltype(nit)>);
 
         REQUIRE(std::input_iterator<iter_t>);
         REQUIRE(!std::default_initializable<iter_t>);
@@ -134,7 +136,8 @@ TEST_CASE("noniter")
     {
         using iter_t = facade::input_iterator<double, const double &, const double &&>;
 
-        REQUIRE(std::same_as<iter_t, decltype(facade::make_input_iterator(noniter3{}))>);
+        auto nit = facade::make_input_iterator(noniter3{});
+        REQUIRE(std::same_as<iter_t, decltype(nit)>);
 
         REQUIRE(std::input_iterator<iter_t>);
         REQUIRE(!std::default_initializable<iter_t>);
@@ -144,7 +147,8 @@ TEST_CASE("noniter")
     {
         using iter_t = facade::input_iterator<double, double &&, double &&>;
 
-        REQUIRE(std::same_as<iter_t, decltype(facade::make_input_iterator(noniter4{}))>);
+        auto nit = facade::make_input_iterator(noniter4{});
+        REQUIRE(std::same_as<iter_t, decltype(nit)>);
 
         REQUIRE(std::input_iterator<iter_t>);
         REQUIRE(!std::default_initializable<iter_t>);
@@ -154,7 +158,8 @@ TEST_CASE("noniter")
     {
         using iter_t = facade::input_iterator<double, const double &&, const double &&>;
 
-        REQUIRE(std::same_as<iter_t, decltype(facade::make_input_iterator(noniter5{}))>);
+        auto nit = facade::make_input_iterator(noniter5{});
+        REQUIRE(std::same_as<iter_t, decltype(nit)>);
 
         REQUIRE(std::input_iterator<iter_t>);
         REQUIRE(!std::default_initializable<iter_t>);

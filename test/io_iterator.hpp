@@ -11,6 +11,7 @@
 
 #include <concepts>
 #include <cstddef>
+#include <type_traits>
 #include <utility>
 
 #include <tanuki/tanuki.hpp>
@@ -99,7 +100,9 @@ struct io_iterator_ref_iface {
 };
 
 template <typename R>
-inline constexpr auto io_iterator_config = tanuki::config<void, io_iterator_ref_iface<R>>{.pointer_interface = false};
+inline constexpr auto io_iterator_config = tanuki::config<void, io_iterator_ref_iface<R>>{
+    .static_size = tanuki::holder_size<std::remove_reference_t<R> *, detail::io_iterator_iface<R>>,
+    .pointer_interface = false};
 
 } // namespace detail
 
@@ -107,9 +110,9 @@ template <typename R>
 using io_iterator = tanuki::wrap<detail::io_iterator_iface<R>, detail::io_iterator_config<R>>;
 
 template <typename T>
-auto make_io_iterator(T x) -> decltype(io_iterator<decltype(*x)>(std::move(x)))
+auto make_io_iterator(T it) -> decltype(io_iterator<decltype(*it)>(std::move(it)))
 {
-    return io_iterator<decltype(*x)>(std::move(x));
+    return io_iterator<decltype(*it)>(std::move(it));
 }
 
 } // namespace facade

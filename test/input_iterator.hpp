@@ -11,6 +11,8 @@
 
 #include <concepts>
 #include <iterator>
+#include <type_traits>
+#include <utility>
 
 #include <tanuki/tanuki.hpp>
 
@@ -64,21 +66,50 @@ struct input_iterator_ref_iface {
 };
 
 template <typename V, typename R, typename RR>
-inline constexpr auto input_iterator_config
-    = tanuki::config<void, tanuki::composite_ref_iface<io_iterator_ref_iface<R>, input_iterator_ref_iface<V, R, RR>>>{
-        .pointer_interface = false};
+using input_iterator_c_iface = tanuki::composite_iface<io_iterator_iface<R>, input_iterator_iface<V, R, RR>>;
+
+template <typename V, typename R, typename RR>
+using input_iterator_c_ref_iface
+    = tanuki::composite_ref_iface<io_iterator_ref_iface<R>, input_iterator_ref_iface<V, R, RR>>;
+
+template <typename V, typename R, typename RR>
+inline constexpr auto input_iterator_config = tanuki::config<void, input_iterator_c_ref_iface<V, R, RR>>{
+    .static_size = tanuki::holder_size<std::remove_reference_t<R> *, input_iterator_c_iface<V, R, RR>>,
+    .pointer_interface = false};
 
 } // namespace detail
 
 template <typename V, typename R, typename RR>
-using input_iterator
-    = tanuki::wrap<tanuki::composite_iface<detail::io_iterator_iface<R>, detail::input_iterator_iface<V, R, RR>>,
-                   detail::input_iterator_config<V, R, RR>>;
+using input_iterator = tanuki::wrap<detail::input_iterator_c_iface<V, R, RR>, detail::input_iterator_config<V, R, RR>>;
 
+namespace detail
+{
+
+// Implementation of the iter_move customisation point
+// for input iterators.
 template <typename V, typename R, typename RR>
-RR iter_move(input_iterator<V, R, RR> it)
+RR iter_move(const input_iterator<V, R, RR> &it)
 {
     return iface_ptr(it)->iter_move();
+}
+
+} // namespace detail
+
+template <typename T>
+    requires std::input_iterator<T>
+auto make_input_iterator(T it)
+{
+    return input_iterator<std::iter_value_t<T>, std::iter_reference_t<T>, std::iter_rvalue_reference_t<T>>(
+        std::move(it));
+}
+
+template <typename T>
+auto make_input_iterator(T it)
+    -> decltype(input_iterator<std::remove_reference_t<decltype(*it)>, decltype(*it),
+                               decltype(std::ranges::iter_move(std::as_const(it)))>(std::move(it)))
+{
+    return input_iterator<std::remove_reference_t<decltype(*it)>, decltype(*it),
+                          decltype(std::ranges::iter_move(std::as_const(it)))>(std::move(it));
 }
 
 } // namespace facade

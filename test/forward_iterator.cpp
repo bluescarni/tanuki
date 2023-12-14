@@ -245,7 +245,7 @@ double iter_move(const iter_move1 &)
 // in the reference interface is picked up correctly.
 TEST_CASE("iter_move")
 {
-    auto nit = facade::forward_iterator<double, double, double>(ns::iter_move1{});
+    auto nit = facade::make_forward_iterator(ns::iter_move1{});
     (void)std::ranges::iter_move(nit);
     (void)std::ranges::iter_move(nit);
     (void)std::ranges::iter_move(nit);

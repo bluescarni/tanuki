@@ -260,11 +260,56 @@ double iter_move(const iter_move1 &)
 // in the reference interface is picked up correctly.
 TEST_CASE("iter_move")
 {
-    auto nit = facade::bidirectional_iterator<double, double, double>(ns::iter_move1{});
+    auto nit = facade::make_bidirectional_iterator(ns::iter_move1{});
     (void)std::ranges::iter_move(nit);
     (void)std::ranges::iter_move(nit);
     (void)std::ranges::iter_move(nit);
     REQUIRE(ns::iter_move1_counter == 3);
+}
+
+namespace ns
+{
+
+// LCOV_EXCL_START
+
+struct iter_move2 {
+    double operator*() const
+    {
+        return {};
+    }
+    void operator++() {}
+    void operator--() {}
+};
+
+bool operator==(const iter_move2 &, const iter_move2 &)
+{
+    return true;
+}
+
+// LCOV_EXCL_STOP
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+int iter_move2_counter = 0;
+
+int iter_move(const iter_move2 &)
+{
+    ++iter_move2_counter;
+
+    return 0;
+}
+
+} // namespace ns
+
+// A test to check that the factory function picks up
+// specialisations of iter_move.
+TEST_CASE("iter_move factory")
+{
+    auto nit = facade::make_bidirectional_iterator(ns::iter_move2{});
+    REQUIRE(std::same_as<facade::bidirectional_iterator<double, double, int>, decltype(nit)>);
+    (void)std::ranges::iter_move(nit);
+    (void)std::ranges::iter_move(nit);
+    (void)std::ranges::iter_move(nit);
+    REQUIRE(ns::iter_move2_counter == 3);
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

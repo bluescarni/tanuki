@@ -97,11 +97,11 @@ struct forward_iterator_mock {
 
     [[noreturn]] void operator++()
     {
-        throw std::runtime_error("Attempting to increase a default-constructed forward_iterator");
+        throw std::runtime_error("Attempting to increase a default-constructed iterator");
     }
     [[noreturn]] R operator*() const
     {
-        throw std::runtime_error("Attempting to dereference a default-constructed forward_iterator");
+        throw std::runtime_error("Attempting to dereference a default-constructed iterator");
     }
     [[nodiscard]] friend bool operator==(const forward_iterator_mock &, const forward_iterator_mock &) noexcept
     {
@@ -109,7 +109,7 @@ struct forward_iterator_mock {
     }
     [[noreturn]] friend RR iter_move(const forward_iterator_mock &)
     {
-        throw std::runtime_error("Attempting to invoke iter_move() on a default-constructed forward_iterator");
+        throw std::runtime_error("Attempting to invoke iter_move() on a default-constructed iterator");
     }
 };
 

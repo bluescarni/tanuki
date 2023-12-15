@@ -13,7 +13,11 @@
 namespace fooable
 {
 
+// LCOV_EXCL_START
+
 void foo_model::foo() const {}
+
+// LCOV_EXCL_STOP
 
 } // namespace fooable
 

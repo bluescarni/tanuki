@@ -60,6 +60,10 @@ TEST_CASE("basic")
 
     using int_iter = facade::random_access_iterator<int, int &, int &&>;
 
+    REQUIRE(std::input_or_output_iterator<int_iter>);
+    REQUIRE(std::input_iterator<int_iter>);
+    REQUIRE(std::forward_iterator<int_iter>);
+    REQUIRE(std::bidirectional_iterator<int_iter>);
     REQUIRE(std::random_access_iterator<int_iter>);
     REQUIRE(std::default_initializable<int_iter>);
     REQUIRE(!std::constructible_from<int_iter, int>);

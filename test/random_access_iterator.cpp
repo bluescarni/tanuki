@@ -92,6 +92,11 @@ TEST_CASE("basic")
                            Message("Attempting to invoke iter_move() on a default-constructed iterator"));
     REQUIRE_THROWS_MATCHES(int_iter{std::vector<int>::iterator{}} != int_iter{static_cast<int *>(nullptr)},
                            std::runtime_error, Message("Cannot compare iterators of different types"));
+    REQUIRE_THROWS_MATCHES(int_iter{std::vector<int>::iterator{}} < int_iter{static_cast<int *>(nullptr)},
+                           std::runtime_error, Message("Cannot compare iterators of different types"));
+    REQUIRE_THROWS_MATCHES(int_iter{std::vector<int>::iterator{}} - int_iter{static_cast<int *>(nullptr)},
+                           std::runtime_error,
+                           Message("Cannot compute the distance between two iterators of different types"));
 
     {
         int arr[] = {1, 2, 3};

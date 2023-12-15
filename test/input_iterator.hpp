@@ -71,10 +71,10 @@ struct value_tag_ref_iface {
     };
 };
 
-template <typename RR>
+template <typename R, typename RR>
 struct input_iterator_ref_iface {
     template <typename Wrap>
-    struct impl {
+    struct impl : io_iterator_ref_iface<R>::template impl<Wrap> {
         // Implementation of the iter_move customisation point
         // for input iterators.
         friend RR iter_move(const impl &it)
@@ -86,8 +86,7 @@ struct input_iterator_ref_iface {
 
 template <typename V, typename R, typename RR>
 using input_iterator_c_ref_iface
-    = tanuki::composite_ref_iface<io_iterator_ref_iface<R>, value_tag_ref_iface<V, std::input_iterator_tag>,
-                                  input_iterator_ref_iface<RR>>;
+    = tanuki::composite_ref_iface<input_iterator_ref_iface<R, RR>, value_tag_ref_iface<V, std::input_iterator_tag>>;
 
 template <typename V, typename R, typename RR>
 inline constexpr auto input_iterator_config = tanuki::config<void, input_iterator_c_ref_iface<V, R, RR>>{

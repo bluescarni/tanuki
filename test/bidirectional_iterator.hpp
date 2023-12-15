@@ -16,8 +16,6 @@
 #include <tanuki/tanuki.hpp>
 
 #include "forward_iterator.hpp"
-#include "input_iterator.hpp"
-#include "io_iterator.hpp"
 
 namespace facade
 {
@@ -60,9 +58,10 @@ struct bidirectional_iterator_iface_impl<Base, Holder, T, V, R, RR>
 };
 
 // Implementation of the reference interface.
+template <typename R, typename RR>
 struct bidirectional_iterator_ref_iface {
     template <typename Wrap>
-    struct impl {
+    struct impl : forward_iterator_ref_iface<R, RR>::template impl<Wrap> {
         // NOTE: in these operators we need the value type
         // to be copyable/movable. These requirements are part
         // of the input-output iterator concept.
@@ -82,9 +81,8 @@ struct bidirectional_iterator_ref_iface {
 
 template <typename V, typename R, typename RR>
 using bidirectional_iterator_c_ref_iface
-    = tanuki::composite_ref_iface<io_iterator_ref_iface<R>, value_tag_ref_iface<V, std::bidirectional_iterator_tag>,
-                                  input_iterator_ref_iface<RR>, forward_iterator_ref_iface,
-                                  bidirectional_iterator_ref_iface>;
+    = tanuki::composite_ref_iface<bidirectional_iterator_ref_iface<R, RR>,
+                                  value_tag_ref_iface<V, std::bidirectional_iterator_tag>>;
 
 template <typename V, typename R, typename RR>
 struct bidirectional_iterator_mock : forward_iterator_mock<V, R, RR> {

@@ -18,7 +18,6 @@
 #include <tanuki/tanuki.hpp>
 
 #include "input_iterator.hpp"
-#include "io_iterator.hpp"
 
 namespace facade
 {
@@ -73,9 +72,10 @@ struct forward_iterator_iface_impl<Base, Holder, T, V, R, RR>
     }
 };
 
+template <typename R, typename RR>
 struct forward_iterator_ref_iface {
     template <typename Wrap>
-    struct impl {
+    struct impl : input_iterator_ref_iface<R, RR>::template impl<Wrap> {
         friend bool operator==(const impl &a, const impl &b)
         {
             return iface_ptr(*static_cast<const Wrap *>(&a))->equal_to(*iface_ptr(*static_cast<const Wrap *>(&b)));
@@ -89,8 +89,7 @@ struct forward_iterator_ref_iface {
 
 template <typename V, typename R, typename RR>
 using forward_iterator_c_ref_iface
-    = tanuki::composite_ref_iface<io_iterator_ref_iface<R>, value_tag_ref_iface<V, std::forward_iterator_tag>,
-                                  input_iterator_ref_iface<RR>, forward_iterator_ref_iface>;
+    = tanuki::composite_ref_iface<forward_iterator_ref_iface<R, RR>, value_tag_ref_iface<V, std::forward_iterator_tag>>;
 
 template <typename V, typename R, typename RR>
 struct forward_iterator_mock {

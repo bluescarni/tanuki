@@ -107,19 +107,11 @@ using bidirectional_iterator
     = tanuki::wrap<detail::bidirectional_iterator_iface<V, R, RR>, detail::bidirectional_iterator_config<V, R, RR>>;
 
 template <typename T>
-    requires std::bidirectional_iterator<T>
 auto make_bidirectional_iterator(T it)
-{
-    return bidirectional_iterator<std::iter_value_t<T>, std::iter_reference_t<T>, std::iter_rvalue_reference_t<T>>(
-        std::move(it));
-}
-
-template <typename T>
-auto make_bidirectional_iterator(T it)
-    -> decltype(bidirectional_iterator<std::remove_cvref_t<std::iter_reference_t<T>>, std::iter_reference_t<T>,
+    -> decltype(bidirectional_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>,
                                        std::iter_rvalue_reference_t<T>>(std::move(it)))
 {
-    return bidirectional_iterator<std::remove_cvref_t<std::iter_reference_t<T>>, std::iter_reference_t<T>,
+    return bidirectional_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>,
                                   std::iter_rvalue_reference_t<T>>(std::move(it));
 }
 

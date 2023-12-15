@@ -99,21 +99,42 @@ inline constexpr auto input_iterator_config = tanuki::config<void, input_iterato
 template <typename V, typename R, typename RR>
 using input_iterator = tanuki::wrap<detail::input_iterator_iface<V, R, RR>, detail::input_iterator_config<V, R, RR>>;
 
-template <typename T>
-    requires std::input_iterator<T>
-auto make_input_iterator(T it)
+namespace detail
 {
-    return input_iterator<std::iter_value_t<T>, std::iter_reference_t<T>, std::iter_rvalue_reference_t<T>>(
-        std::move(it));
-}
 
 template <typename T>
-auto make_input_iterator(T it)
-    -> decltype(input_iterator<std::remove_cvref_t<std::iter_reference_t<T>>, std::iter_reference_t<T>,
-                               std::iter_rvalue_reference_t<T>>(std::move(it)))
+concept has_iter_value = requires() { typename std::iter_value_t<T>; };
+
+template <typename T>
+concept has_iter_ref = requires() { typename std::iter_reference_t<T>; };
+
+template <typename T>
+struct deduce_iter_value {
+};
+
+template <typename T>
+    requires has_iter_value<T>
+struct deduce_iter_value<T> {
+    using type = std::iter_value_t<T>;
+};
+
+template <typename T>
+    requires(!has_iter_value<T>) && has_iter_ref<T>
+struct deduce_iter_value<T> {
+    using type = std::remove_cvref_t<std::iter_reference_t<T>>;
+};
+
+template <typename T>
+using deduce_iter_value_t = typename detail::deduce_iter_value<T>::type;
+
+} // namespace detail
+
+template <typename T>
+auto make_input_iterator(T it) -> decltype(input_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>,
+                                                          std::iter_rvalue_reference_t<T>>(std::move(it)))
 {
-    return input_iterator<std::remove_cvref_t<std::iter_reference_t<T>>, std::iter_reference_t<T>,
-                          std::iter_rvalue_reference_t<T>>(std::move(it));
+    return input_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>, std::iter_rvalue_reference_t<T>>(
+        std::move(it));
 }
 
 } // namespace facade

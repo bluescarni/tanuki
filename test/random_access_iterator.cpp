@@ -3,6 +3,7 @@
 #include <iterator>
 #include <list>
 #include <stdexcept>
+#include <unordered_set>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
@@ -11,6 +12,9 @@
 #include "random_access_iterator.hpp"
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+
+template <typename T>
+concept can_make_random_access_iterator = requires(T it) { facade::make_random_access_iterator(it); };
 
 // Minimal wrapper around a std::vector iterator.
 // This is used to check that all primitives
@@ -68,6 +72,8 @@ TEST_CASE("basic")
     REQUIRE(std::default_initializable<int_iter>);
     REQUIRE(!std::constructible_from<int_iter, int>);
     REQUIRE(!std::constructible_from<int_iter, std::list<int>::iterator>);
+    REQUIRE(!can_make_random_access_iterator<int>);
+    REQUIRE(!can_make_random_access_iterator<std::unordered_set<int>::iterator>);
 
     REQUIRE(std::same_as<std::ptrdiff_t, std::iter_difference_t<int_iter>>);
     REQUIRE(std::same_as<int, std::iter_value_t<int_iter>>);

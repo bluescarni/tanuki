@@ -8,8 +8,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_exception.hpp>
 
-#include <iostream>
-
 #include "random_access_iterator.hpp"
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
@@ -18,11 +16,25 @@ TEST_CASE("basic")
 {
     using Catch::Matchers::Message;
 
-    using int_iter = facade::random_access_iterator<int, int &, int &&>;
+    int n[] = {1, 2, 3};
+    auto nit = facade::make_random_access_iterator(&n[0]);
 
-    REQUIRE(std::random_access_iterator<int_iter>);
-    REQUIRE(std::default_initializable<int_iter>);
-    REQUIRE(!std::constructible_from<int_iter, int>);
+    REQUIRE(nit == nit);
+    REQUIRE(!(nit < nit));
+    nit += 1;
+    REQUIRE(*nit == 2);
+    nit -= 1;
+    REQUIRE(*nit == 1);
+
+    REQUIRE(*(nit + 2) == 3);
+    REQUIRE(*(nit + 2 - 1) == 2);
+    REQUIRE(nit[2] == 3);
+
+    REQUIRE(nit - nit == 0);
+    REQUIRE(nit + 1 - nit == 1);
+    REQUIRE(nit + 2 - 1 - nit == 1);
+
+    const decltype(nit) foo;
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

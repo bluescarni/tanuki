@@ -221,6 +221,7 @@ TEST_CASE("basic")
     }
 
     {
+        // NOLINTNEXTLINE(misc-const-correctness)
         std::vector arr = {1, 2, 3};
         auto it = facade::make_random_access_iterator(std::cbegin(arr));
         REQUIRE(std::same_as<decltype(it), facade::random_access_iterator<int, const int &, const int &&>>);

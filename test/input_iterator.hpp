@@ -30,9 +30,7 @@ struct input_iterator_iface_impl {
 };
 
 template <typename V, typename R, typename RR>
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions,hicpp-special-member-functions)
-struct input_iterator_iface {
-    virtual ~input_iterator_iface() = default;
+struct input_iterator_iface : io_iterator_iface<R> {
     virtual RR iter_move() const = 0;
 
     template <typename Base, typename Holder, typename T>
@@ -46,11 +44,18 @@ concept with_iter_move = requires(const T &x) {
     } -> std::same_as<RR>;
 };
 
+// Gather the minimal requirements for a type T
+// to satisfy the input_iterator concept.
+template <typename T, typename V, typename R, typename RR>
+concept minimal_input_iterator
+    = minimal_io_iterator<T, R> && with_iter_move<T, RR> && std::common_reference_with<R &&, V &>
+      && std::common_reference_with<R &&, RR &&> && std::common_reference_with<RR &&, const V &>;
+
 template <typename Base, typename Holder, typename T, typename V, typename R, typename RR>
-    requires std::derived_from<Base, input_iterator_iface<V, R, RR>> && with_iter_move<T, RR>
-                 && std::common_reference_with<R &&, V &> && std::common_reference_with<R &&, RR &&>
-                 && std::common_reference_with<RR &&, const V &>
-struct input_iterator_iface_impl<Base, Holder, T, V, R, RR> : public Base, tanuki::iface_impl_helper<Base, Holder> {
+    requires std::derived_from<Base, input_iterator_iface<V, R, RR>> && minimal_input_iterator<T, V, R, RR>
+struct input_iterator_iface_impl<Base, Holder, T, V, R, RR>
+    : io_iterator_iface_impl<Base, Holder, T, R>,
+      tanuki::iface_impl_helper<io_iterator_iface_impl<Base, Holder, T, R>, Holder> {
     RR iter_move() const final
     {
         return std::ranges::iter_move(this->value());
@@ -80,22 +85,19 @@ struct input_iterator_ref_iface {
 };
 
 template <typename V, typename R, typename RR>
-using input_iterator_c_iface = tanuki::composite_iface<io_iterator_iface<R>, input_iterator_iface<V, R, RR>>;
-
-template <typename V, typename R, typename RR>
 using input_iterator_c_ref_iface
     = tanuki::composite_ref_iface<io_iterator_ref_iface<R>, value_tag_ref_iface<V, std::input_iterator_tag>,
                                   input_iterator_ref_iface<RR>>;
 
 template <typename V, typename R, typename RR>
 inline constexpr auto input_iterator_config = tanuki::config<void, input_iterator_c_ref_iface<V, R, RR>>{
-    .static_size = tanuki::holder_size<io_iterator_mock<R>, input_iterator_c_iface<V, R, RR>>,
+    .static_size = tanuki::holder_size<io_iterator_mock<R>, input_iterator_iface<V, R, RR>>,
     .pointer_interface = false};
 
 } // namespace detail
 
 template <typename V, typename R, typename RR>
-using input_iterator = tanuki::wrap<detail::input_iterator_c_iface<V, R, RR>, detail::input_iterator_config<V, R, RR>>;
+using input_iterator = tanuki::wrap<detail::input_iterator_iface<V, R, RR>, detail::input_iterator_config<V, R, RR>>;
 
 template <typename T>
     requires std::input_iterator<T>

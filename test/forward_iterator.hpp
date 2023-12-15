@@ -32,9 +32,7 @@ struct forward_iterator_iface_impl {
 };
 
 template <typename V, typename R, typename RR>
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions,hicpp-special-member-functions)
-struct forward_iterator_iface {
-    virtual ~forward_iterator_iface() = default;
+struct forward_iterator_iface : input_iterator_iface<V, R, RR> {
     virtual bool equal_to(const forward_iterator_iface &) const = 0;
     [[nodiscard]] virtual std::type_index get_type_index_for_comparison() const noexcept = 0;
     [[nodiscard]] virtual const void *get_ptr_for_comparison() const noexcept = 0;
@@ -46,10 +44,17 @@ struct forward_iterator_iface {
 template <typename T>
 concept minimal_eq_comparable = requires(const T &a, const T &b) { static_cast<bool>(a == b); };
 
+// Gather the minimal requirements for a type T
+// to satisfy the forward_iterator concept.
+template <typename T, typename V, typename R, typename RR>
+concept minimal_forward_iterator
+    = minimal_input_iterator<T, V, R, RR> && std::default_initializable<T> && minimal_eq_comparable<T>;
+
 template <typename Base, typename Holder, typename T, typename V, typename R, typename RR>
-    requires std::derived_from<Base, forward_iterator_iface<V, R, RR>> && std::default_initializable<T>
-                 && minimal_eq_comparable<T>
-struct forward_iterator_iface_impl<Base, Holder, T, V, R, RR> : public Base, tanuki::iface_impl_helper<Base, Holder> {
+    requires std::derived_from<Base, forward_iterator_iface<V, R, RR>> && minimal_forward_iterator<T, V, R, RR>
+struct forward_iterator_iface_impl<Base, Holder, T, V, R, RR>
+    : input_iterator_iface_impl<Base, Holder, T, V, R, RR>,
+      tanuki::iface_impl_helper<input_iterator_iface_impl<Base, Holder, T, V, R, RR>, Holder> {
     [[nodiscard]] std::type_index get_type_index_for_comparison() const noexcept final
     {
         return typeid(T);
@@ -83,10 +88,6 @@ struct forward_iterator_ref_iface {
 };
 
 template <typename V, typename R, typename RR>
-using forward_iterator_c_iface
-    = tanuki::composite_iface<io_iterator_iface<R>, input_iterator_iface<V, R, RR>, forward_iterator_iface<V, R, RR>>;
-
-template <typename V, typename R, typename RR>
 using forward_iterator_c_ref_iface
     = tanuki::composite_ref_iface<io_iterator_ref_iface<R>, value_tag_ref_iface<V, std::forward_iterator_tag>,
                                   input_iterator_ref_iface<RR>, forward_iterator_ref_iface>;
@@ -116,14 +117,14 @@ struct forward_iterator_mock {
 template <typename V, typename R, typename RR>
 inline constexpr auto forward_iterator_config
     = tanuki::config<forward_iterator_mock<V, R, RR>, forward_iterator_c_ref_iface<V, R, RR>>{
-        .static_size = tanuki::holder_size<forward_iterator_mock<V, R, RR>, forward_iterator_c_iface<V, R, RR>>,
+        .static_size = tanuki::holder_size<forward_iterator_mock<V, R, RR>, forward_iterator_iface<V, R, RR>>,
         .pointer_interface = false};
 
 } // namespace detail
 
 template <typename V, typename R, typename RR>
 using forward_iterator
-    = tanuki::wrap<detail::forward_iterator_c_iface<V, R, RR>, detail::forward_iterator_config<V, R, RR>>;
+    = tanuki::wrap<detail::forward_iterator_iface<V, R, RR>, detail::forward_iterator_config<V, R, RR>>;
 
 template <typename T>
     requires std::forward_iterator<T>

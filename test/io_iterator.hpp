@@ -60,9 +60,13 @@ struct io_iterator_iface {
     using impl = io_iterator_iface_impl<Base, Holder, T, R>;
 };
 
+// Gather the minimal requirements for a type T
+// to satisfy the io_iterator concept.
+template <typename T, typename R>
+concept minimal_io_iterator = std::movable<T> && std::copyable<T> && dereferenceable<T, R> && pre_incrementable<T>;
+
 template <typename Base, typename Holder, typename T, typename R>
-    requires std::derived_from<Base, io_iterator_iface<R>> && std::movable<T> && std::copyable<T>
-                 && dereferenceable<T, R> && pre_incrementable<T>
+    requires std::derived_from<Base, io_iterator_iface<R>> && minimal_io_iterator<T, R>
 struct io_iterator_iface_impl<Base, Holder, T, R> : public Base, tanuki::iface_impl_helper<Base, Holder> {
     void operator++() final
     {

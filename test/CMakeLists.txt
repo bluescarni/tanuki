@@ -36,6 +36,11 @@ ADD_TANUKI_TESTCASE(test_ref_iface)
 ADD_TANUKI_TESTCASE(test_trait_like)
 ADD_TANUKI_TESTCASE(test_composite)
 ADD_TANUKI_TESTCASE(std_function)
+ADD_TANUKI_TESTCASE(io_iterator)
+ADD_TANUKI_TESTCASE(input_iterator)
+ADD_TANUKI_TESTCASE(forward_iterator)
+ADD_TANUKI_TESTCASE(bidirectional_iterator)
+ADD_TANUKI_TESTCASE(random_access_iterator)
 
 if(TANUKI_WITH_BOOST_S11N)
   add_library(fooable SHARED fooable.cpp)
@@ -50,6 +55,11 @@ if(TANUKI_WITH_BOOST_S11N)
   target_compile_features(fooable PRIVATE cxx_std_20)
   set_property(TARGET fooable PROPERTY CXX_EXTENSIONS NO)
   target_link_libraries(fooable PUBLIC tanuki tanuki_boost_s11n)
+
+  # Optional support for clang-tidy.
+  if(TANUKI_CLANG_TIDY)
+    set_property(TARGET fooable PROPERTY CXX_CLANG_TIDY "${TANUKI_CLANG_TIDY_PATH}")
+  endif()
 
   ADD_TANUKI_TESTCASE(test_lib_s11n)
   target_link_libraries(test_lib_s11n PRIVATE fooable)

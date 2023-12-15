@@ -14,6 +14,7 @@
 #include <memory>
 #include <stdexcept>
 #include <typeindex>
+#include <typeinfo>
 
 #include <tanuki/tanuki.hpp>
 

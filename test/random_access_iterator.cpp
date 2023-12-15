@@ -1,7 +1,6 @@
 #include <concepts>
 #include <cstddef>
 #include <iterator>
-#include <list>
 #include <stdexcept>
 #include <vector>
 
@@ -16,25 +15,78 @@ TEST_CASE("basic")
 {
     using Catch::Matchers::Message;
 
-    int n[] = {1, 2, 3};
-    auto nit = facade::make_random_access_iterator(&n[0]);
+    using int_iter = facade::random_access_iterator<int, int &, int &&>;
 
-    REQUIRE(nit == nit);
-    REQUIRE(!(nit < nit));
-    nit += 1;
-    REQUIRE(*nit == 2);
-    nit -= 1;
-    REQUIRE(*nit == 1);
+    REQUIRE(std::random_access_iterator<int_iter>);
+    REQUIRE(std::default_initializable<int_iter>);
+    REQUIRE(!std::constructible_from<int_iter, int>);
 
-    REQUIRE(*(nit + 2) == 3);
-    REQUIRE(*(nit + 2 - 1) == 2);
-    REQUIRE(nit[2] == 3);
+    REQUIRE(std::same_as<std::ptrdiff_t, std::iter_difference_t<int_iter>>);
+    REQUIRE(std::same_as<int, std::iter_value_t<int_iter>>);
+    REQUIRE(std::same_as<int &, std::iter_reference_t<int_iter>>);
+    REQUIRE(std::same_as<int &&, std::iter_rvalue_reference_t<int_iter>>);
+    REQUIRE(std::same_as<std::random_access_iterator_tag, int_iter::iterator_concept>);
 
-    REQUIRE(nit - nit == 0);
-    REQUIRE(nit + 1 - nit == 1);
-    REQUIRE(nit + 2 - 1 - nit == 1);
+    // Tests for def constructed instances.
+    REQUIRE(int_iter{} == int_iter{});
+    REQUIRE(int_iter{} <= int_iter{});
+    REQUIRE(int_iter{} >= int_iter{});
+    REQUIRE(!(int_iter{} != int_iter{}));
+    REQUIRE(!(int_iter{} < int_iter{}));
+    REQUIRE(!(int_iter{} > int_iter{}));
+    REQUIRE(int_iter{} - int_iter{} == 0);
+    int_iter def;
+    REQUIRE_THROWS_MATCHES(++def, std::runtime_error, Message("Attempting to increase a default-constructed iterator"));
+    REQUIRE_THROWS_MATCHES(--def, std::runtime_error, Message("Attempting to decrease a default-constructed iterator"));
+    REQUIRE_THROWS_MATCHES(def += 1, std::runtime_error,
+                           Message("Attempting to increment a default-constructed iterator"));
+    REQUIRE_THROWS_MATCHES(def -= 1, std::runtime_error,
+                           Message("Attempting to decrement a default-constructed iterator"));
+    REQUIRE_THROWS_MATCHES(*def, std::runtime_error,
+                           Message("Attempting to dereference a default-constructed iterator"));
+    REQUIRE_THROWS_MATCHES(std::ranges::iter_move(def), std::runtime_error,
+                           Message("Attempting to invoke iter_move() on a default-constructed iterator"));
+    REQUIRE_THROWS_MATCHES(int_iter{std::vector<int>::iterator{}} != int_iter{static_cast<int *>(nullptr)},
+                           std::runtime_error, Message("Cannot compare iterators of different types"));
 
-    const decltype(nit) foo;
+    {
+        int arr[] = {1, 2, 3};
+        int_iter it(std::begin(arr));
+        REQUIRE(has_static_storage(it));
+        REQUIRE(*it == 1);
+        REQUIRE(*++it == 2);
+        REQUIRE(*--it == 1);
+        REQUIRE(*it++ == 1);
+        REQUIRE(*it-- == 2);
+        REQUIRE(*it == 1);
+        it += 2;
+        REQUIRE(*it == 3);
+        it -= 2;
+        REQUIRE(*it == 1);
+        REQUIRE(*(it + 1) == 2);
+        REQUIRE(*(1 + it) == 2);
+        it += 3;
+        REQUIRE(*(it - 1) == 3);
+        REQUIRE(it - int_iter(std::begin(arr)) == 3);
+        it -= 3;
+        REQUIRE(it[2] == 3);
+
+        REQUIRE(!(it < it));
+        REQUIRE(it < it + 1);
+        REQUIRE(!(it + 1 < it));
+
+        REQUIRE(it <= it);
+        REQUIRE(it <= it + 1);
+        REQUIRE(!(it + 1 <= it));
+
+        REQUIRE(!(it > it));
+        REQUIRE(!(it > it + 1));
+        REQUIRE(it + 1 > it);
+
+        REQUIRE(it >= it);
+        REQUIRE(!(it >= it + 1));
+        REQUIRE(it + 1 >= it);
+    }
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

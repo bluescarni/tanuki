@@ -39,7 +39,7 @@ TEST_CASE("basic")
     REQUIRE_THROWS_MATCHES(std::ranges::iter_move(def), std::runtime_error,
                            Message("Attempting to invoke iter_move() on a default-constructed iterator"));
     REQUIRE_THROWS_MATCHES(int_iter{std::vector<int>::iterator{}} != int_iter{std::list<int>::iterator{}},
-                           std::runtime_error, Message("Cannot compare iterators of different type"));
+                           std::runtime_error, Message("Cannot compare iterators of different types"));
 
     {
         int arr[] = {1, 2, 3};

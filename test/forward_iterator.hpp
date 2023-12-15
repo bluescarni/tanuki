@@ -68,7 +68,7 @@ struct forward_iterator_iface_impl<Base, Holder, T, V, R, RR>
         if (typeid(T) == other.get_type_index()) {
             return static_cast<bool>(this->value() == *static_cast<const T *>(other.get_ptr()));
         } else {
-            throw std::runtime_error("Cannot compare iterators of different type");
+            throw std::runtime_error("Cannot compare iterators of different types");
         }
     }
 };

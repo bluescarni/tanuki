@@ -34,8 +34,8 @@ struct forward_iterator_iface_impl {
 template <typename V, typename R, typename RR>
 struct forward_iterator_iface : input_iterator_iface<V, R, RR> {
     virtual bool equal_to(const forward_iterator_iface &) const = 0;
-    [[nodiscard]] virtual std::type_index get_type_index_for_comparison() const noexcept = 0;
-    [[nodiscard]] virtual const void *get_ptr_for_comparison() const noexcept = 0;
+    [[nodiscard]] virtual std::type_index get_type_index() const noexcept = 0;
+    [[nodiscard]] virtual const void *get_ptr() const noexcept = 0;
 
     template <typename Base, typename Holder, typename T>
     using impl = forward_iterator_iface_impl<Base, Holder, T, V, R, RR>;
@@ -55,20 +55,20 @@ template <typename Base, typename Holder, typename T, typename V, typename R, ty
 struct forward_iterator_iface_impl<Base, Holder, T, V, R, RR>
     : input_iterator_iface_impl<Base, Holder, T, V, R, RR>,
       tanuki::iface_impl_helper<input_iterator_iface_impl<Base, Holder, T, V, R, RR>, Holder> {
-    [[nodiscard]] std::type_index get_type_index_for_comparison() const noexcept final
+    [[nodiscard]] std::type_index get_type_index() const noexcept final
     {
         return typeid(T);
     }
-    [[nodiscard]] const void *get_ptr_for_comparison() const noexcept final
+    [[nodiscard]] const void *get_ptr() const noexcept final
     {
         return std::addressof(this->value());
     }
     bool equal_to(const forward_iterator_iface<V, R, RR> &other) const final
     {
-        if (typeid(T) == other.get_type_index_for_comparison()) {
-            return static_cast<bool>(this->value() == *static_cast<const T *>(other.get_ptr_for_comparison()));
+        if (typeid(T) == other.get_type_index()) {
+            return static_cast<bool>(this->value() == *static_cast<const T *>(other.get_ptr()));
         } else {
-            return false;
+            throw std::runtime_error("Cannot compare iterators of different type");
         }
     }
 };

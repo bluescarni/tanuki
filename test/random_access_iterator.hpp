@@ -72,10 +72,10 @@ struct random_access_iterator_iface_impl<Base, Holder, T, V, R, RR>
       tanuki::iface_impl_helper<bidirectional_iterator_iface_impl<Base, Holder, T, V, R, RR>, Holder> {
     bool less_than(const random_access_iterator_iface<V, R, RR> &other) const final
     {
-        if (typeid(T) == other.get_type_index_for_comparison()) {
-            return static_cast<bool>(this->value() < *static_cast<const T *>(other.get_ptr_for_comparison()));
+        if (typeid(T) == other.get_type_index()) {
+            return static_cast<bool>(this->value() < *static_cast<const T *>(other.get_ptr()));
         } else {
-            return false;
+            throw std::runtime_error("Cannot compare iterators of different type");
         }
     }
     void increment_by(std::ptrdiff_t n) final
@@ -88,8 +88,8 @@ struct random_access_iterator_iface_impl<Base, Holder, T, V, R, RR>
     }
     std::ptrdiff_t distance_from(const random_access_iterator_iface<V, R, RR> &other) const final
     {
-        if (typeid(T) == other.get_type_index_for_comparison()) {
-            const auto &other_val = *static_cast<const T *>(other.get_ptr_for_comparison());
+        if (typeid(T) == other.get_type_index()) {
+            const auto &other_val = *static_cast<const T *>(other.get_ptr());
 
             if constexpr (with_ptrdiff_t_difference<T>) {
                 return static_cast<std::ptrdiff_t>(this->value() - other_val);

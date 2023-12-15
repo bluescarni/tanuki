@@ -11,6 +11,7 @@
 
 #include <concepts>
 #include <cstddef>
+#include <iterator>
 #include <utility>
 
 #include <tanuki/tanuki.hpp>
@@ -121,9 +122,9 @@ template <typename R>
 using io_iterator = tanuki::wrap<detail::io_iterator_iface<R>, detail::io_iterator_config<R>>;
 
 template <typename T>
-auto make_io_iterator(T it) -> decltype(io_iterator<decltype(*it)>(std::move(it)))
+auto make_io_iterator(T it) -> decltype(io_iterator<std::iter_reference_t<T>>(std::move(it)))
 {
-    return io_iterator<decltype(*it)>(std::move(it));
+    return io_iterator<std::iter_reference_t<T>>(std::move(it));
 }
 
 } // namespace facade

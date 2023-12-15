@@ -39,6 +39,7 @@ struct input_iterator_iface : io_iterator_iface<R> {
 
 template <typename T, typename RR>
 concept with_iter_move = requires(const T &x) {
+    requires referenceable<RR>;
     {
         std::ranges::iter_move(x)
     } -> std::same_as<RR>;
@@ -108,11 +109,11 @@ auto make_input_iterator(T it)
 
 template <typename T>
 auto make_input_iterator(T it)
-    -> decltype(input_iterator<std::remove_cvref_t<decltype(*it)>, decltype(*it),
-                               decltype(std::ranges::iter_move(std::as_const(it)))>(std::move(it)))
+    -> decltype(input_iterator<std::remove_cvref_t<std::iter_reference_t<T>>, std::iter_reference_t<T>,
+                               std::iter_rvalue_reference_t<T>>(std::move(it)))
 {
-    return input_iterator<std::remove_cvref_t<decltype(*it)>, decltype(*it),
-                          decltype(std::ranges::iter_move(std::as_const(it)))>(std::move(it));
+    return input_iterator<std::remove_cvref_t<std::iter_reference_t<T>>, std::iter_reference_t<T>,
+                          std::iter_rvalue_reference_t<T>>(std::move(it));
 }
 
 } // namespace facade

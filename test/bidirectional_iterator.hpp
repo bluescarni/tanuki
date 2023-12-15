@@ -116,11 +116,11 @@ auto make_bidirectional_iterator(T it)
 
 template <typename T>
 auto make_bidirectional_iterator(T it)
-    -> decltype(bidirectional_iterator<std::remove_cvref_t<decltype(*it)>, decltype(*it),
-                                       decltype(std::ranges::iter_move(std::as_const(it)))>(std::move(it)))
+    -> decltype(bidirectional_iterator<std::remove_cvref_t<std::iter_reference_t<T>>, std::iter_reference_t<T>,
+                                       std::iter_rvalue_reference_t<T>>(std::move(it)))
 {
-    return bidirectional_iterator<std::remove_cvref_t<decltype(*it)>, decltype(*it),
-                                  decltype(std::ranges::iter_move(std::as_const(it)))>(std::move(it));
+    return bidirectional_iterator<std::remove_cvref_t<std::iter_reference_t<T>>, std::iter_reference_t<T>,
+                                  std::iter_rvalue_reference_t<T>>(std::move(it));
 }
 
 } // namespace facade

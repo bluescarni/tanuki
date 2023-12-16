@@ -28,83 +28,100 @@ namespace detail
 {
 
 // Implementation of the interface.
-template <typename, typename, typename, typename, typename, typename>
-struct forward_range_iface_iface_impl {
+template <typename, typename, typename, typename, typename, typename, template <typename, typename, typename> typename>
+struct generic_range_iface_iface_impl {
 };
 
 // Definition of the interface.
-template <typename V, typename R, typename RR>
+template <typename V, typename R, typename RR, template <typename, typename, typename> typename It>
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions,hicpp-special-member-functions)
-struct forward_range_iface {
-    virtual ~forward_range_iface() = default;
+struct generic_range_iface {
+    virtual ~generic_range_iface() = default;
 
-    virtual forward_iterator<V, R, RR> begin() = 0;
-    virtual forward_iterator<V, R, RR> end() = 0;
+    virtual It<V, R, RR> begin() = 0;
+    virtual It<V, R, RR> end() = 0;
 
     template <typename Base, typename Holder, typename T>
-    using impl = forward_range_iface_iface_impl<Base, Holder, T, V, R, RR>;
+    using impl = generic_range_iface_iface_impl<Base, Holder, T, V, R, RR, It>;
 };
 
-template <typename T, typename V, typename R, typename RR>
-concept is_forward_range = requires(T &r) {
+template <template <typename, typename, typename> typename>
+struct make_generic_iterator;
+
+template <>
+struct make_generic_iterator<forward_iterator> {
+    template <typename T>
+    auto operator()(T it) const -> decltype(make_forward_iterator(std::move(it)))
+    {
+        return make_forward_iterator(std::move(it));
+    }
+};
+
+template <typename T, typename V, typename R, typename RR, template <typename, typename, typename> typename It>
+concept is_generic_range = requires(T &r) {
     requires std::ranges::range<T>;
     {
-        make_forward_iterator(std::ranges::begin(r))
-    } -> std::same_as<forward_iterator<V, R, RR>>;
+        make_generic_iterator<It>{}(std::ranges::begin(r))
+    } -> std::same_as<It<V, R, RR>>;
     {
-        make_forward_iterator(std::ranges::end(r))
-    } -> std::same_as<forward_iterator<V, R, RR>>;
+        make_generic_iterator<It>{}(std::ranges::end(r))
+    } -> std::same_as<It<V, R, RR>>;
 };
 
-template <typename Base, typename Holder, typename T, typename V, typename R, typename RR>
-    requires std::derived_from<Base, forward_range_iface<V, R, RR>>
-                 && is_forward_range<std::remove_reference_t<std::unwrap_reference_t<T>>, V, R, RR>
-struct forward_range_iface_iface_impl<Base, Holder, T, V, R, RR> : public Base,
-                                                                   tanuki::iface_impl_helper<Base, Holder> {
-    forward_iterator<V, R, RR> begin() final
+template <typename Base, typename Holder, typename T, typename V, typename R, typename RR,
+          template <typename, typename, typename> typename It>
+    requires std::derived_from<Base, generic_range_iface<V, R, RR, It>>
+                 && is_generic_range<std::remove_reference_t<std::unwrap_reference_t<T>>, V, R, RR, It>
+struct generic_range_iface_iface_impl<Base, Holder, T, V, R, RR, It> : public Base,
+                                                                       tanuki::iface_impl_helper<Base, Holder> {
+    It<V, R, RR> begin() final
     {
-        return make_forward_iterator(std::ranges::begin(this->value()));
+        return make_generic_iterator<It>{}(std::ranges::begin(this->value()));
     }
-    forward_iterator<V, R, RR> end() final
+    It<V, R, RR> end() final
     {
-        return make_forward_iterator(std::ranges::end(this->value()));
+        return make_generic_iterator<It>{}(std::ranges::end(this->value()));
     }
 };
 
 // Implementation of the reference interface.
-template <typename V, typename R, typename RR>
-struct forward_range_ref_iface {
+template <typename V, typename R, typename RR, template <typename, typename, typename> typename It>
+struct generic_range_ref_iface {
     template <typename Wrap>
     struct impl {
-        forward_iterator<V, R, RR> begin()
+        It<V, R, RR> begin()
         {
             return iface_ptr(*static_cast<Wrap *>(this))->begin();
         }
-        forward_iterator<V, R, RR> end()
+        It<V, R, RR> end()
         {
             return iface_ptr(*static_cast<Wrap *>(this))->end();
         }
     };
 };
 
-template <typename V, typename R, typename RR>
-struct forward_range_mock {
+template <typename V, typename R, typename RR, template <typename, typename, typename> typename It>
+struct generic_range_mock {
     void *ptr1 = nullptr;
     void *ptr2 = nullptr;
 
-    forward_iterator<V, R, RR> begin();
-    forward_iterator<V, R, RR> end();
+    It<V, R, RR> begin();
+    It<V, R, RR> end();
 };
 
-template <typename V, typename R, typename RR>
-inline constexpr auto forward_range_config = tanuki::config<void, forward_range_ref_iface<V, R, RR>>{
-    .static_size = tanuki::holder_size<forward_range_mock<V, R, RR>, forward_range_iface<V, R, RR>>,
+template <typename V, typename R, typename RR, template <typename, typename, typename> typename It>
+inline constexpr auto generic_range_config = tanuki::config<void, generic_range_ref_iface<V, R, RR, It>>{
+    .static_size = tanuki::holder_size<generic_range_mock<V, R, RR, It>, generic_range_iface<V, R, RR, It>>,
     .pointer_interface = false};
+
+template <typename V, typename R, typename RR, template <typename, typename, typename> typename It>
+using generic_range
+    = tanuki::wrap<detail::generic_range_iface<V, R, RR, It>, detail::generic_range_config<V, R, RR, It>>;
 
 } // namespace detail
 
 template <typename V, typename R, typename RR>
-using forward_range = tanuki::wrap<detail::forward_range_iface<V, R, RR>, detail::forward_range_config<V, R, RR>>;
+using forward_range = detail::generic_range<V, R, RR, forward_iterator>;
 
 template <typename T>
 auto make_forward_range(T &&x)

@@ -7,12 +7,12 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "forward_range.hpp"
+#include "ranges.hpp"
 #include "tanuki/tanuki.hpp"
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
-TEST_CASE("basic")
+TEST_CASE("basic forward")
 {
     {
         std::vector vec = {1, 2, 3};

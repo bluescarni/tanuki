@@ -6,8 +6,8 @@
 // Public License v. 2.0. If a copy of the MPL was not distributed
 // with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#ifndef FACADE_FORWARD_RANGE_HPP
-#define FACADE_FORWARD_RANGE_HPP
+#ifndef FACADE_RANGES_HPP
+#define FACADE_RANGES_HPP
 
 #include <concepts>
 #include <functional>
@@ -56,6 +56,24 @@ struct make_generic_iterator<forward_iterator> {
     auto operator()(T it) const -> decltype(make_forward_iterator(std::move(it)))
     {
         return make_forward_iterator(std::move(it));
+    }
+};
+
+template <>
+struct make_generic_iterator<bidirectional_iterator> {
+    template <typename T>
+    auto operator()(T it) const -> decltype(make_bidirectional_iterator(std::move(it)))
+    {
+        return make_bidirectional_iterator(std::move(it));
+    }
+};
+
+template <>
+struct make_generic_iterator<random_access_iterator> {
+    template <typename T>
+    auto operator()(T it) const -> decltype(make_random_access_iterator(std::move(it)))
+    {
+        return make_random_access_iterator(std::move(it));
     }
 };
 
@@ -131,7 +149,7 @@ using bidirectional_range = detail::generic_range<V, R, RR, bidirectional_iterat
 template <typename V, typename R, typename RR>
 using random_access_range = detail::generic_range<V, R, RR, random_access_iterator>;
 
-#define FACADE_DEFINED_RANGE_FACTORY(tp)                                                                               \
+#define FACADE_DEFINE_RANGE_FACTORY(tp)                                                                                \
     template <typename T>                                                                                              \
     auto make_##tp##_range(T &&x)                                                                                      \
         -> decltype(tp##_range<detail::deduce_iter_value_t<std::ranges::iterator_t<std::remove_cvref_t<T>>>,           \
@@ -155,11 +173,11 @@ using random_access_range = detail::generic_range<V, R, RR, random_access_iterat
                           std::iter_rvalue_reference_t<std::ranges::iterator_t<T>>>(std::move(ref));                   \
     }
 
-FACADE_DEFINED_RANGE_FACTORY(forward)
-FACADE_DEFINED_RANGE_FACTORY(bidirectional)
-FACADE_DEFINED_RANGE_FACTORY(random_access)
+FACADE_DEFINE_RANGE_FACTORY(forward)
+FACADE_DEFINE_RANGE_FACTORY(bidirectional)
+FACADE_DEFINE_RANGE_FACTORY(random_access)
 
-#undef FACADE_DEFINED_RANGE_FACTORY
+#undef FACADE_DEFINE_RANGE_FACTORY
 
 } // namespace facade
 

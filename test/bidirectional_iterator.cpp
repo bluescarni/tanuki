@@ -60,6 +60,11 @@ TEST_CASE("basic")
         REQUIRE(*it++ == 1);
         REQUIRE(*it-- == 2);
         REQUIRE(*it == 1);
+
+        // Check that make_bidirectional_iterator() on an io_iterator
+        // returns a copy.
+        auto it2 = facade::make_bidirectional_iterator(facade::make_bidirectional_iterator(std::begin(arr)));
+        REQUIRE(value_isa<int *>(it2));
     }
 
     {

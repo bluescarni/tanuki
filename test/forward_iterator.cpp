@@ -54,6 +54,11 @@ TEST_CASE("basic")
         REQUIRE(*++it == 2);
         REQUIRE(*it++ == 2);
         REQUIRE(*it == 3);
+
+        // Check that make_forward_iterator() on an io_iterator
+        // returns a copy.
+        auto it2 = facade::make_forward_iterator(facade::make_forward_iterator(std::begin(arr)));
+        REQUIRE(value_isa<int *>(it2));
     }
 
     {

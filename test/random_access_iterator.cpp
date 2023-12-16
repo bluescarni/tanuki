@@ -145,6 +145,11 @@ TEST_CASE("basic")
         REQUIRE(it >= it);
         REQUIRE(!(it >= it + 1));
         REQUIRE(it + 1 >= it);
+
+        // Check that make_random_access_iterator() on an io_iterator
+        // returns a copy.
+        auto it2 = facade::make_random_access_iterator(facade::make_random_access_iterator(std::begin(arr)));
+        REQUIRE(value_isa<int *>(it2));
     }
 
     {

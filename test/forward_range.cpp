@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <concepts>
 #include <functional>
 #include <ranges>
@@ -37,6 +38,8 @@ TEST_CASE("basic")
         auto r5 = facade::make_forward_range(std::ref(vec3));
         REQUIRE(std::same_as<decltype(r5), facade::forward_range<int, int &, int &&>>);
         REQUIRE(&*r5.begin() == vec3.data());
+
+        REQUIRE(std::ranges::equal(vec3, r5));
     }
 }
 

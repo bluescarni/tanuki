@@ -67,7 +67,7 @@ struct forward_range_iface_iface_impl<Base, Holder, T, V, R, RR> : public Base,
     }
     forward_iterator<V, R, RR> end() final
     {
-        return make_forward_iterator(std::ranges::begin(this->value()));
+        return make_forward_iterator(std::ranges::end(this->value()));
     }
 };
 

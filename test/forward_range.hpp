@@ -18,8 +18,10 @@
 
 #include <tanuki/tanuki.hpp>
 
+#include "bidirectional_iterator.hpp"
 #include "forward_iterator.hpp"
 #include "input_iterator.hpp"
+#include "random_access_iterator.hpp"
 
 namespace facade
 {
@@ -123,29 +125,41 @@ using generic_range
 template <typename V, typename R, typename RR>
 using forward_range = detail::generic_range<V, R, RR, forward_iterator>;
 
-template <typename T>
-auto make_forward_range(T &&x)
-    -> decltype(forward_range<detail::deduce_iter_value_t<std::ranges::iterator_t<std::remove_cvref_t<T>>>,
-                              std::iter_reference_t<std::ranges::iterator_t<std::remove_cvref_t<T>>>,
-                              std::iter_rvalue_reference_t<std::ranges::iterator_t<std::remove_cvref_t<T>>>>(
-        std::forward<T>(x)))
-{
-    return forward_range<detail::deduce_iter_value_t<std::ranges::iterator_t<std::remove_cvref_t<T>>>,
-                         std::iter_reference_t<std::ranges::iterator_t<std::remove_cvref_t<T>>>,
-                         std::iter_rvalue_reference_t<std::ranges::iterator_t<std::remove_cvref_t<T>>>>(
-        std::forward<T>(x));
-}
+template <typename V, typename R, typename RR>
+using bidirectional_range = detail::generic_range<V, R, RR, bidirectional_iterator>;
 
-template <typename T>
-auto make_forward_range(std::reference_wrapper<T> ref)
-    -> decltype(forward_range<detail::deduce_iter_value_t<std::ranges::iterator_t<T>>,
-                              std::iter_reference_t<std::ranges::iterator_t<T>>,
-                              std::iter_rvalue_reference_t<std::ranges::iterator_t<T>>>(std::move(ref)))
-{
-    return forward_range<detail::deduce_iter_value_t<std::ranges::iterator_t<T>>,
-                         std::iter_reference_t<std::ranges::iterator_t<T>>,
-                         std::iter_rvalue_reference_t<std::ranges::iterator_t<T>>>(std::move(ref));
-}
+template <typename V, typename R, typename RR>
+using random_access_range = detail::generic_range<V, R, RR, random_access_iterator>;
+
+#define FACADE_DEFINED_RANGE_FACTORY(tp)                                                                               \
+    template <typename T>                                                                                              \
+    auto make_##tp##_range(T &&x)                                                                                      \
+        -> decltype(tp##_range<detail::deduce_iter_value_t<std::ranges::iterator_t<std::remove_cvref_t<T>>>,           \
+                               std::iter_reference_t<std::ranges::iterator_t<std::remove_cvref_t<T>>>,                 \
+                               std::iter_rvalue_reference_t<std::ranges::iterator_t<std::remove_cvref_t<T>>>>(         \
+            std::forward<T>(x)))                                                                                       \
+    {                                                                                                                  \
+        return tp##_range<detail::deduce_iter_value_t<std::ranges::iterator_t<std::remove_cvref_t<T>>>,                \
+                          std::iter_reference_t<std::ranges::iterator_t<std::remove_cvref_t<T>>>,                      \
+                          std::iter_rvalue_reference_t<std::ranges::iterator_t<std::remove_cvref_t<T>>>>(              \
+            std::forward<T>(x));                                                                                       \
+    }                                                                                                                  \
+    template <typename T>                                                                                              \
+    auto make_##tp##_range(std::reference_wrapper<T> ref)                                                              \
+        -> decltype(tp##_range<detail::deduce_iter_value_t<std::ranges::iterator_t<T>>,                                \
+                               std::iter_reference_t<std::ranges::iterator_t<T>>,                                      \
+                               std::iter_rvalue_reference_t<std::ranges::iterator_t<T>>>(std::move(ref)))              \
+    {                                                                                                                  \
+        return tp##_range<detail::deduce_iter_value_t<std::ranges::iterator_t<T>>,                                     \
+                          std::iter_reference_t<std::ranges::iterator_t<T>>,                                           \
+                          std::iter_rvalue_reference_t<std::ranges::iterator_t<T>>>(std::move(ref));                   \
+    }
+
+FACADE_DEFINED_RANGE_FACTORY(forward)
+FACADE_DEFINED_RANGE_FACTORY(bidirectional)
+FACADE_DEFINED_RANGE_FACTORY(random_access)
+
+#undef FACADE_DEFINED_RANGE_FACTORY
 
 } // namespace facade
 

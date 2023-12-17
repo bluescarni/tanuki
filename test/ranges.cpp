@@ -7,10 +7,43 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <tanuki/tanuki.hpp>
+
 #include "ranges.hpp"
-#include "tanuki/tanuki.hpp"
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+
+// Minimal-interface forward iterator.
+struct min_fw_it {
+    std::vector<int>::iterator it{};
+
+    int &operator*() const
+    {
+        return *it;
+    }
+    void operator++()
+    {
+        ++it;
+    }
+    friend bool operator==(const min_fw_it &a, const min_fw_it &b)
+    {
+        return a.it == b.it;
+    }
+};
+
+// Minimal-interface forward range.
+struct min_fw_range {
+    std::vector<int> vec;
+
+    auto begin()
+    {
+        return min_fw_it{vec.begin()};
+    }
+    auto end()
+    {
+        return min_fw_it{vec.end()};
+    }
+};
 
 TEST_CASE("basic forward")
 {
@@ -44,8 +77,18 @@ TEST_CASE("basic forward")
         REQUIRE(std::ranges::equal(vec3, r5));
 
         auto r6 = facade::make_forward_range(std::ranges::subrange(vec3.begin(), vec3.end()));
+        REQUIRE(std::same_as<decltype(r6), facade::forward_range<int, int &, int &&>>);
         REQUIRE(std::ranges::equal(r5, r6));
         REQUIRE(has_static_storage(r6));
+    }
+
+    {
+        min_fw_range vec{{1, 2, 3}};
+
+        REQUIRE(!std::ranges::range<min_fw_range>);
+        auto r1 = facade::make_forward_range(vec);
+        REQUIRE(std::ranges::forward_range<decltype(r1)>);
+        REQUIRE(std::same_as<decltype(r1), facade::forward_range<int, int &, int &&>>);
     }
 }
 

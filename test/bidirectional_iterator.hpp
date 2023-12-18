@@ -24,19 +24,6 @@ namespace facade
 namespace detail
 {
 
-// Definition of the interface implementation for bidirectional iterators.
-template <typename, typename, typename, typename, typename, typename>
-struct bidirectional_iterator_iface_impl {
-};
-
-template <typename V, typename R, typename RR>
-struct bidirectional_iterator_iface : forward_iterator_iface<V, R, RR> {
-    virtual void operator--() = 0;
-
-    template <typename Base, typename Holder, typename T>
-    using impl = bidirectional_iterator_iface_impl<Base, Holder, T, V, R, RR>;
-};
-
 // Concept to check that a type is pre-decrementable.
 template <typename T>
 concept pre_decrementable = requires(T &x) { static_cast<void>(--x); };
@@ -47,15 +34,22 @@ template <typename T, typename V, typename R, typename RR>
 concept minimal_bidirectional_iterator = minimal_forward_iterator<T, V, R, RR> && pre_decrementable<T>;
 
 template <typename Base, typename Holder, typename T, typename V, typename R, typename RR>
-    requires std::derived_from<Base, bidirectional_iterator_iface<V, R, RR>>
-                 && minimal_bidirectional_iterator<T, V, R, RR>
-struct bidirectional_iterator_iface_impl<Base, Holder, T, V, R, RR>
+    requires minimal_bidirectional_iterator<T, V, R, RR>
+struct bidirectional_iterator_iface_impl
     : forward_iterator_iface_impl<Base, Holder, T, V, R, RR>,
       tanuki::iface_impl_helper<forward_iterator_iface_impl<Base, Holder, T, V, R, RR>, Holder> {
     void operator--() final
     {
         static_cast<void>(--this->value());
     }
+};
+
+template <typename V, typename R, typename RR>
+struct bidirectional_iterator_iface : forward_iterator_iface<V, R, RR> {
+    virtual void operator--() = 0;
+
+    template <typename Base, typename Holder, typename T>
+    using impl = bidirectional_iterator_iface_impl<Base, Holder, T, V, R, RR>;
 };
 
 // Implementation of the reference interface.

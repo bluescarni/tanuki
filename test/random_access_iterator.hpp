@@ -26,22 +26,6 @@ namespace facade
 namespace detail
 {
 
-// Definition of the interface implementation for random access iterators.
-template <typename, typename, typename, typename, typename, typename>
-struct random_access_iterator_iface_impl {
-};
-
-template <typename V, typename R, typename RR>
-struct random_access_iterator_iface : bidirectional_iterator_iface<V, R, RR> {
-    virtual bool less_than(const random_access_iterator_iface &) const = 0;
-    virtual void increment_by(std::ptrdiff_t) = 0;
-    virtual void decrement_by(std::ptrdiff_t) = 0;
-    virtual std::ptrdiff_t distance_from(const random_access_iterator_iface &) const = 0;
-
-    template <typename Base, typename Holder, typename T>
-    using impl = random_access_iterator_iface_impl<Base, Holder, T, V, R, RR>;
-};
-
 template <typename T>
 concept minimal_less_than_comparable = requires(const T &a, const T &b) { static_cast<bool>(a < b); };
 
@@ -57,6 +41,10 @@ concept with_ptrdiff_t_difference = requires(const T &a, const T &b) { static_ca
 template <typename T>
 concept with_distance_from = requires(const T &a, const T &b) { static_cast<std::ptrdiff_t>(a.distance_from(b)); };
 
+// Fwd declaration of the interface.
+template <typename, typename, typename>
+struct random_access_iterator_iface;
+
 // Gather the minimal requirements for a type T
 // to satisfy the random_access_iterator concept.
 template <typename T, typename V, typename R, typename RR>
@@ -65,9 +53,8 @@ concept minimal_random_access_iterator
       && decrementable_by_ptrdiff_t<T> && (with_ptrdiff_t_difference<T> || with_distance_from<T>);
 
 template <typename Base, typename Holder, typename T, typename V, typename R, typename RR>
-    requires std::derived_from<Base, random_access_iterator_iface<V, R, RR>>
-                 && minimal_random_access_iterator<T, V, R, RR>
-struct random_access_iterator_iface_impl<Base, Holder, T, V, R, RR>
+    requires minimal_random_access_iterator<T, V, R, RR>
+struct random_access_iterator_iface_impl
     : bidirectional_iterator_iface_impl<Base, Holder, T, V, R, RR>,
       tanuki::iface_impl_helper<bidirectional_iterator_iface_impl<Base, Holder, T, V, R, RR>, Holder> {
     bool less_than(const random_access_iterator_iface<V, R, RR> &other) const final
@@ -100,6 +87,17 @@ struct random_access_iterator_iface_impl<Base, Holder, T, V, R, RR>
             throw std::runtime_error("Cannot compute the distance between two iterators of different types");
         }
     }
+};
+
+template <typename V, typename R, typename RR>
+struct random_access_iterator_iface : bidirectional_iterator_iface<V, R, RR> {
+    virtual bool less_than(const random_access_iterator_iface &) const = 0;
+    virtual void increment_by(std::ptrdiff_t) = 0;
+    virtual void decrement_by(std::ptrdiff_t) = 0;
+    virtual std::ptrdiff_t distance_from(const random_access_iterator_iface &) const = 0;
+
+    template <typename Base, typename Holder, typename T>
+    using impl = random_access_iterator_iface_impl<Base, Holder, T, V, R, RR>;
 };
 
 // Implementation of the reference interface.

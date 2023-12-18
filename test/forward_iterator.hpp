@@ -26,21 +26,6 @@ namespace facade
 namespace detail
 {
 
-// Definition of the interface implementation for forward iterators.
-template <typename, typename, typename, typename, typename, typename>
-struct forward_iterator_iface_impl {
-};
-
-template <typename V, typename R, typename RR>
-struct forward_iterator_iface : input_iterator_iface<V, R, RR> {
-    virtual bool equal_to(const forward_iterator_iface &) const = 0;
-    [[nodiscard]] virtual std::type_index get_type_index() const noexcept = 0;
-    [[nodiscard]] virtual const void *get_ptr() const noexcept = 0;
-
-    template <typename Base, typename Holder, typename T>
-    using impl = forward_iterator_iface_impl<Base, Holder, T, V, R, RR>;
-};
-
 template <typename T>
 concept minimal_eq_comparable = requires(const T &a, const T &b) { static_cast<bool>(a == b); };
 
@@ -50,9 +35,14 @@ template <typename T, typename V, typename R, typename RR>
 concept minimal_forward_iterator
     = minimal_input_iterator<T, V, R, RR> && std::default_initializable<T> && minimal_eq_comparable<T>;
 
+// Fwd declaration of the interface.
+template <typename, typename, typename>
+struct forward_iterator_iface;
+
+// Implementation of the interface.
 template <typename Base, typename Holder, typename T, typename V, typename R, typename RR>
-    requires std::derived_from<Base, forward_iterator_iface<V, R, RR>> && minimal_forward_iterator<T, V, R, RR>
-struct forward_iterator_iface_impl<Base, Holder, T, V, R, RR>
+    requires minimal_forward_iterator<T, V, R, RR>
+struct forward_iterator_iface_impl
     : input_iterator_iface_impl<Base, Holder, T, V, R, RR>,
       tanuki::iface_impl_helper<input_iterator_iface_impl<Base, Holder, T, V, R, RR>, Holder> {
     [[nodiscard]] std::type_index get_type_index() const noexcept final
@@ -71,6 +61,16 @@ struct forward_iterator_iface_impl<Base, Holder, T, V, R, RR>
             throw std::runtime_error("Cannot compare iterators of different types");
         }
     }
+};
+
+template <typename V, typename R, typename RR>
+struct forward_iterator_iface : input_iterator_iface<V, R, RR> {
+    virtual bool equal_to(const forward_iterator_iface &) const = 0;
+    [[nodiscard]] virtual std::type_index get_type_index() const noexcept = 0;
+    [[nodiscard]] virtual const void *get_ptr() const noexcept = 0;
+
+    template <typename Base, typename Holder, typename T>
+    using impl = forward_iterator_iface_impl<Base, Holder, T, V, R, RR>;
 };
 
 template <typename R, typename RR>

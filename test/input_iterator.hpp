@@ -24,19 +24,6 @@ namespace facade
 namespace detail
 {
 
-// Definition of the interface implementation for input iterators.
-template <typename, typename, typename, typename, typename, typename>
-struct input_iterator_iface_impl {
-};
-
-template <typename V, typename R, typename RR>
-struct input_iterator_iface : io_iterator_iface<R> {
-    virtual RR iter_move() const = 0;
-
-    template <typename Base, typename Holder, typename T>
-    using impl = input_iterator_iface_impl<Base, Holder, T, V, R, RR>;
-};
-
 template <typename T, typename RR>
 concept with_iter_move = requires(const T &x) {
     requires referenceable<RR>;
@@ -52,15 +39,23 @@ concept minimal_input_iterator
     = minimal_io_iterator<T, R> && with_iter_move<T, RR> && std::common_reference_with<R &&, V &>
       && std::common_reference_with<R &&, RR &&> && std::common_reference_with<RR &&, const V &>;
 
+// Definition of the interface implementation.
 template <typename Base, typename Holder, typename T, typename V, typename R, typename RR>
-    requires std::derived_from<Base, input_iterator_iface<V, R, RR>> && minimal_input_iterator<T, V, R, RR>
-struct input_iterator_iface_impl<Base, Holder, T, V, R, RR>
-    : io_iterator_iface_impl<Base, Holder, T, R>,
-      tanuki::iface_impl_helper<io_iterator_iface_impl<Base, Holder, T, R>, Holder> {
+    requires minimal_input_iterator<T, V, R, RR>
+struct input_iterator_iface_impl : io_iterator_iface_impl<Base, Holder, T, R>,
+                                   tanuki::iface_impl_helper<io_iterator_iface_impl<Base, Holder, T, R>, Holder> {
     RR iter_move() const final
     {
         return std::ranges::iter_move(this->value());
     }
+};
+
+template <typename V, typename R, typename RR>
+struct input_iterator_iface : io_iterator_iface<R> {
+    virtual RR iter_move() const = 0;
+
+    template <typename Base, typename Holder, typename T>
+    using impl = input_iterator_iface_impl<Base, Holder, T, V, R, RR>;
 };
 
 template <typename V, typename Tag>

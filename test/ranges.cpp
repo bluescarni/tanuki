@@ -2,6 +2,7 @@
 #include <concepts>
 #include <functional>
 #include <ranges>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -15,11 +16,12 @@
 
 // LCOV_EXCL_START
 
-// Minimal-interface forward iterators.
+// Minimal-interface forward iterator.
+template <bool Const>
 struct min_fw_it {
-    std::vector<int>::iterator it{};
+    std::conditional_t<Const, std::vector<int>::const_iterator, std::vector<int>::iterator> it{};
 
-    int &operator*() const
+    auto &operator*() const
     {
         return *it;
     }
@@ -33,43 +35,26 @@ struct min_fw_it {
     }
 };
 
-struct min_fw_cit {
-    std::vector<int>::const_iterator it{};
-
-    const int &operator*() const
-    {
-        return *it;
-    }
-    void operator++()
-    {
-        ++it;
-    }
-    friend bool operator==(const min_fw_cit &a, const min_fw_cit &b)
-    {
-        return a.it == b.it;
-    }
-};
-
 // Minimal-interface forward range.
 struct min_fw_range {
     std::vector<int> vec;
 
     auto begin()
     {
-        return min_fw_it{vec.begin()};
+        return min_fw_it<false>{vec.begin()};
     }
     auto end()
     {
-        return min_fw_it{vec.end()};
+        return min_fw_it<false>{vec.end()};
     }
 
     [[nodiscard]] auto begin() const
     {
-        return min_fw_cit{vec.begin()};
+        return min_fw_it<true>{vec.begin()};
     }
     [[nodiscard]] auto end() const
     {
-        return min_fw_cit{vec.end()};
+        return min_fw_it<true>{vec.end()};
     }
 };
 
@@ -131,6 +116,8 @@ TEST_CASE("basic forward")
         REQUIRE(std::ranges::forward_range<decltype(r1)>);
         REQUIRE(std::same_as<decltype(r1),
                              facade::forward_range<int, const int &, const int &&, const int &, const int &&>>);
+        REQUIRE(has_static_storage(r1));
+        REQUIRE(&*std::ranges::begin(r1) == vec.vec.data());
     }
 }
 

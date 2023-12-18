@@ -20,6 +20,18 @@ struct print_iface_impl : Base, tanuki::iface_impl_helper<Base, Holder> {
     }
 };
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+int counter = 0;
+
+template <typename Base, typename Holder>
+struct print_iface_impl<Base, Holder, int> : Base, tanuki::iface_impl_helper<Base, Holder> {
+    void print() const final
+    {
+        ++counter;
+        std::cout << "int ostream: " << this->value() << '\n';
+    }
+};
+
 // NOLINTNEXTLINE
 struct print_iface {
     virtual ~print_iface() = default;
@@ -45,7 +57,9 @@ TEST_CASE("invalid iface")
     print_wrap w1(42);
     print_wrap w2(std::string("hello world"));
 
+    REQUIRE(counter == 0);
     w1->print();
+    REQUIRE(counter == 1);
     w2->print();
 
     print_wrap w3(foo{});

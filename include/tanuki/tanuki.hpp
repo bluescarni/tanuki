@@ -352,6 +352,7 @@ struct impl_from_iface_impl<composite_iface<IFace0, IFace1, IFaceN...>, Holder, 
 };
 
 template <typename IFace, typename Holder, typename T>
+    requires(requires() { typename impl_from_iface_impl<IFace, Holder, T>::type; })
 using impl_from_iface = typename impl_from_iface_impl<IFace, Holder, T>::type;
 
 template <typename T, typename IFace>

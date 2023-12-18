@@ -42,6 +42,7 @@ ADD_TANUKI_TESTCASE(forward_iterator)
 ADD_TANUKI_TESTCASE(bidirectional_iterator)
 ADD_TANUKI_TESTCASE(random_access_iterator)
 ADD_TANUKI_TESTCASE(forward_range)
+ADD_TANUKI_TESTCASE(bidirectional_range)
 
 if(TANUKI_WITH_BOOST_S11N)
   add_library(fooable SHARED fooable.cpp)

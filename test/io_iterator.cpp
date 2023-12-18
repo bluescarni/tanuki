@@ -10,6 +10,9 @@
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
+template <typename T>
+concept can_make_io_iterator = requires(T it) { facade::make_io_iterator(it); };
+
 TEST_CASE("basic")
 {
     using int_iter = facade::io_iterator<int &>;
@@ -17,7 +20,11 @@ TEST_CASE("basic")
     REQUIRE(std::input_or_output_iterator<int_iter>);
     REQUIRE(!std::default_initializable<int_iter>);
     REQUIRE(!std::constructible_from<int_iter, int>);
+    REQUIRE(!can_make_io_iterator<int>);
 
+    REQUIRE(std::same_as<std::iter_reference_t<int_iter>, int &>);
+    REQUIRE(std::same_as<std::iter_reference_t<facade::io_iterator<int>>, int>);
+    REQUIRE(std::same_as<std::iter_reference_t<facade::io_iterator<int &&>>, int &&>);
     REQUIRE(std::same_as<std::ptrdiff_t, std::iter_difference_t<int_iter>>);
 
     {
@@ -28,6 +35,11 @@ TEST_CASE("basic")
         REQUIRE(*++it == 2);
         REQUIRE(*it++ == 2);
         REQUIRE(*it == 3);
+
+        // Check that make_io_iterator() on an io_iterator
+        // returns a copy.
+        auto it2 = facade::make_io_iterator(facade::make_io_iterator(std::begin(arr)));
+        REQUIRE(value_isa<int *>(it2));
     }
 
     {

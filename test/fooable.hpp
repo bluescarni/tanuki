@@ -9,6 +9,8 @@
 #ifndef TANUKI_TEST_FOOABLE_HPP
 #define TANUKI_TEST_FOOABLE_HPP
 
+// LCOV_EXCL_START
+
 #include <tanuki/tanuki.hpp>
 
 #if defined(_WIN32) || defined(__CYGWIN__)
@@ -98,5 +100,7 @@ using foo_wrap = tanuki::wrap<foo_iface<U>, foo_wrap_config<U>>;
 } // namespace fooable
 
 TANUKI_S11N_WRAP_EXPORT_KEY(fooable::foo_model, fooable::foo_iface<int>)
+
+// LCOV_EXCL_STOP
 
 #endif

@@ -12,6 +12,9 @@
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
+template <typename T>
+concept can_make_bidirectional_iterator = requires(T it) { facade::make_bidirectional_iterator(it); };
+
 TEST_CASE("basic")
 {
     using Catch::Matchers::Message;
@@ -24,6 +27,7 @@ TEST_CASE("basic")
     REQUIRE(std::bidirectional_iterator<int_iter>);
     REQUIRE(std::default_initializable<int_iter>);
     REQUIRE(!std::constructible_from<int_iter, int>);
+    REQUIRE(!can_make_bidirectional_iterator<int>);
 
     REQUIRE(std::same_as<std::ptrdiff_t, std::iter_difference_t<int_iter>>);
     REQUIRE(std::same_as<int, std::iter_value_t<int_iter>>);
@@ -54,6 +58,11 @@ TEST_CASE("basic")
         REQUIRE(*it++ == 1);
         REQUIRE(*it-- == 2);
         REQUIRE(*it == 1);
+
+        // Check that make_bidirectional_iterator() on an io_iterator
+        // returns a copy.
+        auto it2 = facade::make_bidirectional_iterator(facade::make_bidirectional_iterator(std::begin(arr)));
+        REQUIRE(value_isa<int *>(it2));
     }
 
     {

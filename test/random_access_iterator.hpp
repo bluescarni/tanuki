@@ -202,20 +202,12 @@ using random_access_iterator
     = tanuki::wrap<detail::random_access_iterator_iface<V, R, RR>, detail::random_access_iterator_config<V, R, RR>>;
 
 template <typename T>
-    requires std::random_access_iterator<T>
 auto make_random_access_iterator(T it)
+    -> decltype(random_access_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>,
+                                       std::iter_rvalue_reference_t<T>>(std::move(it)))
 {
-    return random_access_iterator<std::iter_value_t<T>, std::iter_reference_t<T>, std::iter_rvalue_reference_t<T>>(
-        std::move(it));
-}
-
-template <typename T>
-auto make_random_access_iterator(T it)
-    -> decltype(random_access_iterator<std::remove_cvref_t<decltype(*it)>, decltype(*it),
-                                       decltype(std::ranges::iter_move(std::as_const(it)))>(std::move(it)))
-{
-    return random_access_iterator<std::remove_cvref_t<decltype(*it)>, decltype(*it),
-                                  decltype(std::ranges::iter_move(std::as_const(it)))>(std::move(it));
+    return random_access_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>,
+                                  std::iter_rvalue_reference_t<T>>(std::move(it));
 }
 
 } // namespace facade

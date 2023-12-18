@@ -354,6 +354,9 @@ struct impl_from_iface_impl<composite_iface<IFace0, IFace1, IFaceN...>, Holder, 
 template <typename IFace, typename Holder, typename T>
 using impl_from_iface = typename impl_from_iface_impl<IFace, Holder, T>::type;
 
+template <typename IFace, typename Holder, typename T>
+concept has_impl_from_iface = requires() { typename impl_from_iface<IFace, Holder, T>; };
+
 template <typename T, typename IFace>
 // NOTE: ideally, we would like to put here the checks about the interface
 // and its implementation, e.g., the interface implementation
@@ -1032,6 +1035,10 @@ public:
                  (!detail::is_in_place_type<std::remove_cvref_t<T>>::value) &&
                  // Must not compete with copy/move.
                  (!std::same_as<std::remove_cvref_t<T>, wrap>) &&
+                 // Must have a valid interface implementation.
+                 detail::has_impl_from_iface<iface_t, holder_t<detail::value_t_from_arg<T &&>>,
+                                             detail::value_t_from_arg<T &&>>
+                 &&
                  // We must be able to construct a holder from x.
                  detail::ctible_holder<holder_t<detail::value_t_from_arg<T &&>>, iface_t, Cfg, T &&>
     explicit(Cfg.explicit_generic_ctor)

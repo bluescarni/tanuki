@@ -44,9 +44,23 @@ concept dereferenceable = requires(const T &x) {
 template <typename T>
 concept pre_incrementable = requires(T &x) { static_cast<void>(++x); };
 
-// Implementation of the interface.
+// Gather the minimal requirements for a type T
+// to satisfy the io_iterator concept.
+template <typename T, typename R>
+concept minimal_io_iterator = std::movable<T> && std::copyable<T> && dereferenceable<T, R> && pre_incrementable<T>;
+
+// Definition of the interface implementation.
 template <typename Base, typename Holder, typename T, typename R>
-struct io_iterator_iface_impl {
+    requires minimal_io_iterator<T, R>
+struct io_iterator_iface_impl : public Base, tanuki::iface_impl_helper<Base, Holder> {
+    void operator++() final
+    {
+        static_cast<void>(++this->value());
+    }
+    R operator*() const final
+    {
+        return *(this->value());
+    }
 };
 
 // Definition of the interface.
@@ -59,24 +73,6 @@ struct io_iterator_iface {
 
     template <typename Base, typename Holder, typename T>
     using impl = io_iterator_iface_impl<Base, Holder, T, R>;
-};
-
-// Gather the minimal requirements for a type T
-// to satisfy the io_iterator concept.
-template <typename T, typename R>
-concept minimal_io_iterator = std::movable<T> && std::copyable<T> && dereferenceable<T, R> && pre_incrementable<T>;
-
-template <typename Base, typename Holder, typename T, typename R>
-    requires std::derived_from<Base, io_iterator_iface<R>> && minimal_io_iterator<T, R>
-struct io_iterator_iface_impl<Base, Holder, T, R> : public Base, tanuki::iface_impl_helper<Base, Holder> {
-    void operator++() final
-    {
-        static_cast<void>(++this->value());
-    }
-    R operator*() const final
-    {
-        return *(this->value());
-    }
 };
 
 // Implementation of the reference interface.

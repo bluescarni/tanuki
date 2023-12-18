@@ -119,6 +119,7 @@ TEST_CASE("basic forward")
         REQUIRE(has_static_storage(r1));
         REQUIRE(&*std::ranges::begin(r1) == vec.vec.data());
         REQUIRE(std::ranges::equal(vec.vec, r1));
+        REQUIRE(std::ranges::equal(vec.vec, std::as_const(r1)));
     }
 }
 

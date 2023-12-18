@@ -95,6 +95,8 @@ TEST_CASE("basic forward")
         auto r6 = facade::make_forward_range(std::ranges::subrange(vec3.begin(), vec3.end()));
         REQUIRE(std::same_as<decltype(r6), facade::forward_range<int, int &, int &&, int &, int &&>>);
         REQUIRE(std::ranges::equal(r5, r6));
+        REQUIRE(std::ranges::equal(std::as_const(r5), r6));
+        REQUIRE(std::ranges::equal(std::as_const(r5), std::as_const(r6)));
         REQUIRE(has_static_storage(r6));
     }
 

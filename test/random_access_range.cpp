@@ -123,12 +123,15 @@ TEST_CASE("basic random_access")
 
     {
         // NOLINTNEXTLINE(misc-const-correctness)
-        min_ra_range vec{{1, 2, 3}};
+        min_ra_range vec{{3, 1, 2}};
 
         REQUIRE(!std::ranges::range<min_ra_range>);
         auto r1 = facade::make_random_access_range(vec);
         REQUIRE(std::ranges::random_access_range<decltype(r1)>);
         REQUIRE(std::same_as<decltype(r1), facade::random_access_range<int, int &, int &&, const int &, const int &&>>);
+
+        std::ranges::sort(r1);
+        REQUIRE(std::ranges::equal(r1, std::vector{1, 2, 3}));
     }
 
     {

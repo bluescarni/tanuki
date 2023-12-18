@@ -1495,7 +1495,7 @@ struct iface_impl_helper : public detail::iface_impl_helper_base {
             return val;
         }
     }
-    auto &value() const noexcept
+    const auto &value() const noexcept
     {
         using T = typename detail::holder_value<Holder>::type;
 

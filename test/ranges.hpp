@@ -30,21 +30,25 @@ namespace detail
 {
 
 // Default implementation of the interface.
-template <typename, typename, typename, typename, typename, typename, template <typename, typename, typename> typename>
+template <typename, typename, typename, typename, typename, typename, typename, typename,
+          template <typename, typename, typename> typename>
 struct generic_range_iface_iface_impl {
 };
 
 // Definition of the interface.
-template <typename V, typename R, typename RR, template <typename, typename, typename> typename It>
+template <typename V, typename R, typename RR, typename CR, typename CRR,
+          template <typename, typename, typename> typename It>
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions,hicpp-special-member-functions)
 struct generic_range_iface {
     virtual ~generic_range_iface() = default;
 
     virtual It<V, R, RR> begin() = 0;
     virtual It<V, R, RR> end() = 0;
+    virtual It<V, CR, CRR> begin() const = 0;
+    virtual It<V, CR, CRR> end() const = 0;
 
     template <typename Base, typename Holder, typename T>
-    using impl = generic_range_iface_iface_impl<Base, Holder, T, V, R, RR, It>;
+    using impl = generic_range_iface_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, It>;
 };
 
 // Helper to invoke make_*_iterator().
@@ -80,20 +84,25 @@ struct make_generic_iterator<random_access_iterator> {
 
 // Machinery to detect the presence of begin()/end(). Contrary
 // to std::ranges::range, we only require that begin()/end()
-// exist, but not that they return standard-compliant iterators.
+// exist and that they return the same type, but not that they
+// return standard-compliant iterators.
 namespace begin_end_impl
 {
 
 template <typename T>
 concept has_member_begin_end = requires(T &x) {
     x.begin();
-    x.end();
+    {
+        x.end()
+    } -> std::same_as<decltype(x.begin())>;
 };
 
 template <typename T>
 concept has_adl_begin_end = requires(T &x) {
     begin(x);
-    end(x);
+    {
+        end(x)
+    } -> std::same_as<decltype(begin(x))>;
 };
 
 template <typename T>
@@ -128,7 +137,8 @@ auto e(T &x) -> decltype(end(x))
 
 } // namespace begin_end_impl
 
-template <typename T, typename V, typename R, typename RR, template <typename, typename, typename> typename It>
+template <typename T, typename V, typename R, typename RR, typename CR, typename CRR,
+          template <typename, typename, typename> typename It>
 concept is_generic_range = requires(T &x) {
     {
         make_generic_iterator<It>{}(begin_end_impl::b(x))
@@ -136,20 +146,34 @@ concept is_generic_range = requires(T &x) {
     {
         make_generic_iterator<It>{}(begin_end_impl::e(x))
     } -> std::same_as<It<V, R, RR>>;
+    {
+        make_generic_iterator<It>{}(begin_end_impl::b(std::as_const(x)))
+    } -> std::same_as<It<V, CR, CRR>>;
+    {
+        make_generic_iterator<It>{}(begin_end_impl::e(std::as_const(x)))
+    } -> std::same_as<It<V, CR, CRR>>;
 };
 
 // Implementation of the interface.
-template <typename Base, typename Holder, typename T, typename V, typename R, typename RR,
+template <typename Base, typename Holder, typename T, typename V, typename R, typename RR, typename CR, typename CRR,
           template <typename, typename, typename> typename It>
-    requires std::derived_from<Base, generic_range_iface<V, R, RR, It>>
-                 && is_generic_range<std::remove_reference_t<std::unwrap_reference_t<T>>, V, R, RR, It>
-struct generic_range_iface_iface_impl<Base, Holder, T, V, R, RR, It> : public Base,
-                                                                       tanuki::iface_impl_helper<Base, Holder> {
+    requires std::derived_from<Base, generic_range_iface<V, R, RR, CR, CRR, It>>
+                 && is_generic_range<std::remove_reference_t<std::unwrap_reference_t<T>>, V, R, RR, CR, CRR, It>
+struct generic_range_iface_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, It>
+    : public Base, tanuki::iface_impl_helper<Base, Holder> {
     It<V, R, RR> begin() final
     {
         return make_generic_iterator<It>{}(begin_end_impl::b(this->value()));
     }
     It<V, R, RR> end() final
+    {
+        return make_generic_iterator<It>{}(begin_end_impl::e(this->value()));
+    }
+    It<V, CR, CRR> begin() const final
+    {
+        return make_generic_iterator<It>{}(begin_end_impl::b(this->value()));
+    }
+    It<V, CR, CRR> end() const final
     {
         return make_generic_iterator<It>{}(begin_end_impl::e(this->value()));
     }
@@ -160,16 +184,11 @@ struct generic_range_iface_iface_impl<Base, Holder, T, V, R, RR, It> : public Ba
 // we do not require the range to provide
 // standard-compliant iterators.
 template <typename T>
-    requires(requires(T &x) {
-                begin_end_impl::b(x);
-                {
-                    begin_end_impl::e(x)
-                } -> std::same_as<decltype(begin_end_impl::b(x))>;
-            })
 using iter_t = decltype(begin_end_impl::b(std::declval<T &>()));
 
 // Implementation of the reference interface.
-template <typename V, typename R, typename RR, template <typename, typename, typename> typename It>
+template <typename V, typename R, typename RR, typename CR, typename CRR,
+          template <typename, typename, typename> typename It>
 struct generic_range_ref_iface {
     template <typename Wrap>
     struct impl {
@@ -181,10 +200,20 @@ struct generic_range_ref_iface {
         {
             return iface_ptr(*static_cast<Wrap *>(this))->end();
         }
+
+        It<V, CR, CRR> begin() const
+        {
+            return iface_ptr(*static_cast<const Wrap *>(this))->begin();
+        }
+        It<V, CR, CRR> end() const
+        {
+            return iface_ptr(*static_cast<const Wrap *>(this))->end();
+        }
     };
 };
 
-template <typename V, typename R, typename RR, template <typename, typename, typename> typename It>
+template <typename V, typename R, typename RR, typename CR, typename CRR,
+          template <typename, typename, typename> typename It>
 struct generic_range_mock {
     // NOTE: use 2 pointers here, as this is arguably
     // how most trivial (sub)ranges are implemented.
@@ -193,27 +222,32 @@ struct generic_range_mock {
 
     It<V, R, RR> begin();
     It<V, R, RR> end();
+    It<V, CR, CRR> begin() const;
+    It<V, CR, CRR> end() const;
 };
 
-template <typename V, typename R, typename RR, template <typename, typename, typename> typename It>
-inline constexpr auto generic_range_config = tanuki::config<void, generic_range_ref_iface<V, R, RR, It>>{
-    .static_size = tanuki::holder_size<generic_range_mock<V, R, RR, It>, generic_range_iface<V, R, RR, It>>,
+template <typename V, typename R, typename RR, typename CR, typename CRR,
+          template <typename, typename, typename> typename It>
+inline constexpr auto generic_range_config = tanuki::config<void, generic_range_ref_iface<V, R, RR, CR, CRR, It>>{
+    .static_size
+    = tanuki::holder_size<generic_range_mock<V, R, RR, CR, CRR, It>, generic_range_iface<V, R, RR, CR, CRR, It>>,
     .pointer_interface = false};
 
-template <typename V, typename R, typename RR, template <typename, typename, typename> typename It>
-using generic_range
-    = tanuki::wrap<detail::generic_range_iface<V, R, RR, It>, detail::generic_range_config<V, R, RR, It>>;
+template <typename V, typename R, typename RR, typename CR, typename CRR,
+          template <typename, typename, typename> typename It>
+using generic_range = tanuki::wrap<detail::generic_range_iface<V, R, RR, CR, CRR, It>,
+                                   detail::generic_range_config<V, R, RR, CR, CRR, It>>;
 
 } // namespace detail
 
-template <typename V, typename R, typename RR>
-using forward_range = detail::generic_range<V, R, RR, forward_iterator>;
+template <typename V, typename R, typename RR, typename CR, typename CRR>
+using forward_range = detail::generic_range<V, R, RR, CR, CRR, forward_iterator>;
 
-template <typename V, typename R, typename RR>
-using bidirectional_range = detail::generic_range<V, R, RR, bidirectional_iterator>;
+template <typename V, typename R, typename RR, typename CR, typename CRR>
+using bidirectional_range = detail::generic_range<V, R, RR, CR, CRR, bidirectional_iterator>;
 
-template <typename V, typename R, typename RR>
-using random_access_range = detail::generic_range<V, R, RR, random_access_iterator>;
+template <typename V, typename R, typename RR, typename CR, typename CRR>
+using random_access_range = detail::generic_range<V, R, RR, CR, CRR, random_access_iterator>;
 
 // Factory functions.
 #define FACADE_DEFINE_RANGE_FACTORY(tp)                                                                                \
@@ -221,21 +255,29 @@ using random_access_range = detail::generic_range<V, R, RR, random_access_iterat
     auto make_##tp##_range(T &&x)                                                                                      \
         -> decltype(tp##_range<detail::deduce_iter_value_t<detail::iter_t<std::remove_cvref_t<T>>>,                    \
                                std::iter_reference_t<detail::iter_t<std::remove_cvref_t<T>>>,                          \
-                               std::iter_rvalue_reference_t<detail::iter_t<std::remove_cvref_t<T>>>>(                  \
+                               std::iter_rvalue_reference_t<detail::iter_t<std::remove_cvref_t<T>>>,                   \
+                               std::iter_reference_t<detail::iter_t<const std::remove_cvref_t<T>>>,                    \
+                               std::iter_rvalue_reference_t<detail::iter_t<const std::remove_cvref_t<T>>>>(            \
             std::forward<T>(x)))                                                                                       \
     {                                                                                                                  \
         return tp##_range<detail::deduce_iter_value_t<detail::iter_t<std::remove_cvref_t<T>>>,                         \
                           std::iter_reference_t<detail::iter_t<std::remove_cvref_t<T>>>,                               \
-                          std::iter_rvalue_reference_t<detail::iter_t<std::remove_cvref_t<T>>>>(std::forward<T>(x));   \
+                          std::iter_rvalue_reference_t<detail::iter_t<std::remove_cvref_t<T>>>,                        \
+                          std::iter_reference_t<detail::iter_t<const std::remove_cvref_t<T>>>,                         \
+                          std::iter_rvalue_reference_t<detail::iter_t<const std::remove_cvref_t<T>>>>(                 \
+            std::forward<T>(x));                                                                                       \
     }                                                                                                                  \
     template <typename T>                                                                                              \
     auto make_##tp##_range(std::reference_wrapper<T> ref)                                                              \
-        -> decltype(tp##_range<detail::deduce_iter_value_t<detail::iter_t<T>>,                                         \
-                               std::iter_reference_t<detail::iter_t<T>>,                                               \
-                               std::iter_rvalue_reference_t<detail::iter_t<T>>>(std::move(ref)))                       \
+        -> decltype(tp##_range<                                                                                        \
+                    detail::deduce_iter_value_t<detail::iter_t<T>>, std::iter_reference_t<detail::iter_t<T>>,          \
+                    std::iter_rvalue_reference_t<detail::iter_t<T>>, std::iter_reference_t<detail::iter_t<const T>>,   \
+                    std::iter_rvalue_reference_t<detail::iter_t<const T>>>(std::move(ref)))                            \
     {                                                                                                                  \
         return tp##_range<detail::deduce_iter_value_t<detail::iter_t<T>>, std::iter_reference_t<detail::iter_t<T>>,    \
-                          std::iter_rvalue_reference_t<detail::iter_t<T>>>(std::move(ref));                            \
+                          std::iter_rvalue_reference_t<detail::iter_t<T>>,                                             \
+                          std::iter_reference_t<detail::iter_t<const T>>,                                              \
+                          std::iter_rvalue_reference_t<detail::iter_t<const T>>>(std::move(ref));                      \
     }
 
 FACADE_DEFINE_RANGE_FACTORY(forward)

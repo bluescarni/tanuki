@@ -82,11 +82,11 @@ TEST_CASE("basic forward")
 
         auto r1 = facade::make_forward_range(vec);
         REQUIRE(std::ranges::forward_range<decltype(r1)>);
-        REQUIRE(std::same_as<decltype(r1), facade::forward_range<int, int &, int &&>>);
+        REQUIRE(std::same_as<decltype(r1), facade::forward_range<int, int &, int &&, const int &, const int &&>>);
 
         auto r2 = facade::make_forward_range(std::as_const(vec));
         REQUIRE(std::ranges::forward_range<decltype(r2)>);
-        REQUIRE(std::same_as<decltype(r2), facade::forward_range<int, int &, int &&>>);
+        REQUIRE(std::same_as<decltype(r2), facade::forward_range<int, int &, int &&, const int &, const int &&>>);
 
         auto *orig_data = vec.data();
         auto r3 = facade::make_forward_range(std::move(vec));
@@ -96,18 +96,19 @@ TEST_CASE("basic forward")
         auto r4 = facade::make_forward_range(std::cref(vec2));
         REQUIRE(has_static_storage(r4));
         REQUIRE(std::ranges::forward_range<decltype(r4)>);
-        REQUIRE(std::same_as<decltype(r4), facade::forward_range<int, const int &, const int &&>>);
+        REQUIRE(std::same_as<decltype(r4),
+                             facade::forward_range<int, const int &, const int &&, const int &, const int &&>>);
         REQUIRE(&*r4.begin() == vec2.data());
 
         std::vector vec3 = {1, 2, 3};
         auto r5 = facade::make_forward_range(std::ref(vec3));
-        REQUIRE(std::same_as<decltype(r5), facade::forward_range<int, int &, int &&>>);
+        REQUIRE(std::same_as<decltype(r5), facade::forward_range<int, int &, int &&, const int &, const int &&>>);
         REQUIRE(&*r5.begin() == vec3.data());
 
         REQUIRE(std::ranges::equal(vec3, r5));
 
         auto r6 = facade::make_forward_range(std::ranges::subrange(vec3.begin(), vec3.end()));
-        REQUIRE(std::same_as<decltype(r6), facade::forward_range<int, int &, int &&>>);
+        REQUIRE(std::same_as<decltype(r6), facade::forward_range<int, int &, int &&, int &, int &&>>);
         REQUIRE(std::ranges::equal(r5, r6));
         REQUIRE(has_static_storage(r6));
     }
@@ -119,7 +120,7 @@ TEST_CASE("basic forward")
         REQUIRE(!std::ranges::range<min_fw_range>);
         auto r1 = facade::make_forward_range(vec);
         REQUIRE(std::ranges::forward_range<decltype(r1)>);
-        REQUIRE(std::same_as<decltype(r1), facade::forward_range<int, int &, int &&>>);
+        REQUIRE(std::same_as<decltype(r1), facade::forward_range<int, int &, int &&, const int &, const int &&>>);
     }
 
     {
@@ -128,7 +129,8 @@ TEST_CASE("basic forward")
         REQUIRE(!std::ranges::range<min_fw_range>);
         auto r1 = facade::make_forward_range(std::ref(vec));
         REQUIRE(std::ranges::forward_range<decltype(r1)>);
-        REQUIRE(std::same_as<decltype(r1), facade::forward_range<int, const int &, const int &&>>);
+        REQUIRE(std::same_as<decltype(r1),
+                             facade::forward_range<int, const int &, const int &&, const int &, const int &&>>);
     }
 }
 

@@ -14,6 +14,8 @@
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
+// LCOV_EXCL_START
+
 template <typename, typename, typename>
 struct foo_iface_impl {
 };
@@ -43,6 +45,8 @@ struct f1 {
     void foo() const {}
 };
 
+// LCOV_EXCL_STOP
+
 TEST_CASE("inf loop")
 {
     using wrap1_t = tanuki::wrap<foo_iface, tanuki::config<f1>{.explicit_generic_ctor = false}>;
@@ -56,6 +60,8 @@ TEST_CASE("inf loop")
     // type traits/concept checking in the implementation of std::vector/std::tuple.
     // This would result in some sort of infinite recursion in concept checking
     // due to the satisfaction of a constraint depending on itself.
+    // It is not clear whether this is a compiler bug or a legitimate compilation
+    // failure, as both MSVC and the EDG compiler are fine with this.
     v.resize(10u);
 }
 

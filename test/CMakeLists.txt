@@ -47,7 +47,29 @@ ADD_TANUKI_TESTCASE(forward_range)
 ADD_TANUKI_TESTCASE(bidirectional_range)
 ADD_TANUKI_TESTCASE(random_access_range)
 
+# Test to check explicit instantiation of the
+# wrap class in an external library.
+add_library(external_inst SHARED external_inst.cpp)
+set_target_properties(external_inst PROPERTIES CXX_VISIBILITY_PRESET hidden)
+set_target_properties(external_inst PROPERTIES VISIBILITY_INLINES_HIDDEN TRUE)
+target_compile_options(external_inst PRIVATE
+  "$<$<CONFIG:Debug>:${TANUKI_CXX_FLAGS_DEBUG}>"
+  "$<$<CONFIG:Release>:${TANUKI_CXX_FLAGS_RELEASE}>"
+  "$<$<CONFIG:RelWithDebInfo>:${TANUKI_CXX_FLAGS_RELEASE}>"
+  "$<$<CONFIG:MinSizeRel>:${TANUKI_CXX_FLAGS_RELEASE}>"
+)
+target_compile_features(external_inst PRIVATE cxx_std_20)
+set_property(TARGET external_inst PROPERTY CXX_EXTENSIONS NO)
+target_link_libraries(external_inst PUBLIC tanuki)
+if(TANUKI_CLANG_TIDY)
+  set_property(TARGET external_inst PROPERTY CXX_CLANG_TIDY "${TANUKI_CLANG_TIDY_PATH}")
+endif()
+ADD_TANUKI_TESTCASE(test_external_inst)
+target_link_libraries(test_external_inst PUBLIC external_inst)
+
 if(TANUKI_WITH_BOOST_S11N)
+  # Test to check the proper functioning of serialisation
+  # macros in external library.
   add_library(fooable SHARED fooable.cpp)
   set_target_properties(fooable PROPERTIES CXX_VISIBILITY_PRESET hidden)
   set_target_properties(fooable PROPERTIES VISIBILITY_INLINES_HIDDEN TRUE)

@@ -32,7 +32,7 @@ namespace detail
 // Default implementation of the interface.
 template <typename, typename, typename, typename, typename, typename, typename, typename,
           template <typename, typename, typename> typename>
-struct generic_range_iface_iface_impl {
+struct generic_range_iface_impl {
 };
 
 // Definition of the interface.
@@ -48,7 +48,7 @@ struct generic_range_iface {
     virtual It<V, CR, CRR> end() const = 0;
 
     template <typename Base, typename Holder, typename T>
-    using impl = generic_range_iface_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, It>;
+    using impl = generic_range_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, It>;
 };
 
 // Helper to invoke make_*_iterator().
@@ -159,8 +159,8 @@ template <typename Base, typename Holder, typename T, typename V, typename R, ty
           template <typename, typename, typename> typename It>
     requires std::derived_from<Base, generic_range_iface<V, R, RR, CR, CRR, It>>
                  && is_generic_range<std::remove_reference_t<std::unwrap_reference_t<T>>, V, R, RR, CR, CRR, It>
-struct generic_range_iface_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, It>
-    : public Base, tanuki::iface_impl_helper<Base, Holder> {
+struct generic_range_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, It> : public Base,
+                                                                          tanuki::iface_impl_helper<Base, Holder> {
     It<V, R, RR> begin() final
     {
         return make_generic_iterator<It>{}(begin_end_impl::b(this->value()));

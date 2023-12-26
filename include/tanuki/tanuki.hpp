@@ -17,7 +17,6 @@
 #include <memory>
 #include <new>
 #include <stdexcept>
-#include <tuple>
 #include <type_traits>
 #include <typeindex>
 #include <typeinfo>
@@ -169,17 +168,17 @@ struct TANUKI_VISIBLE value_iface : public IFace, value_iface_base {
     }
 
     // Methods to implement virtual copy/move primitives for the holder class.
-    [[nodiscard]] virtual std::pair<IFace *, value_iface *> _tanuki_clone() const
+    [[nodiscard]] virtual value_iface *_tanuki_clone() const
     {
         assert(false);
         return {};
     }
-    [[nodiscard]] virtual std::pair<IFace *, value_iface *> _tanuki_copy_init_holder(void *) const
+    [[nodiscard]] virtual value_iface *_tanuki_copy_init_holder(void *) const
     {
         assert(false);
         return {};
     }
-    [[nodiscard]] virtual std::pair<IFace *, value_iface *> _tanuki_move_init_holder(void *) && noexcept
+    [[nodiscard]] virtual value_iface *_tanuki_move_init_holder(void *) && noexcept
     {
         assert(false);
         return {};
@@ -420,39 +419,36 @@ private:
         return is_reference_wrapper<T>::value;
     }
 
-    // Clone this, and cast the result to the two bases.
-    [[nodiscard]] std::pair<IFace *, value_iface<IFace> *> _tanuki_clone() const final
+    // Clone this, and cast the result to the value interface.
+    [[nodiscard]] value_iface<IFace> *_tanuki_clone() const final
     {
         if constexpr (std::copy_constructible<T>) {
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-            auto *ret = new holder(m_value);
-            return {ret, ret};
+            return new holder(m_value);
         } else {
             throw std::invalid_argument("Attempting to clone a non-copyable value type");
         }
     }
     // Copy-init a new holder into the storage beginning at ptr.
-    // Then cast the result to the two bases and return.
-    [[nodiscard]] std::pair<IFace *, value_iface<IFace> *> _tanuki_copy_init_holder(void *ptr) const final
+    // Then cast the result to the value interface and return.
+    [[nodiscard]] value_iface<IFace> *_tanuki_copy_init_holder(void *ptr) const final
     {
         if constexpr (std::copy_constructible<T>) {
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-            auto *ret = ::new (ptr) holder(m_value);
-            return {ret, ret};
+            return ::new (ptr) holder(m_value);
         } else {
             throw std::invalid_argument("Attempting to copy-construct a non-copyable value type");
         }
     }
     // Move-init a new holder into the storage beginning at ptr.
-    // Then cast the result to the two bases and return.
-    [[nodiscard]] std::pair<IFace *, value_iface<IFace> *>
+    // Then cast the result to the value interface and return.
+    [[nodiscard]] value_iface<IFace> *
     // NOLINTNEXTLINE(bugprone-exception-escape)
     _tanuki_move_init_holder(void *ptr) && noexcept final
     {
         if constexpr (std::move_constructible<T>) {
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-            auto *ret = ::new (ptr) holder(std::move(m_value));
-            return {ret, ret};
+            return ::new (ptr) holder(std::move(m_value));
         } else {
             throw std::invalid_argument("Attempting to move-construct a non-movable value type"); // LCOV_EXCL_LINE
         }
@@ -549,32 +545,21 @@ struct holder_value<holder<T, IFace>> {
     using type = T;
 };
 
-// Implementation of basic storage for the wrap class.
+// Implementation of storage for the wrap class.
 template <typename IFace, std::size_t StaticStorageSize, std::size_t StaticStorageAlignment>
 struct TANUKI_VISIBLE wrap_storage {
-    // NOTE: static storage optimisation enabled. The m_p_iface member is used as a flag:
-    // if it is null, then the current storage type is dynamic and the interface pointer
-    // (which may be null for the invalid state) is stored in static_storage. If m_p_iface
-    // is *not* null, then the current storage type is static and both m_p_iface and m_pv_iface
-    // point somewhere in static_storage.
     static_assert(StaticStorageSize > 0u);
 
-    // NOTE: replacing static_storage with an union (IFace *, std::byte[]) may allow us to get rid
-    // of the reinterpret_casts and perhaps even to make wrap constexpr-friendly. However, there are
-    // some patterns we use (e.g., void * cast and back) which, as of C++20, still cannot be used
-    // in constant expressions. Something to investigate for later versions of the standard?
-
-    // NOTE: the static storage is used to store an IFace * in dynamic
-    // storage mode, thus it has minimum size and alignment requirements.
-    alignas(std::max(StaticStorageAlignment,
-                     alignof(IFace *))) std::byte static_storage[std::max(StaticStorageSize, sizeof(IFace *))];
-    IFace *m_p_iface;
+    // Static storage optimisation enabled.
+    // The active storage is dynamic if either m_pv_iface is null (which indicates the
+    // invalid state) or if it points somewhere outside static_storage. Otherwise,
+    // the active storage is static.
+    alignas(StaticStorageAlignment) std::byte static_storage[StaticStorageSize];
     value_iface<IFace> *m_pv_iface;
 };
 
 template <typename IFace, std::size_t StaticStorageAlignment>
 struct TANUKI_VISIBLE wrap_storage<IFace, 0, StaticStorageAlignment> {
-    IFace *m_p_iface;
     value_iface<IFace> *m_pv_iface;
 };
 
@@ -808,37 +793,15 @@ class TANUKI_VISIBLE wrap
     template <typename T>
     using holder_t = detail::holder<T, IFace>;
 
-    // Helpers to fetch the interface pointers and the storage type when
-    // static storage is enabled.
-    std::tuple<const iface_t *, const value_iface_t *, bool> stype() const noexcept
+    // Helper to detect the type of storage in use. Returns true for static
+    // storage, false for dynamic storage (including the invalid state).
+    [[nodiscard]] bool stype() const noexcept
         requires(Cfg.static_size > 0u)
     {
-        if (this->m_p_iface == nullptr) {
-            // Dynamic storage.
-            const auto *ret = *std::launder(reinterpret_cast<iface_t *const *>(this->static_storage));
-            // NOTE: if one interface pointer is null, the other must be as well, and vice-versa.
-            // Null interface pointers with dynamic storage indicate that this object is in the
-            // invalid state.
-            assert((ret == nullptr) == (this->m_pv_iface == nullptr));
-            return {ret, this->m_pv_iface, false};
-        } else {
-            // Static storage.
-            // NOTE: with static storage, the interface pointers cannot be null.
-            assert(this->m_p_iface != nullptr && this->m_pv_iface != nullptr);
-            return {this->m_p_iface, this->m_pv_iface, true};
-        }
-    }
-    std::tuple<iface_t *, value_iface_t *, bool> stype() noexcept
-        requires(Cfg.static_size > 0u)
-    {
-        if (this->m_p_iface == nullptr) {
-            auto *ret = *std::launder(reinterpret_cast<iface_t **>(this->static_storage));
-            assert((ret == nullptr) == (this->m_pv_iface == nullptr));
-            return {ret, this->m_pv_iface, false};
-        } else {
-            assert(this->m_p_iface != nullptr && this->m_pv_iface != nullptr);
-            return {this->m_p_iface, this->m_pv_iface, true};
-        }
+        return (this->m_pv_iface != nullptr)
+               && std::less{}(reinterpret_cast<const std::byte *>(this->m_pv_iface),
+                              this->static_storage + sizeof(this->static_storage))
+               && std::greater_equal{}(reinterpret_cast<const std::byte *>(this->m_pv_iface), this->static_storage);
     }
 
     // Implementation of generic construction. This will constrcut
@@ -870,23 +833,16 @@ class TANUKI_VISIBLE wrap
         if constexpr (Cfg.static_size == 0u) {
             // Static storage disabled.
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-            auto d_ptr = new holder_t<T>(std::forward<U>(x)...);
-            this->m_p_iface = d_ptr;
-            this->m_pv_iface = d_ptr;
+            this->m_pv_iface = new holder_t<T>(std::forward<U>(x)...);
         } else {
             if constexpr (sizeof(holder_t<T>) <= Cfg.static_size) {
                 // Static storage.
                 // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-                auto *d_ptr = ::new (this->static_storage) holder_t<T>(std::forward<U>(x)...);
-                this->m_p_iface = d_ptr;
-                this->m_pv_iface = d_ptr;
+                this->m_pv_iface = ::new (this->static_storage) holder_t<T>(std::forward<U>(x)...);
             } else {
                 // Dynamic storage.
                 // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-                auto d_ptr = new holder_t<T>(std::forward<U>(x)...);
-                ::new (this->static_storage) iface_t *(d_ptr);
-                this->m_p_iface = nullptr;
-                this->m_pv_iface = d_ptr;
+                this->m_pv_iface = new holder_t<T>(std::forward<U>(x)...);
             }
         }
     }
@@ -901,12 +857,10 @@ class TANUKI_VISIBLE wrap
             // Store the pointer to the value interface.
             ar << this->m_pv_iface;
         } else {
-            const auto [_, pv_iface, st] = stype();
-
             // Store the storage type.
-            ar << st;
+            ar << stype();
             // Store the pointer to the value interface.
-            ar << pv_iface;
+            ar << this->m_pv_iface;
         }
     }
     // NOTE: as I have understood, when deserialising a pointer Boost
@@ -924,6 +878,7 @@ class TANUKI_VISIBLE wrap
             // Load the serialised pointer.
             value_iface_t *pv_iface = nullptr;
             ar >> pv_iface;
+            // TODO can this be null now?
             assert(pv_iface != nullptr);
 
             // NOTE: from now on, all is noexcept.
@@ -931,10 +886,8 @@ class TANUKI_VISIBLE wrap
             // Destroy the current object.
             destroy();
 
-            // Assign the new pointers.
+            // Assign the new pointer.
             this->m_pv_iface = pv_iface;
-            this->m_p_iface = dynamic_cast<iface_t *>(pv_iface);
-            assert(this->m_p_iface != nullptr);
         } else {
             // Recover the storage type.
             bool st{};
@@ -943,6 +896,8 @@ class TANUKI_VISIBLE wrap
             // Load the serialised pointer.
             value_iface_t *pv_iface = nullptr;
             ar >> pv_iface;
+            // TODO can this be null now?
+            // TOOD assert nonnull if static storage?
             assert(pv_iface != nullptr);
 
             // NOTE: from now on, all is noexcept.
@@ -952,17 +907,12 @@ class TANUKI_VISIBLE wrap
 
             if (st) {
                 // Move-init the value from pv_iface.
-                auto [new_p_iface, new_pv_iface] = std::move(*pv_iface)._tanuki_move_init_holder(this->static_storage);
-                this->m_p_iface = new_p_iface;
-                this->m_pv_iface = new_pv_iface;
+                this->m_pv_iface = std::move(*pv_iface)._tanuki_move_init_holder(this->static_storage);
 
                 // Clean up pv_iface.
                 // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
                 delete pv_iface;
             } else {
-                assert(dynamic_cast<iface_t *>(pv_iface) != nullptr);
-                ::new (this->static_storage) iface_t *(dynamic_cast<iface_t *>(pv_iface));
-                this->m_p_iface = nullptr;
                 this->m_pv_iface = pv_iface;
             }
         }
@@ -978,15 +928,6 @@ public:
     wrap() noexcept(detail::nothrow_default_initializable<ref_iface_t>)
         requires(Cfg.invalid_default_ctor) && std::default_initializable<ref_iface_t>
     {
-        if constexpr (Cfg.static_size != 0u) {
-            // Init the interface pointer to null.
-            ::new (this->static_storage) iface_t *(nullptr);
-        }
-
-        // NOTE: if static storage is enabled, this will indicate
-        // that dynamic storage is being employed. Otherwise, this will
-        // set the interface pointer to null.
-        this->m_p_iface = nullptr;
         this->m_pv_iface = nullptr;
     }
     // NOTE: the extra W template argument appearing
@@ -999,7 +940,7 @@ public:
     // https://github.com/llvm/llvm-project/issues/55945
     //
     // I.e., trailing-style concept checks may not short
-    // circuit, which is particuarly problematic for a default
+    // circuit, which is particularly problematic for a default
     // constructor.
     template <typename W = wrap>
         requires(requires(W &w) {
@@ -1056,19 +997,16 @@ public:
     {
         if constexpr (Cfg.static_size == 0u) {
             // Static storage disabled.
-            std::tie(this->m_p_iface, this->m_pv_iface) = other.m_pv_iface->_tanuki_clone();
+            this->m_pv_iface = other.m_pv_iface->_tanuki_clone();
         } else {
-            const auto [_, pv_iface, st] = other.stype();
+            const auto *pv_iface = other.m_pv_iface;
 
-            if (st) {
+            if (other.stype()) {
                 // Other has static storage.
-                std::tie(this->m_p_iface, this->m_pv_iface) = pv_iface->_tanuki_copy_init_holder(this->static_storage);
+                this->m_pv_iface = pv_iface->_tanuki_copy_init_holder(this->static_storage);
             } else {
                 // Other has dynamic storage.
-                auto [new_p_iface, new_pv_iface] = pv_iface->_tanuki_clone();
-                ::new (this->static_storage) iface_t *(new_p_iface);
-                this->m_p_iface = nullptr;
-                this->m_pv_iface = new_pv_iface;
+                this->m_pv_iface = pv_iface->_tanuki_clone();
             }
         }
     }
@@ -1079,32 +1017,22 @@ private:
     {
         if constexpr (Cfg.static_size == 0u) {
             // Static storage disabled.
-            // Shallow copy the pointers.
-            this->m_p_iface = other.m_p_iface;
+            // Shallow copy the pointer.
             this->m_pv_iface = other.m_pv_iface;
 
             // Invalidate other.
-            other.m_p_iface = nullptr;
             other.m_pv_iface = nullptr;
         } else {
-            const auto [p_iface, pv_iface, st] = other.stype();
+            auto *pv_iface = other.m_pv_iface;
 
-            if (st) {
+            if (other.stype()) {
                 // Other has static storage.
-                std::tie(this->m_p_iface, this->m_pv_iface)
-                    = std::move(*pv_iface)._tanuki_move_init_holder(this->static_storage);
+                this->m_pv_iface = std::move(*pv_iface)._tanuki_move_init_holder(this->static_storage);
             } else {
                 // Other has dynamic storage.
-                ::new (this->static_storage) iface_t *(p_iface);
-                this->m_p_iface = nullptr;
                 this->m_pv_iface = pv_iface;
 
                 // Invalidate other.
-                // NOTE: re-initing with new() is ok here: we know that
-                // other.static_storage contains a pointer and we can overwrite
-                // it with another pointer without calling the destructor first.
-                ::new (other.static_storage) iface_t *(nullptr);
-                assert(other.m_p_iface == nullptr);
                 other.m_pv_iface = nullptr;
             }
         }
@@ -1122,18 +1050,13 @@ private:
     void destroy() noexcept
     {
         if constexpr (Cfg.static_size == 0u) {
-            // NOTE: if one pointer is null, the other one must be as well.
-            assert((this->m_p_iface == nullptr) == (this->m_pv_iface == nullptr));
-
-            delete this->m_p_iface;
+            delete this->m_pv_iface;
         } else {
-            const auto [p_iface, _, st] = stype();
-
-            if (st) {
-                p_iface->~iface_t();
+            if (stype()) {
+                this->m_pv_iface->~value_iface_t();
             } else {
                 // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-                delete p_iface;
+                delete this->m_pv_iface;
             }
         }
     }
@@ -1171,27 +1094,18 @@ public:
 
         // The internal types are the same.
         if constexpr (Cfg.static_size == 0u) {
-            // For dynamic storage, swap the pointers.
-            std::swap(this->m_p_iface, other.m_p_iface);
+            // For dynamic storage, swap the pointer.
             std::swap(this->m_pv_iface, other.m_pv_iface);
         } else {
-            const auto [p_iface0, pv_iface0, st0] = stype();
-            const auto [p_iface1, pv_iface1, st1] = other.stype();
-
             // The storage flags must match, as they depend only
             // on the internal types.
-            assert(st0 == st1);
+            assert(stype() == other.stype());
 
-            if (st0) {
+            if (stype()) {
                 // For static storage, directly move assign the internal value.
-                std::move(*pv_iface1)._tanuki_move_assign_value_to(pv_iface0);
+                std::move(*other.m_pv_iface)._tanuki_move_assign_value_to(this->m_pv_iface);
             } else {
-                // For dynamic storage, swap the pointers.
-                assert(this->m_p_iface == nullptr);
-                assert(other.m_p_iface == nullptr);
-
-                std::swap(*std::launder(reinterpret_cast<iface_t **>(this->static_storage)),
-                          *std::launder(reinterpret_cast<iface_t **>(other.static_storage)));
+                // For dynamic storage, swap the pointer.
                 std::swap(this->m_pv_iface, other.m_pv_iface);
             }
         }
@@ -1219,12 +1133,12 @@ public:
             // Assign the internal value.
             other.m_pv_iface->_tanuki_copy_assign_value_to(this->m_pv_iface);
         } else {
-            const auto [p_iface0, pv_iface0, st0] = stype();
-            const auto [p_iface1, pv_iface1, st1] = other.stype();
-
             // The storage flags must match, as they depend only
             // on the internal types.
-            assert(st0 == st1);
+            assert(stype() == other.stype());
+
+            auto *pv_iface0 = this->m_pv_iface;
+            const auto *pv_iface1 = other.m_pv_iface;
 
             // Assign the internal value.
             pv_iface1->_tanuki_copy_assign_value_to(pv_iface0);
@@ -1262,14 +1176,7 @@ public:
             } catch (...) {
                 // NOTE: if ctor_impl fails there's no cleanup required.
                 // Invalidate this before rethrowing.
-                if constexpr (Cfg.static_size == 0u) {
-                    this->m_p_iface = nullptr;
-                    this->m_pv_iface = nullptr;
-                } else {
-                    ::new (this->static_storage) iface_t *(nullptr);
-                    this->m_p_iface = nullptr;
-                    this->m_pv_iface = nullptr;
-                }
+                this->m_pv_iface = nullptr;
 
                 throw;
             }
@@ -1304,8 +1211,7 @@ public:
     // it has been moved from (note that this also includes the case
     // in which w has been swapped with an invalid object),
     // or if generic assignment failed.
-    // In an invalid wrap, the interface pointers are set to null,
-    // and the static storage (if enabled) also stores a null pointer.
+    // In an invalid wrap, the value interface pointer is set to null.
     // The only valid operations on an invalid object are:
     //
     // - invocation of is_invalid(),
@@ -1314,36 +1220,21 @@ public:
     // - generic assignment.
     [[nodiscard]] friend bool is_invalid(const wrap &w) noexcept
     {
-        if constexpr (Cfg.static_size == 0u) {
-            assert((w.m_p_iface == nullptr) == (w.m_pv_iface == nullptr));
-            return w.m_p_iface == nullptr;
-        } else {
-            return std::get<0>(w.stype()) == nullptr;
-        }
+        return w.m_pv_iface == nullptr;
     }
 
     [[nodiscard]] friend std::type_index value_type_index(const wrap &w) noexcept
     {
-        // NOTE: the value interface pointer can be accessed regardless of whether
-        // or not static storage is enabled.
         return w.m_pv_iface->_tanuki_value_type_index();
     }
 
     [[nodiscard]] friend const iface_t *iface_ptr(const wrap &w) noexcept
     {
-        if constexpr (Cfg.static_size == 0u) {
-            return w.m_p_iface;
-        } else {
-            return std::get<0>(w.stype());
-        }
+        return w.m_pv_iface;
     }
     [[nodiscard]] friend iface_t *iface_ptr(wrap &w) noexcept
     {
-        if constexpr (Cfg.static_size == 0u) {
-            return w.m_p_iface;
-        } else {
-            return std::get<0>(w.stype());
-        }
+        return w.m_pv_iface;
     }
 
     friend void swap(wrap &w1, wrap &w2) noexcept
@@ -1388,26 +1279,17 @@ public:
         // The types are the same.
         if constexpr (Cfg.static_size == 0u) {
             // For dynamic storage, swap the pointers.
-            std::swap(w1.m_p_iface, w2.m_p_iface);
             std::swap(w1.m_pv_iface, w2.m_pv_iface);
         } else {
-            const auto [p_iface1, pv_iface1, st1] = w1.stype();
-            const auto [p_iface2, pv_iface2, st2] = w2.stype();
-
             // The storage flags must match, as they depend only
             // on the internal types.
-            assert(st1 == st2);
+            assert(w1.stype() == w2.stype());
 
-            if (st1) {
+            if (w1.stype()) {
                 // For static storage, directly swap the internal values.
-                pv_iface2->_tanuki_swap_value(pv_iface1);
+                w2.m_pv_iface->_tanuki_swap_value(w1.m_pv_iface);
             } else {
                 // For dynamic storage, swap the pointers.
-                assert(w1.m_p_iface == nullptr);
-                assert(w2.m_p_iface == nullptr);
-
-                std::swap(*std::launder(reinterpret_cast<iface_t **>(w1.static_storage)),
-                          *std::launder(reinterpret_cast<iface_t **>(w2.static_storage)));
                 std::swap(w1.m_pv_iface, w2.m_pv_iface);
             }
         }
@@ -1418,7 +1300,7 @@ public:
         if constexpr (Cfg.static_size == 0u) {
             return false;
         } else {
-            return std::get<2>(w.stype());
+            return w.stype();
         }
     }
 

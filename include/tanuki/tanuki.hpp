@@ -364,6 +364,8 @@ concept iface_has_impl = requires() {
 };
 
 // Class for holding an instance of the value type T.
+// The inheritance diagram is:
+// holder -> iface impl -> value_iface -> iface.
 // NOTE: this class has several conceptual requirements which
 // are checked in wrap::ctor_impl().
 template <typename T, typename IFace>

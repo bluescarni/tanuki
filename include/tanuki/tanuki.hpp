@@ -405,28 +405,6 @@ concept iface_has_impl = requires() {
 };
 
 template <typename T, typename IFace>
-// NOTE: ideally, we would like to put here the checks about the interface
-// and its implementation, e.g., the interface implementation
-// must derive from the interface, it must be destructible, etc.
-// However, because we are using the CRTP
-// and passing the holder as a template parameter to the interface
-// impl, the checks cannot go here because holder
-// is still an incomplete type. Thus, the interface checks are placed in
-// the ctible_holder concept instead (defined elsewhere). As an unfortunate
-// consequence, a holder with an invalid IFace might end up being instantiated,
-// and we must thus take care of coping with an invalid IFace throughout
-// the implementation of this class (see for instance the static checks
-// in clone() and friends). This is not 100% foolproof as we cannot put
-// static checks on the destructor (since it is virtual), thus a non-dtible
-// interface impl will still trigger a hard-error - however this is a corner case
-// I think we can live with for the time being.
-// NOTE: this situation might be resolved in C++23 with the "deducing this"
-// feature, which should allow us to avoid passing the holder as a template
-// parameter to the interface implementation when implementing the CRTP. See here:
-// https://devblogs.microsoft.com/cppblog/cpp23-deducing-this/
-// NOTE: it seems like "deducing this" may also help with the interface template
-// and with iface_impl_helper (no more Holder parameter?).
-    requires valid_value_type<T>
 struct TANUKI_VISIBLE holder final : public impl_from_iface<IFace, holder<T, IFace>, T> {
     TANUKI_NO_UNIQUE_ADDRESS T m_value;
 
@@ -448,21 +426,13 @@ struct TANUKI_VISIBLE holder final : public impl_from_iface<IFace, holder<T, IFa
     // potentially competing with the copy/move ctors.
     template <typename U>
         requires(!std::same_as<holder, std::remove_cvref_t<U>>)
-                && std::constructible_from<T, U &&>
-                // NOTE: we need the interface implementation to be:
-                // - default initable,
-                // - destructible.
-                && std::default_initializable<impl_from_iface<IFace, holder<T, IFace>, T>>
-                && std::destructible<impl_from_iface<IFace, holder<T, IFace>, T>>
     explicit holder(U &&x) noexcept(std::is_nothrow_constructible_v<T, U &&>
                                     && nothrow_default_initializable<impl_from_iface<IFace, holder<T, IFace>, T>>)
         : m_value(std::forward<U>(x))
     {
     }
     template <typename... U>
-        requires(sizeof...(U) != 1u) && std::constructible_from<T, U &&...>
-                && std::default_initializable<impl_from_iface<IFace, holder<T, IFace>, T>>
-                && std::destructible<impl_from_iface<IFace, holder<T, IFace>, T>>
+        requires(sizeof...(U) != 1u)
     explicit holder(U &&...x) noexcept(std::is_nothrow_constructible_v<T, U &&...>
                                        && nothrow_default_initializable<impl_from_iface<IFace, holder<T, IFace>, T>>)
         : m_value(std::forward<U>(x)...)
@@ -778,28 +748,6 @@ template <typename T>
 using value_t_from_arg = std::conditional_t<std::is_function_v<std::remove_cvref_t<T>>,
                                             std::decay_t<std::remove_cvref_t<T>>, std::remove_cvref_t<T>>;
 
-// These two concepts are used in the implementation of the wrap constructors.
-
-// Check if we can construct from U a valid Holder for the interface IFace.
-// Holder is expected to be an instance of the "holder" class defined earlier.
-// Cfg must be a valid config instance.
-template <typename Holder, typename IFace, auto Cfg, typename... U>
-concept ctible_holder =
-    // These checks are for verifying that:
-    // - IFace is a base of the interface implementation, and
-    // - all interface requirements have been implemented, and
-    // - we can construct the value type from the variadic args, and
-    // - the value type T satisfies the conditions to be stored in a holder.
-    // NOTE: we put the derived_from check first as this helps avoiding
-    // constructible_from triggering an infinite loop. This has been observed
-    // in certain situations involving wraps with an implicit generic constructor
-    // (see also the test_inf_loop_bug test).
-    std::derived_from<Holder, IFace> && std::constructible_from<Holder, U...> &&
-    // Alignment checks: if we are going to use dynamic storage, then no checks are needed
-    // as new() takes care of proper alignment; otherwise, we need to ensure that the static
-    // storage is sufficiently aligned.
-    (sizeof(Holder) > Cfg.static_size || alignof(Holder) <= Cfg.static_alignment);
-
 } // namespace detail
 
 // Type used to indicate emplace construction in the wrap class.
@@ -934,8 +882,25 @@ class TANUKI_VISIBLE wrap
     // Implementation of generic construction. This will constrcut
     // a holder with value type T using the construction argument(s) x.
     template <typename T, typename... U>
-    void ctor_impl(U &&...x) noexcept(sizeof(holder_t<T>) <= Cfg.static_size
-                                      && std::is_nothrow_constructible_v<holder_t<T>, U &&...>)
+        requires
+        // The interface must have an implementation.
+        detail::iface_has_impl<iface_t, holder_t<T>, T> &&
+        // The holder must derive from the interface.
+        std::derived_from<holder_t<T>, IFace> &&
+        // T must be a valid value type.
+        detail::valid_value_type<T> &&
+        // T must be constructible from the construction arguments.
+        std::constructible_from<T, U &&...> &&
+        // The implementation must be default-initable and
+        // destructible.
+        std::default_initializable<detail::impl_from_iface<iface_t, holder_t<T>, T>>
+        && std::destructible<detail::impl_from_iface<iface_t, holder_t<T>, T>> &&
+        // Alignment checks: if we are going to use dynamic storage, then no checks are needed
+        // as new() takes care of proper alignment; otherwise, we need to ensure that the static
+        // storage is sufficiently aligned.
+        (sizeof(holder_t<T>) > Cfg.static_size || alignof(holder_t<T>) <= Cfg.static_alignment)
+        void ctor_impl(U &&...x) noexcept(sizeof(holder_t<T>) <= Cfg.static_size
+                                          && std::is_nothrow_constructible_v<holder_t<T>, U &&...>)
     {
         if constexpr (Cfg.static_size == 0u) {
             // Static storage disabled.
@@ -1059,40 +1024,30 @@ public:
         this->m_p_iface = nullptr;
         this->m_pv_iface = nullptr;
     }
+    template <typename W = wrap>
     wrap() noexcept(noexcept(this->ctor_impl<default_value_t>()) && detail::nothrow_default_initializable<ref_iface_t>)
-        requires(!Cfg.invalid_default_ctor) && std::default_initializable<ref_iface_t> &&
-                // A default value type must have been specified
-                // in the configuration.
-                (!std::same_as<void, default_value_t>) &&
-                // Must have a valid interface implementation.
-                detail::iface_has_impl<iface_t, holder_t<default_value_t>, default_value_t> &&
-                // We must be able to value-init the holder.
-                detail::ctible_holder<
-#if defined(TANUKI_CLANG_BUGGY_CONCEPTS)
-                    // NOTE: this seems due to this bug:
-                    // https://github.com/llvm/llvm-project/issues/55945
-                    detail::detected_t<holder_t, default_value_t>,
-#else
-                    holder_t<default_value_t>,
-#endif
-                    iface_t, Cfg>
+        requires(requires(W &w) {
+            requires !Cfg.invalid_default_ctor;
+            requires std::default_initializable<ref_iface_t>;
+            // A default value type must have been specified
+            // in the configuration.
+            requires !std::same_as<void, default_value_t>;
+            w.template ctor_impl<default_value_t>();
+        })
     {
         ctor_impl<default_value_t>();
     }
 
     // Generic ctor from a wrappable value.
-    template <typename T>
-        requires std::default_initializable<ref_iface_t> &&
-                 // Must not compete with the emplace ctor.
-                 (!detail::is_in_place_type<std::remove_cvref_t<T>>::value) &&
-                 // Must not compete with copy/move.
-                 (!std::same_as<std::remove_cvref_t<T>, wrap>) &&
-                 // Must have a valid interface implementation.
-                 detail::iface_has_impl<iface_t, holder_t<detail::value_t_from_arg<T &&>>,
-                                        detail::value_t_from_arg<T &&>>
-                 &&
-                 // We must be able to construct a holder from x.
-                 detail::ctible_holder<holder_t<detail::value_t_from_arg<T &&>>, iface_t, Cfg, T &&>
+    template <typename T, typename W = wrap>
+        requires(requires(W &w, T &&x) {
+            requires std::default_initializable<ref_iface_t>;
+            // Must not compete with the emplace ctor.
+            requires !detail::is_in_place_type<std::remove_cvref_t<T>>::value;
+            // Must not compete with copy/move.
+            requires !std::same_as<std::remove_cvref_t<T>, wrap>;
+            w.template ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x));
+        })
     explicit(Cfg.explicit_generic_ctor)
         // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,cppcoreguidelines-pro-type-member-init,hicpp-member-init,google-explicit-constructor,hicpp-explicit-conversions)
         wrap(T &&x) noexcept(noexcept(this->ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x)))
@@ -1103,12 +1058,13 @@ public:
 
     // NOTE: this will *value-init* if no args
     // are provided. This must be documented well.
-    template <typename T, typename... U>
-        requires std::default_initializable<ref_iface_t> &&
-                 // Forbid emplacing a wrap inside a wrap.
-                 (!std::same_as<T, wrap>) &&
-                 // We must be able to construct a holder from args.
-                 detail::ctible_holder<holder_t<T>, iface_t, Cfg, U &&...>
+    template <typename T, typename W = wrap, typename... U>
+        requires(requires(W &w, U &&...args) {
+            requires std::default_initializable<ref_iface_t>;
+            // Forbid emplacing a wrap inside a wrap.
+            requires !std::same_as<T, wrap>;
+            w.template ctor_impl<T>(std::forward<U>(args)...);
+        })
     explicit wrap(in_place_type<T>, U &&...args) noexcept(noexcept(this->ctor_impl<T>(std::forward<U>(args)...))
                                                           && detail::nothrow_default_initializable<ref_iface_t>)
     {
@@ -1299,17 +1255,18 @@ public:
     }
 
     // Generic assignment.
-    template <typename T>
-        requires
-        // NOTE: not 100% sure about this, but it seems consistent
-        // for generic assignment to be enabled only if copy/move
-        // assignment are as well.
-        (Cfg.copyable) && (Cfg.movable) &&
-        // Must not compete with copy/move assignment.
-        (!std::same_as<std::remove_cvref_t<T>, wrap>) &&
-        // We must be able to construct a holder from x.
-        detail::ctible_holder<holder_t<detail::value_t_from_arg<T &&>>, iface_t, Cfg, T &&>
-        wrap &operator=(T &&x)
+    template <typename T, typename W = wrap>
+        requires(requires(W &w, T &&x) {
+            // NOTE: not 100% sure about this, but it seems consistent
+            // for generic assignment to be enabled only if copy/move
+            // assignment are as well.
+            requires Cfg.copyable;
+            requires Cfg.movable;
+            // Must not compete with copy/move assignment.
+            requires !std::same_as<std::remove_cvref_t<T>, wrap>;
+            w.template ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x));
+        })
+    wrap &operator=(T &&x)
     {
         // Handle invalid object.
         if (is_invalid(*this)) {

@@ -991,7 +991,14 @@ public:
     // here and in the other ctors/assignment operators
     // is to work around compiler issues: earlier versions
     // of clang error out complaining about an incomplete type
-    // if we just use wrap instead of W.
+    // if we just use wrap instead of W. Older clang versions
+    // also suffer from this bug
+    //
+    // https://github.com/llvm/llvm-project/issues/55945
+    //
+    // I.e., trailing-style concept checks may not short
+    // circuit, which is particuarly problematic for a default
+    // constructor.
     template <typename W = wrap>
         requires(requires(W &w) {
             requires !Cfg.invalid_default_ctor;

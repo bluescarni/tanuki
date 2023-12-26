@@ -53,7 +53,7 @@ TEST_CASE("inf loop")
 
     std::vector<std::tuple<wrap1_t>> v;
     // NOTE: GCC and clang (but not MSVC strangely enough) would error out
-    // on the next line, before we re-ordered the concept checks in ctible_holder.
+    // on the next line, before we re-ordered the concept checks in wrap::ctor_impl.
     // Apparently, for some reason I do not fully understand (but I think related
     // to the implicitness of the generic ctor), the compiler would end
     // up attempting to construct a wrap1_t from std::tuple<wrap1_t>, deep within

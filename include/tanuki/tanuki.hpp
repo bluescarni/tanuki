@@ -459,9 +459,7 @@ private:
     // Clone this, and cast the result to the two bases.
     [[nodiscard]] std::pair<IFace *, value_iface<IFace> *> _tanuki_clone() const final
     {
-        // NOTE: the std::convertible_to check is to avoid a hard error when instantiating a holder
-        // with an invalid interface implementation.
-        if constexpr (std::copy_constructible<T> && std::convertible_to<holder *, IFace *>) {
+        if constexpr (std::copy_constructible<T>) {
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
             auto *ret = new holder(m_value);
             return {ret, ret};
@@ -473,7 +471,7 @@ private:
     // Then cast the result to the two bases and return.
     [[nodiscard]] std::pair<IFace *, value_iface<IFace> *> _tanuki_copy_init_holder(void *ptr) const final
     {
-        if constexpr (std::copy_constructible<T> && std::convertible_to<holder *, IFace *>) {
+        if constexpr (std::copy_constructible<T>) {
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
             auto *ret = ::new (ptr) holder(m_value);
             return {ret, ret};
@@ -487,7 +485,7 @@ private:
     // NOLINTNEXTLINE(bugprone-exception-escape)
     _tanuki_move_init_holder(void *ptr) && noexcept final
     {
-        if constexpr (std::move_constructible<T> && std::convertible_to<holder *, IFace *>) {
+        if constexpr (std::move_constructible<T>) {
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
             auto *ret = ::new (ptr) holder(std::move(m_value));
             return {ret, ret};
@@ -885,8 +883,6 @@ class TANUKI_VISIBLE wrap
         requires
         // The interface must have an implementation.
         detail::iface_has_impl<iface_t, holder_t<T>, T> &&
-        // The holder must derive from the interface.
-        std::derived_from<holder_t<T>, IFace> &&
         // T must be a valid value type.
         detail::valid_value_type<T> &&
         // T must be constructible from the construction arguments.

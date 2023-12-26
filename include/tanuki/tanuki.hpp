@@ -191,28 +191,34 @@ struct TANUKI_VISIBLE value_iface : public IFace, value_iface_base {
     [[nodiscard]] virtual void *_tanuki_value_ptr() noexcept
     {
         assert(false);
+        return {};
     };
     [[nodiscard]] virtual std::type_index _tanuki_value_type_index() const noexcept
     {
         assert(false);
+        return typeid(void);
     };
     [[nodiscard]] virtual bool _tanuki_is_reference() const noexcept
     {
         assert(false);
+        return {};
     };
 
     // Methods to implement virtual copy/move primitives for the holder class.
     [[nodiscard]] virtual std::pair<IFace *, value_iface *> _tanuki_clone() const
     {
         assert(false);
+        return {};
     };
     [[nodiscard]] virtual std::pair<IFace *, value_iface *> _tanuki_copy_init_holder(void *) const
     {
         assert(false);
+        return {};
     };
     [[nodiscard]] virtual std::pair<IFace *, value_iface *> _tanuki_move_init_holder(void *) && noexcept
     {
         assert(false);
+        return {};
     };
     virtual void _tanuki_copy_assign_value_to(value_iface *) const
     {

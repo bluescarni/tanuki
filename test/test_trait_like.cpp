@@ -13,7 +13,7 @@
 
 #endif
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-multiple-inheritance,fuchsia-virtual-inheritance)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance)
 
 template <typename, typename, typename>
 struct summary_iface_impl;
@@ -162,7 +162,7 @@ TEST_CASE("composite wrap")
     REQUIRE(&value_ref<std::reference_wrapper<foo_capable>>(notify_fooable(std::ref(f))).get() == &f);
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-multiple-inheritance,fuchsia-virtual-inheritance)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance)
 
 #if defined(__GNUC__)
 

@@ -187,6 +187,10 @@ struct TANUKI_VISIBLE value_iface : public IFace, value_iface_base {
     value_iface &operator=(value_iface &&) noexcept = delete;
     virtual ~value_iface() = default;
 
+    // NOTE: don't make these pure virtual as this prevents us from asserting
+    // default-constructability of the implementation interface when doing concept
+    // checking.
+
     // LCOV_EXCL_START
     // Access to the value and its type.
     [[nodiscard]] virtual void *_tanuki_value_ptr() noexcept

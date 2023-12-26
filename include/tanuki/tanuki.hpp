@@ -170,17 +170,16 @@ template <typename T>
 struct is_reference_wrapper<std::reference_wrapper<T>> : std::true_type {
 };
 
+// This is a base class for value_iface, used
+// to check that an interface implementation
+// is correctly inheriting from its Base.
+struct value_iface_base {
+};
+
 // Interface containing methods to interact
 // with the value in the holder class.
-// NOTE: templating this on IFace is not strictly necessary,
-// as we could just use void * instead of IFace * and then
-// cast back to IFace * as needed. However, templating
-// gives a higher degree of type safety as there's no risk
-// of casting to the wrong type in the wrap class (which already
-// does enough memory shenanigans). Perhaps in the future
-// we can reconsider if we want to reduce binary bloat.
 template <typename IFace>
-struct TANUKI_VISIBLE value_iface {
+struct TANUKI_VISIBLE value_iface : public IFace, value_iface_base {
     value_iface() = default;
     value_iface(const value_iface &) = delete;
     value_iface(value_iface &&) noexcept = delete;
@@ -189,19 +188,52 @@ struct TANUKI_VISIBLE value_iface {
     virtual ~value_iface() = default;
 
     // Access to the value and its type.
-    [[nodiscard]] virtual void *_tanuki_value_ptr() noexcept = 0;
-    [[nodiscard]] virtual std::type_index _tanuki_value_type_index() const noexcept = 0;
-    [[nodiscard]] virtual bool _tanuki_is_reference() const noexcept = 0;
+    [[nodiscard]] virtual void *_tanuki_value_ptr() noexcept
+    {
+        assert(false);
+    };
+    [[nodiscard]] virtual std::type_index _tanuki_value_type_index() const noexcept
+    {
+        assert(false);
+    };
+    [[nodiscard]] virtual bool _tanuki_is_reference() const noexcept
+    {
+        assert(false);
+    };
 
     // Methods to implement virtual copy/move primitives for the holder class.
-    [[nodiscard]] virtual std::pair<IFace *, value_iface *> _tanuki_clone() const = 0;
-    [[nodiscard]] virtual std::pair<IFace *, value_iface *> _tanuki_copy_init_holder(void *) const = 0;
-    [[nodiscard]] virtual std::pair<IFace *, value_iface *> _tanuki_move_init_holder(void *) && noexcept = 0;
-    virtual void _tanuki_copy_assign_value_to(value_iface *) const = 0;
-    virtual void _tanuki_move_assign_value_to(value_iface *) && noexcept = 0;
-    virtual void _tanuki_copy_assign_value_from(const void *) = 0;
-    virtual void _tanuki_move_assign_value_from(void *) noexcept = 0;
-    virtual void _tanuki_swap_value(value_iface *) noexcept = 0;
+    [[nodiscard]] virtual std::pair<IFace *, value_iface *> _tanuki_clone() const
+    {
+        assert(false);
+    };
+    [[nodiscard]] virtual std::pair<IFace *, value_iface *> _tanuki_copy_init_holder(void *) const
+    {
+        assert(false);
+    };
+    [[nodiscard]] virtual std::pair<IFace *, value_iface *> _tanuki_move_init_holder(void *) && noexcept
+    {
+        assert(false);
+    };
+    virtual void _tanuki_copy_assign_value_to(value_iface *) const
+    {
+        assert(false);
+    };
+    virtual void _tanuki_move_assign_value_to(value_iface *) && noexcept
+    {
+        assert(false);
+    };
+    virtual void _tanuki_copy_assign_value_from(const void *)
+    {
+        assert(false);
+    };
+    virtual void _tanuki_move_assign_value_from(void *) noexcept
+    {
+        assert(false);
+    };
+    virtual void _tanuki_swap_value(value_iface *) noexcept
+    {
+        assert(false);
+    };
 
 #if defined(TANUKI_WITH_BOOST_S11N)
 
@@ -316,10 +348,12 @@ struct get_iface_impl<IFace, Base, Holder, T> {
 };
 
 // Meta-programming to select the implementation of an interface.
-// By default, we select an implementation in which the
-// Base is the interface itself.
+
+// By default, the Base for the interface implementation is
+// value_iface (which transitively makes IFace also a base for
+// the implementation).
 template <typename IFace, typename Holder, typename T>
-struct impl_from_iface_impl : get_iface_impl<IFace, IFace, Holder, T> {
+struct impl_from_iface_impl : get_iface_impl<IFace, value_iface<IFace>, Holder, T> {
 };
 
 // For composite interfaces, we synthesize a class hierarchy in which every
@@ -340,15 +374,18 @@ struct c_iface_assembler<Holder, T, CurIFace, CurBase, LastIFace> {
 // Specialisation for composite interfaces.
 template <typename Holder, typename T, typename IFace0, typename IFace1, typename... IFaceN>
 struct impl_from_iface_impl<composite_iface<IFace0, IFace1, IFaceN...>, Holder, T> {
-    using type = typename c_iface_assembler<Holder, T, IFace0, composite_iface<IFace0, IFace1, IFaceN...>, IFace1,
-                                            IFaceN...>::type;
+    using type = typename c_iface_assembler<Holder, T, IFace0, value_iface<composite_iface<IFace0, IFace1, IFaceN...>>,
+                                            IFace1, IFaceN...>::type;
 };
 
 template <typename IFace, typename Holder, typename T>
 using impl_from_iface = typename impl_from_iface_impl<IFace, Holder, T>::type;
 
 template <typename IFace, typename Holder, typename T>
-concept has_impl_from_iface = requires() { typename impl_from_iface<IFace, Holder, T>; };
+concept has_impl_from_iface = requires() {
+    typename impl_from_iface<IFace, Holder, T>;
+    requires std::derived_from<impl_from_iface<IFace, Holder, T>, value_iface_base>;
+};
 
 template <typename T, typename IFace>
 // NOTE: ideally, we would like to put here the checks about the interface
@@ -373,7 +410,7 @@ template <typename T, typename IFace>
 // NOTE: it seems like "deducing this" may also help with the interface template
 // and with iface_impl_helper (no more Holder parameter?).
     requires valid_value_type<T>
-struct TANUKI_VISIBLE holder final : public value_iface<IFace>, public impl_from_iface<IFace, holder<T, IFace>, T> {
+struct TANUKI_VISIBLE holder final : public impl_from_iface<IFace, holder<T, IFace>, T> {
     TANUKI_NO_UNIQUE_ADDRESS T m_value;
 
     // Make sure we don't end up accidentally copying/moving
@@ -1010,6 +1047,8 @@ public:
                 // A default value type must have been specified
                 // in the configuration.
                 (!std::same_as<void, default_value_t>) &&
+                // Must have a valid interface implementation.
+                detail::has_impl_from_iface<iface_t, holder_t<default_value_t>, default_value_t> &&
                 // We must be able to value-init the holder.
                 detail::ctible_holder<
 #if defined(TANUKI_CLANG_BUGGY_CONCEPTS)

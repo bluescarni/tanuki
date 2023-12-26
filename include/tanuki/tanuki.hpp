@@ -83,15 +83,6 @@
     }                                                                                                                  \
     }
 
-// Clang concept bugs.
-// NOTE: perhaps we can put more specific version checking
-// here once we figure out exactly which versions work ok.
-#if defined(__clang__)
-
-#define TANUKI_CLANG_BUGGY_CONCEPTS
-
-#endif
-
 #if defined(__GNUC__)
 
 #pragma GCC diagnostic push
@@ -128,38 +119,6 @@ TANUKI_BEGIN_NAMESPACE
 
 namespace detail
 {
-
-#if defined(TANUKI_CLANG_BUGGY_CONCEPTS)
-
-// NOTE: we employ the detection idiom in order to work
-// around certain bugs in clang's concepts implementation.
-
-// http://en.cppreference.com/w/cpp/experimental/is_detected
-template <class Default, class AlwaysVoid, template <class...> class Op, class... Args>
-struct detector {
-    using value_t = std::false_type;
-    using type = Default;
-};
-
-struct nonesuch {
-    nonesuch() = delete;
-    ~nonesuch() = delete;
-    nonesuch(nonesuch const &) = delete;
-    nonesuch(nonesuch &&) noexcept = delete;
-    nonesuch &operator=(nonesuch const &) = delete;
-    nonesuch &operator=(nonesuch &&) noexcept = delete;
-};
-
-template <class Default, template <class...> class Op, class... Args>
-struct detector<Default, std::void_t<Op<Args...>>, Op, Args...> {
-    using value_t = std::true_type;
-    using type = Op<Args...>;
-};
-
-template <template <class...> class Op, class... Args>
-using detected_t = typename detector<nonesuch, void, Op, Args...>::type;
-
-#endif
 
 // Type-trait to detect instances of std::reference_wrapper.
 template <typename T>
@@ -1652,11 +1611,5 @@ struct tracking_level<tanuki::detail::value_iface<IFace>> {
 #undef TANUKI_ABI_TAG_ATTR
 #undef TANUKI_NO_UNIQUE_ADDRESS
 #undef TANUKI_VISIBLE
-
-#if defined(TANUKI_CLANG_BUGGY_CONCEPTS)
-
-#undef TANUKI_CLANG_BUGGY_CONCEPTS
-
-#endif
 
 #endif

@@ -1041,7 +1041,7 @@ public:
             // Must not compete with the emplace ctor.
             requires !detail::is_in_place_type<std::remove_cvref_t<T>>::value;
             // Must not compete with copy/move.
-            requires !std::same_as<std::remove_cvref_t<T>, wrap>;
+            requires !std::same_as<std::remove_cvref_t<T>, W>;
             w.template ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x));
         })
     explicit(Cfg.explicit_generic_ctor)
@@ -1058,7 +1058,7 @@ public:
         requires(requires(W &w, U &&...args) {
             requires std::default_initializable<ref_iface_t>;
             // Forbid emplacing a wrap inside a wrap.
-            requires !std::same_as<T, wrap>;
+            requires !std::same_as<T, W>;
             w.template ctor_impl<T>(std::forward<U>(args)...);
         })
     explicit wrap(in_place_type<T>, U &&...args) noexcept(noexcept(this->ctor_impl<T>(std::forward<U>(args)...))
@@ -1259,7 +1259,7 @@ public:
             requires Cfg.copyable;
             requires Cfg.movable;
             // Must not compete with copy/move assignment.
-            requires !std::same_as<std::remove_cvref_t<T>, wrap>;
+            requires !std::same_as<std::remove_cvref_t<T>, W>;
             w.template ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x));
         })
     wrap &operator=(T &&x)

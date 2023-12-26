@@ -370,7 +370,7 @@ struct impl_from_iface_impl : get_iface_impl<IFace, value_iface<IFace>, Holder, 
 
 // For composite interfaces, we synthesize a class hierarchy in which every
 // implementation derives from the previous one, and the first implementation
-// derives from the composite interface.
+// derives from value_iface of the composite interface.
 template <typename Holder, typename T, typename CurIFace, typename CurBase, typename NextIFace, typename... IFaceN>
 struct c_iface_assembler {
     using cur_impl = typename get_iface_impl<CurIFace, CurBase, Holder, T>::type;
@@ -383,19 +383,24 @@ struct c_iface_assembler<Holder, T, CurIFace, CurBase, LastIFace> {
     using type = typename get_iface_impl<LastIFace, cur_impl, Holder, T>::type;
 };
 
-// Specialisation for composite interfaces.
 template <typename Holder, typename T, typename IFace0, typename IFace1, typename... IFaceN>
 struct impl_from_iface_impl<composite_iface<IFace0, IFace1, IFaceN...>, Holder, T> {
     using type = typename c_iface_assembler<Holder, T, IFace0, value_iface<composite_iface<IFace0, IFace1, IFaceN...>>,
                                             IFace1, IFaceN...>::type;
 };
 
+// Helper alias.
 template <typename IFace, typename Holder, typename T>
 using impl_from_iface = typename impl_from_iface_impl<IFace, Holder, T>::type;
 
+// Concept to check that the interface IFace has a valid implementation
+// for the value type T.
 template <typename IFace, typename Holder, typename T>
-concept has_impl_from_iface = requires() {
+concept iface_has_impl = requires() {
     typename impl_from_iface<IFace, Holder, T>;
+    // NOTE: this will check that the implementation derives
+    // from its Base (e.g., the check will fail in case of
+    // an empty implementation).
     requires std::derived_from<impl_from_iface<IFace, Holder, T>, value_iface_base>;
 };
 
@@ -1060,7 +1065,7 @@ public:
                 // in the configuration.
                 (!std::same_as<void, default_value_t>) &&
                 // Must have a valid interface implementation.
-                detail::has_impl_from_iface<iface_t, holder_t<default_value_t>, default_value_t> &&
+                detail::iface_has_impl<iface_t, holder_t<default_value_t>, default_value_t> &&
                 // We must be able to value-init the holder.
                 detail::ctible_holder<
 #if defined(TANUKI_CLANG_BUGGY_CONCEPTS)
@@ -1083,8 +1088,8 @@ public:
                  // Must not compete with copy/move.
                  (!std::same_as<std::remove_cvref_t<T>, wrap>) &&
                  // Must have a valid interface implementation.
-                 detail::has_impl_from_iface<iface_t, holder_t<detail::value_t_from_arg<T &&>>,
-                                             detail::value_t_from_arg<T &&>>
+                 detail::iface_has_impl<iface_t, holder_t<detail::value_t_from_arg<T &&>>,
+                                        detail::value_t_from_arg<T &&>>
                  &&
                  // We must be able to construct a holder from x.
                  detail::ctible_holder<holder_t<detail::value_t_from_arg<T &&>>, iface_t, Cfg, T &&>

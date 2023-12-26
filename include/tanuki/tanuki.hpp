@@ -187,59 +187,61 @@ struct TANUKI_VISIBLE value_iface : public IFace, value_iface_base {
     value_iface &operator=(value_iface &&) noexcept = delete;
     virtual ~value_iface() = default;
 
+    // LCOV_EXCL_START
     // Access to the value and its type.
     [[nodiscard]] virtual void *_tanuki_value_ptr() noexcept
     {
         assert(false);
         return {};
-    };
+    }
     [[nodiscard]] virtual std::type_index _tanuki_value_type_index() const noexcept
     {
         assert(false);
         return typeid(void);
-    };
+    }
     [[nodiscard]] virtual bool _tanuki_is_reference() const noexcept
     {
         assert(false);
         return {};
-    };
+    }
 
     // Methods to implement virtual copy/move primitives for the holder class.
     [[nodiscard]] virtual std::pair<IFace *, value_iface *> _tanuki_clone() const
     {
         assert(false);
         return {};
-    };
+    }
     [[nodiscard]] virtual std::pair<IFace *, value_iface *> _tanuki_copy_init_holder(void *) const
     {
         assert(false);
         return {};
-    };
+    }
     [[nodiscard]] virtual std::pair<IFace *, value_iface *> _tanuki_move_init_holder(void *) && noexcept
     {
         assert(false);
         return {};
-    };
+    }
     virtual void _tanuki_copy_assign_value_to(value_iface *) const
     {
         assert(false);
-    };
+    }
     virtual void _tanuki_move_assign_value_to(value_iface *) && noexcept
     {
         assert(false);
-    };
+    }
     virtual void _tanuki_copy_assign_value_from(const void *)
     {
         assert(false);
-    };
+    }
     virtual void _tanuki_move_assign_value_from(void *) noexcept
     {
         assert(false);
-    };
+    }
     virtual void _tanuki_swap_value(value_iface *) noexcept
     {
         assert(false);
-    };
+    }
+    // LCOV_EXCL_STOP
 
 #if defined(TANUKI_WITH_BOOST_S11N)
 

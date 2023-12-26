@@ -321,7 +321,7 @@ struct get_iface_impl<IFace, Base, Holder, T> {
 // Meta-programming to select the implementation of an interface.
 
 // By default, the Base for the interface implementation is
-// value_iface (which transitively makes IFace also a base for
+// value_iface of IFace (which transitively makes IFace also a base for
 // the implementation).
 template <typename IFace, typename Holder, typename T>
 struct impl_from_iface_impl : get_iface_impl<IFace, value_iface<IFace>, Holder, T> {
@@ -363,6 +363,9 @@ concept iface_has_impl = requires() {
     requires std::derived_from<impl_from_iface<IFace, Holder, T>, value_iface_base>;
 };
 
+// Class for holding an instance of the value type T.
+// NOTE: this class has several conceptual requirements which
+// are checked in wrap::ctor_impl().
 template <typename T, typename IFace>
 struct TANUKI_VISIBLE holder final : public impl_from_iface<IFace, holder<T, IFace>, T> {
     TANUKI_NO_UNIQUE_ADDRESS T m_value;
@@ -838,18 +841,23 @@ class TANUKI_VISIBLE wrap
 
     // Implementation of generic construction. This will constrcut
     // a holder with value type T using the construction argument(s) x.
+    // NOTE: it is important that the checks on the
+    // interface implementation come *before* the checks on T.
+    // This helps breaking infinite recursions that can arise when
+    // the generic constructor of wrap is implicit
+    // (see also the test_inf_loop_bug test).
     template <typename T, typename... U>
         requires
-        // The interface must have an implementation.
+        // The interface must have an implementation for T.
         detail::iface_has_impl<iface_t, holder_t<T>, T> &&
-        // T must be a valid value type.
-        detail::valid_value_type<T> &&
-        // T must be constructible from the construction arguments.
-        std::constructible_from<T, U &&...> &&
         // The implementation must be default-initable and
         // destructible.
         std::default_initializable<detail::impl_from_iface<iface_t, holder_t<T>, T>>
         && std::destructible<detail::impl_from_iface<iface_t, holder_t<T>, T>> &&
+        // T must be a valid value type.
+        detail::valid_value_type<T> &&
+        // T must be constructible from the construction arguments.
+        std::constructible_from<T, U &&...> &&
         // Alignment checks: if we are going to use dynamic storage, then no checks are needed
         // as new() takes care of proper alignment; otherwise, we need to ensure that the static
         // storage is sufficiently aligned.
@@ -979,16 +987,22 @@ public:
         this->m_p_iface = nullptr;
         this->m_pv_iface = nullptr;
     }
+    // NOTE: the extra W template argument appearing
+    // here and in the other ctors/assignment operators
+    // is to work around compiler issues: earlier versions
+    // of clang error out complaining about an incomplete type
+    // if we just use wrap instead of W.
     template <typename W = wrap>
-    wrap() noexcept(noexcept(this->ctor_impl<default_value_t>()) && detail::nothrow_default_initializable<ref_iface_t>)
         requires(requires(W &w) {
             requires !Cfg.invalid_default_ctor;
             requires std::default_initializable<ref_iface_t>;
             // A default value type must have been specified
             // in the configuration.
             requires !std::same_as<void, default_value_t>;
+            // We must be able to invoke the construction function.
             w.template ctor_impl<default_value_t>();
         })
+    wrap() noexcept(noexcept(this->ctor_impl<default_value_t>()) && detail::nothrow_default_initializable<ref_iface_t>)
     {
         ctor_impl<default_value_t>();
     }
@@ -1001,6 +1015,7 @@ public:
             requires !detail::is_in_place_type<std::remove_cvref_t<T>>::value;
             // Must not compete with copy/move.
             requires !std::same_as<std::remove_cvref_t<T>, W>;
+            // We must be able to invoke the construction function.
             w.template ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x));
         })
     explicit(Cfg.explicit_generic_ctor)

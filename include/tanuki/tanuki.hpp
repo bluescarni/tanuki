@@ -393,7 +393,7 @@ struct impl_from_iface_impl<composite_iface<IFace0, IFace1, IFaceN...>, Holder, 
 template <typename IFace, typename Holder, typename T>
 using impl_from_iface = typename impl_from_iface_impl<IFace, Holder, T>::type;
 
-// Concept to check that the interface IFace has a valid implementation
+// Concept to check that the interface IFace has an implementation
 // for the value type T.
 template <typename IFace, typename Holder, typename T>
 concept iface_has_impl = requires() {

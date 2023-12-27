@@ -924,11 +924,15 @@ public:
     // Store the configuration.
     static constexpr auto cfg = Cfg;
 
+    // Default initialisation into the invalid state.
     wrap() noexcept(detail::nothrow_default_initializable<ref_iface_t>)
         requires(Cfg.invalid_default_ctor) && std::default_initializable<ref_iface_t>
     {
         this->m_pv_iface = nullptr;
     }
+
+    // Default initialisation into the default value type.
+    // NOTE: need to document that this value-inits.
     // NOTE: the extra W template argument appearing
     // here and in the other ctors/assignment operators
     // is to work around compiler issues: earlier versions

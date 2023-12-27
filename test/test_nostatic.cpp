@@ -54,12 +54,15 @@ struct any_iface_impl<Base, Holder, T> : Base {
 struct large {
     std::array<char, 100> buffer = {1, 2, 3};
     std::string str = "hello world                                                                            ";
+    // NOTE: this is never invoked because we are using
+    // this structure to test s11n of invalid state.
+    // LCOV_EXCL_START
     template <typename Archive>
-    void serialize(Archive &ar, unsigned)
+    void serialize(Archive &, unsigned)
     {
-        ar & buffer;
-        ar & str;
+        REQUIRE(false);
     }
+    // LCOV_EXCL_STOP
 };
 
 struct small {

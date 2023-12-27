@@ -1,3 +1,4 @@
+#include <concepts>
 #include <functional>
 #include <iostream>
 #include <string>
@@ -53,7 +54,7 @@ struct tweet {
 
 // Implement the summary trait for news_article and tweet.
 template <typename Base, typename Holder, typename T>
-    requires tanuki::same_or_ref_for<T, news_article>
+    requires std::same_as<tanuki::unwrap_cvref_t<T>, news_article>
 struct summary_iface_impl<Base, Holder, T> : Base, tanuki::iface_impl_helper<Base, Holder> {
     [[nodiscard]] std::string summarize() const final
     {
@@ -62,7 +63,7 @@ struct summary_iface_impl<Base, Holder, T> : Base, tanuki::iface_impl_helper<Bas
 };
 
 template <typename Base, typename Holder, typename T>
-    requires tanuki::same_or_ref_for<T, tweet>
+    requires std::same_as<tanuki::unwrap_cvref_t<T>, tweet>
 struct summary_iface_impl<Base, Holder, T> : Base, tanuki::iface_impl_helper<Base, Holder> {
     [[nodiscard]] std::string summarize() const final
     {
@@ -128,7 +129,7 @@ struct foo_capable {
 
 // Implement the summary trait for news_article and tweet.
 template <typename Base, typename Holder, typename T>
-    requires tanuki::same_or_ref_for<T, foo_capable>
+    requires std::same_as<tanuki::unwrap_cvref_t<T>, foo_capable>
 struct fooable_iface_impl<Base, Holder, T> : Base, tanuki::iface_impl_helper<Base, Holder> {
     [[nodiscard]] std::string foo() const final
     {

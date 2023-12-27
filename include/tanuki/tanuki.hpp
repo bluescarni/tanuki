@@ -17,10 +17,20 @@
 #include <memory>
 #include <new>
 #include <stdexcept>
+#include <string>
 #include <type_traits>
 #include <typeindex>
 #include <typeinfo>
 #include <utility>
+
+#if defined(__GNUC__) || (defined(__clang__) && !defined(_MSC_VER))
+
+// Headers for GCC-style demangle implementation. This is available
+// also for clang, both with libstdc++ and libc++.
+#include <cstdlib>
+#include <cxxabi.h>
+
+#endif
 
 #if defined(TANUKI_WITH_BOOST_S11N)
 
@@ -118,6 +128,29 @@ TANUKI_BEGIN_NAMESPACE
 
 namespace detail
 {
+
+// Helper to demangle a type name.
+inline std::string demangle(const char *s)
+{
+#if defined(__GNUC__) || (defined(__clang__) && !defined(_MSC_VER))
+    // NOTE: wrap std::free() in a local lambda, so we avoid
+    // potential ambiguities when taking the address of std::free().
+    // See:
+    // https://stackoverflow.com/questions/27440953/stdunique-ptr-for-c-functions-that-need-free
+    // NOLINTNEXTLINE(cppcoreguidelines-no-malloc, cppcoreguidelines-owning-memory, hicpp-no-malloc)
+    auto deleter = [](void *ptr) { std::free(ptr); };
+
+    // NOTE: abi::__cxa_demangle will return a pointer allocated by std::malloc, which we will delete via std::free().
+    std::unique_ptr<char, decltype(deleter)> res{::abi::__cxa_demangle(s, nullptr, nullptr, nullptr), deleter};
+
+    // NOTE: return the original string if demangling fails.
+    return res ? std::string(res.get()) : std::string(s);
+#else
+    // If no demangling is available, just return the mangled name.
+    // NOTE: MSVC already returns the demangled name from typeid.
+    return std::string(s);
+#endif
+}
 
 // Type-trait to detect instances of std::reference_wrapper.
 template <typename T>
@@ -720,17 +753,6 @@ template <typename T>
 struct is_in_place_type<in_place_type<T>> : std::true_type {
 };
 
-// Type trait to check if T is a reference wrapper
-// whose type, after the removal of cv-qualifiers, is U.
-template <typename T, typename U>
-struct is_reference_wrapper_for : std::false_type {
-};
-
-template <typename T, typename U>
-struct is_reference_wrapper_for<std::reference_wrapper<T>, U>
-    : std::bool_constant<std::same_as<std::remove_cv_t<T>, U>> {
-};
-
 // Implementation of the pointer interface for the wrap
 // class, conditionally-enabled depending on the configuration.
 template <bool Enable, typename Wrap, typename IFace>
@@ -760,12 +782,10 @@ struct wrap_pointer_iface<false, Wrap, IFace> {
 
 } // namespace detail
 
-// Concept to detect if either:
-// - T is the same as U, or
-// - T is a reference wrapper whose type, after the
-//   removal of cv-qualifiers, is U.
-template <typename T, typename U>
-concept same_or_ref_for = std::same_as<T, U> || detail::is_reference_wrapper_for<T, U>::value;
+// Helper to unwrap a std::reference_wrapper and remove reference
+// and cv qualifiers from the result.
+template <typename T>
+using unwrap_cvref_t = std::remove_cvref_t<std::unwrap_reference_t<T>>;
 
 // The wrap class.
 template <typename IFace, auto Cfg = default_config>
@@ -1343,6 +1363,22 @@ namespace detail
 struct iface_impl_helper_base {
 };
 
+// Helper to determine if the non-const value() getter
+// overload in iface_impl_helper can be marked as noexcept.
+template <typename Holder>
+consteval bool iface_impl_value_getter_is_noexcept()
+{
+    using T = typename detail::holder_value<Holder>::type;
+
+    if constexpr (detail::is_reference_wrapper<T>::value) {
+        if constexpr (std::is_const_v<std::remove_reference_t<std::unwrap_reference_t<T>>>) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 } // namespace detail
 
 // Helper that can be used to reduce typing in an
@@ -1359,14 +1395,25 @@ struct iface_impl_helper_base {
 //   used in an interface implementation.
 template <typename Base, typename Holder>
 struct iface_impl_helper : public detail::iface_impl_helper_base {
-    auto &value() noexcept
+    template <typename H = Holder>
+    auto &value() noexcept(detail::iface_impl_value_getter_is_noexcept<H>())
     {
         using T = typename detail::holder_value<Holder>::type;
 
         auto &val = static_cast<Holder *>(this)->m_value;
 
         if constexpr (detail::is_reference_wrapper<T>::value) {
-            return val.get();
+            if constexpr (std::is_const_v<std::remove_reference_t<std::unwrap_reference_t<T>>>) {
+                throw std::runtime_error("Invalid access to a const reference of type '"
+                                         + detail::demangle(typeid(std::unwrap_reference_t<T>).name())
+                                         + "' via a non-const member function");
+
+                // LCOV_EXCL_START
+                return *static_cast<unwrap_cvref_t<T> *>(nullptr);
+                // LCOV_EXCL_STOP
+            } else {
+                return val.get();
+            }
         } else {
             return val;
         }

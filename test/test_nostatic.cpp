@@ -2,10 +2,20 @@
 #include <concepts>
 #include <functional>
 #include <mutex>
+#include <sstream>
 #include <string>
 #include <type_traits>
 #include <typeinfo>
 #include <utility>
+
+#if defined(TANUKI_WITH_BOOST_S11N)
+
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/array.hpp>
+#include <boost/serialization/string.hpp>
+
+#endif
 
 #include <tanuki/tanuki.hpp>
 
@@ -44,6 +54,12 @@ struct any_iface_impl<Base, Holder, T> : Base {
 struct large {
     std::array<char, 100> buffer = {1, 2, 3};
     std::string str = "hello world                                                                            ";
+    template <typename Archive>
+    void serialize(Archive &ar, unsigned)
+    {
+        ar & buffer;
+        ar & str;
+    }
 };
 
 struct small {
@@ -51,6 +67,12 @@ struct small {
 };
 
 void my_func(int) {}
+
+#if defined(TANUKI_WITH_BOOST_S11N)
+
+TANUKI_S11N_WRAP_EXPORT(large, any_iface)
+
+#endif
 
 TEST_CASE("basics")
 {
@@ -315,6 +337,37 @@ TEST_CASE("swap")
         REQUIRE(value_ptr<large>(w2) == p1);
     }
 }
+
+#if defined(TANUKI_WITH_BOOST_S11N)
+
+TEST_CASE("s11n invalid")
+{
+    using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{.static_size = 0}>;
+
+    wrap_t w(large{});
+    value_ptr<large>(w)->buffer[0] = 42;
+    auto w_move = std::move(w);
+    REQUIRE(is_invalid(w));
+
+    std::stringstream ss;
+
+    {
+        boost::archive::binary_oarchive oa(ss);
+        oa << w;
+    }
+
+    w = wrap_t(3);
+    REQUIRE(!is_invalid(w));
+
+    {
+        boost::archive::binary_iarchive ia(ss);
+        ia >> w;
+    }
+
+    REQUIRE(is_invalid(w));
+}
+
+#endif
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 

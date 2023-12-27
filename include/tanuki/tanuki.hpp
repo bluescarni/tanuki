@@ -878,8 +878,6 @@ class TANUKI_VISIBLE wrap
             // Load the serialised pointer.
             value_iface_t *pv_iface = nullptr;
             ar >> pv_iface;
-            // TODO can this be null now?
-            assert(pv_iface != nullptr);
 
             // NOTE: from now on, all is noexcept.
 
@@ -896,9 +894,10 @@ class TANUKI_VISIBLE wrap
             // Load the serialised pointer.
             value_iface_t *pv_iface = nullptr;
             ar >> pv_iface;
-            // TODO can this be null now?
-            // TOOD assert nonnull if static storage?
-            assert(pv_iface != nullptr);
+
+            // NOTE: the only way pv_iface can be null
+            // is if the storage type is dynamic.
+            assert(pv_iface != nullptr || !st);
 
             // NOTE: from now on, all is noexcept.
 

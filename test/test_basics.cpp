@@ -405,6 +405,7 @@ TEST_CASE("s11n invalid")
     wrap_t w(large{});
     value_ptr<large>(w)->buffer[0] = 42;
     auto w_move = std::move(w);
+    // NOLINTNEXTLINE
     REQUIRE(is_invalid(w));
 
     std::stringstream ss;

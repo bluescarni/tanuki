@@ -554,8 +554,8 @@ struct TANUKI_VISIBLE wrap_storage {
     // The active storage is dynamic if either m_pv_iface is null (which indicates the
     // invalid state) or if it points somewhere outside static_storage. Otherwise,
     // the active storage is static.
-    alignas(StaticStorageAlignment) std::byte static_storage[StaticStorageSize];
     value_iface<IFace> *m_pv_iface;
+    alignas(StaticStorageAlignment) std::byte static_storage[StaticStorageSize];
 };
 
 template <typename IFace, std::size_t StaticStorageAlignment>

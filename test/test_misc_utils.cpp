@@ -128,17 +128,6 @@ TEST_CASE("misc utils")
                 == static_cast<void *>(&wf0));
         REQUIRE_NOTHROW(wf0_ref.bar());
     }
-
-    {
-        // Test the same_or_ref_for concept.
-        REQUIRE(tanuki::same_or_ref_for<int, int>);
-        REQUIRE(!tanuki::same_or_ref_for<int, double>);
-        REQUIRE(tanuki::same_or_ref_for<std::reference_wrapper<int>, int>);
-        REQUIRE(tanuki::same_or_ref_for<std::reference_wrapper<const int>, int>);
-        REQUIRE(tanuki::same_or_ref_for<std::reference_wrapper<volatile int>, int>);
-        REQUIRE(tanuki::same_or_ref_for<std::reference_wrapper<const volatile int>, int>);
-        REQUIRE(!tanuki::same_or_ref_for<std::reference_wrapper<const volatile int>, double>);
-    }
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

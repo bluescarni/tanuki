@@ -10,9 +10,7 @@
 #define FACADE_RANGES_HPP
 
 #include <concepts>
-#include <functional>
 #include <iterator>
-#include <ranges>
 #include <type_traits>
 #include <utility>
 
@@ -158,7 +156,7 @@ concept is_generic_range = requires(T &x) {
 template <typename Base, typename Holder, typename T, typename V, typename R, typename RR, typename CR, typename CRR,
           template <typename, typename, typename> typename It>
     requires std::derived_from<Base, generic_range_iface<V, R, RR, CR, CRR, It>>
-                 && is_generic_range<std::remove_reference_t<std::unwrap_reference_t<T>>, V, R, RR, CR, CRR, It>
+                 && is_generic_range<tanuki::unwrap_cvref_t<T>, V, R, RR, CR, CRR, It>
 struct generic_range_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, It> : public Base,
                                                                           tanuki::iface_impl_helper<Base, Holder> {
     It<V, R, RR> begin() final
@@ -238,6 +236,9 @@ template <typename V, typename R, typename RR, typename CR, typename CRR,
 using generic_range = tanuki::wrap<detail::generic_range_iface<V, R, RR, CR, CRR, It>,
                                    detail::generic_range_config<V, R, RR, CR, CRR, It>>;
 
+template <typename T>
+using unwrap_cvref2_t = tanuki::unwrap_cvref_t<std::remove_cvref_t<T>>;
+
 } // namespace detail
 
 template <typename V, typename R, typename RR, typename CR, typename CRR>
@@ -253,31 +254,19 @@ using random_access_range = detail::generic_range<V, R, RR, CR, CRR, random_acce
 #define FACADE_DEFINE_RANGE_FACTORY(tp)                                                                                \
     template <typename T>                                                                                              \
     auto make_##tp##_range(T &&x)                                                                                      \
-        -> decltype(tp##_range<detail::deduce_iter_value_t<detail::iter_t<std::remove_cvref_t<T>>>,                    \
-                               std::iter_reference_t<detail::iter_t<std::remove_cvref_t<T>>>,                          \
-                               std::iter_rvalue_reference_t<detail::iter_t<std::remove_cvref_t<T>>>,                   \
-                               std::iter_reference_t<detail::iter_t<const std::remove_cvref_t<T>>>,                    \
-                               std::iter_rvalue_reference_t<detail::iter_t<const std::remove_cvref_t<T>>>>(            \
+        -> decltype(tp##_range<detail::deduce_iter_value_t<detail::iter_t<detail::unwrap_cvref2_t<T>>>,                \
+                               std::iter_reference_t<detail::iter_t<detail::unwrap_cvref2_t<T>>>,                      \
+                               std::iter_rvalue_reference_t<detail::iter_t<detail::unwrap_cvref2_t<T>>>,               \
+                               std::iter_reference_t<detail::iter_t<const detail::unwrap_cvref2_t<T>>>,                \
+                               std::iter_rvalue_reference_t<detail::iter_t<const detail::unwrap_cvref2_t<T>>>>(        \
             std::forward<T>(x)))                                                                                       \
     {                                                                                                                  \
-        return tp##_range<detail::deduce_iter_value_t<detail::iter_t<std::remove_cvref_t<T>>>,                         \
-                          std::iter_reference_t<detail::iter_t<std::remove_cvref_t<T>>>,                               \
-                          std::iter_rvalue_reference_t<detail::iter_t<std::remove_cvref_t<T>>>,                        \
-                          std::iter_reference_t<detail::iter_t<const std::remove_cvref_t<T>>>,                         \
-                          std::iter_rvalue_reference_t<detail::iter_t<const std::remove_cvref_t<T>>>>(                 \
+        return tp##_range<detail::deduce_iter_value_t<detail::iter_t<detail::unwrap_cvref2_t<T>>>,                     \
+                          std::iter_reference_t<detail::iter_t<detail::unwrap_cvref2_t<T>>>,                           \
+                          std::iter_rvalue_reference_t<detail::iter_t<detail::unwrap_cvref2_t<T>>>,                    \
+                          std::iter_reference_t<detail::iter_t<const detail::unwrap_cvref2_t<T>>>,                     \
+                          std::iter_rvalue_reference_t<detail::iter_t<const detail::unwrap_cvref2_t<T>>>>(             \
             std::forward<T>(x));                                                                                       \
-    }                                                                                                                  \
-    template <typename T>                                                                                              \
-    auto make_##tp##_range(std::reference_wrapper<T> ref)                                                              \
-        -> decltype(tp##_range<                                                                                        \
-                    detail::deduce_iter_value_t<detail::iter_t<T>>, std::iter_reference_t<detail::iter_t<T>>,          \
-                    std::iter_rvalue_reference_t<detail::iter_t<T>>, std::iter_reference_t<detail::iter_t<const T>>,   \
-                    std::iter_rvalue_reference_t<detail::iter_t<const T>>>(std::move(ref)))                            \
-    {                                                                                                                  \
-        return tp##_range<detail::deduce_iter_value_t<detail::iter_t<T>>, std::iter_reference_t<detail::iter_t<T>>,    \
-                          std::iter_rvalue_reference_t<detail::iter_t<T>>,                                             \
-                          std::iter_reference_t<detail::iter_t<const T>>,                                              \
-                          std::iter_rvalue_reference_t<detail::iter_t<const T>>>(std::move(ref));                      \
     }
 
 FACADE_DEFINE_RANGE_FACTORY(forward)

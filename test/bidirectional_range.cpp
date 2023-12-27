@@ -82,11 +82,11 @@ TEST_CASE("basic bidirectional")
         REQUIRE(value_ref<std::vector<int>>(r3).data() == orig_data);
 
         std::vector vec2 = {1, 2, 3};
-        auto r4 = facade::make_bidirectional_range(std::cref(vec2));
+        const auto r4 = facade::make_bidirectional_range(std::cref(vec2));
         REQUIRE(has_static_storage(r4));
         REQUIRE(std::ranges::bidirectional_range<decltype(r4)>);
         REQUIRE(std::same_as<decltype(r4),
-                             facade::bidirectional_range<int, const int &, const int &&, const int &, const int &&>>);
+                             const facade::bidirectional_range<int, int &, int &&, const int &, const int &&>>);
         REQUIRE(&*r4.begin() == vec2.data());
 
         std::vector vec3 = {1, 2, 3};
@@ -118,10 +118,10 @@ TEST_CASE("basic bidirectional")
         const min_bd_range vec{{1, 2, 3}};
 
         REQUIRE(!std::ranges::range<min_bd_range>);
-        auto r1 = facade::make_bidirectional_range(std::ref(vec));
+        const auto r1 = facade::make_bidirectional_range(std::ref(vec));
         REQUIRE(std::ranges::bidirectional_range<decltype(r1)>);
         REQUIRE(std::same_as<decltype(r1),
-                             facade::bidirectional_range<int, const int &, const int &&, const int &, const int &&>>);
+                             const facade::bidirectional_range<int, int &, int &&, const int &, const int &&>>);
         REQUIRE(has_static_storage(r1));
         REQUIRE(&*std::ranges::begin(r1) == vec.vec.data());
         REQUIRE(std::ranges::equal(vec.vec, r1));

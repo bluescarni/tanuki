@@ -99,11 +99,11 @@ TEST_CASE("basic random_access")
         REQUIRE(value_ref<std::vector<int>>(r3).data() == orig_data);
 
         std::vector vec2 = {1, 2, 3};
-        auto r4 = facade::make_random_access_range(std::cref(vec2));
+        const auto r4 = facade::make_random_access_range(std::cref(vec2));
         REQUIRE(has_static_storage(r4));
         REQUIRE(std::ranges::random_access_range<decltype(r4)>);
         REQUIRE(std::same_as<decltype(r4),
-                             facade::random_access_range<int, const int &, const int &&, const int &, const int &&>>);
+                             const facade::random_access_range<int, int &, int &&, const int &, const int &&>>);
         REQUIRE(&*r4.begin() == vec2.data());
 
         std::vector vec3 = {1, 2, 3};
@@ -138,10 +138,10 @@ TEST_CASE("basic random_access")
         const min_ra_range vec{{1, 2, 3}};
 
         REQUIRE(!std::ranges::range<min_ra_range>);
-        auto r1 = facade::make_random_access_range(std::ref(vec));
+        const auto r1 = facade::make_random_access_range(std::ref(vec));
         REQUIRE(std::ranges::random_access_range<decltype(r1)>);
         REQUIRE(std::same_as<decltype(r1),
-                             facade::random_access_range<int, const int &, const int &&, const int &, const int &&>>);
+                             const facade::random_access_range<int, int &, int &&, const int &, const int &&>>);
         REQUIRE(has_static_storage(r1));
         REQUIRE(&*std::ranges::begin(r1) == vec.vec.data());
         REQUIRE(std::ranges::equal(vec.vec, r1));

@@ -553,7 +553,8 @@ struct TANUKI_VISIBLE wrap_storage {
     // Static storage optimisation enabled.
     // The active storage is dynamic if either m_pv_iface is null (which indicates the
     // invalid state) or if it points somewhere outside static_storage. Otherwise,
-    // the active storage is static.
+    // the active storage is static and m_pv_iface points somewhere within
+    // static_storage.
     value_iface<IFace> *m_pv_iface;
     alignas(StaticStorageAlignment) std::byte static_storage[StaticStorageSize];
 };
@@ -884,7 +885,7 @@ class TANUKI_VISIBLE wrap
             // Destroy the current object.
             destroy();
 
-            // Assign the new pointer.
+            // Assign the deserialised pointer.
             this->m_pv_iface = pv_iface;
         } else {
             // Recover the storage type.
@@ -912,6 +913,7 @@ class TANUKI_VISIBLE wrap
                 // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
                 delete pv_iface;
             } else {
+                // Assign the deserialised pointer.
                 this->m_pv_iface = pv_iface;
             }
         }
@@ -1002,14 +1004,12 @@ public:
             // Static storage disabled.
             this->m_pv_iface = other.m_pv_iface->_tanuki_clone();
         } else {
-            const auto *pv_iface = other.m_pv_iface;
-
             if (other.stype()) {
                 // Other has static storage.
-                this->m_pv_iface = pv_iface->_tanuki_copy_init_holder(this->static_storage);
+                this->m_pv_iface = other.m_pv_iface->_tanuki_copy_init_holder(this->static_storage);
             } else {
                 // Other has dynamic storage.
-                this->m_pv_iface = pv_iface->_tanuki_clone();
+                this->m_pv_iface = other.m_pv_iface->_tanuki_clone();
             }
         }
     }
@@ -1131,21 +1131,18 @@ public:
             return *this;
         }
 
-        // The internal types are the same.
-        if constexpr (Cfg.static_size == 0u) {
-            // Assign the internal value.
-            other.m_pv_iface->_tanuki_copy_assign_value_to(this->m_pv_iface);
-        } else {
+        // The internal types are the same and this is valid.
+
+        // NOTE: no need to branch on the storage type or static_size
+        // here, as everything happens through the value interface.
+        if constexpr (Cfg.static_size > 0u) {
             // The storage flags must match, as they depend only
             // on the internal types.
             assert(stype() == other.stype());
-
-            auto *pv_iface0 = this->m_pv_iface;
-            const auto *pv_iface1 = other.m_pv_iface;
-
-            // Assign the internal value.
-            pv_iface1->_tanuki_copy_assign_value_to(pv_iface0);
         }
+
+        // Assign the internal value.
+        other.m_pv_iface->_tanuki_copy_assign_value_to(this->m_pv_iface);
 
         return *this;
     }

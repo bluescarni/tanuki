@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <iterator>
 #include <list>
+#include <utility>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
@@ -33,10 +34,10 @@ TEST_CASE("basic")
         int arr[] = {1, 2, 3};
         int_iter it(std::begin(arr));
         REQUIRE(has_static_storage(it));
-        REQUIRE(*it == 1);
+        REQUIRE(*std::as_const(it) == 1);
         REQUIRE(*++it == 2);
         REQUIRE(*it++ == 2);
-        REQUIRE(*it == 3);
+        REQUIRE(*std::as_const(it) == 3);
 
         // Check that make_input_iterator() on an io_iterator
         // returns a copy.
@@ -48,10 +49,10 @@ TEST_CASE("basic")
         std::vector<int> vec = {1, 2, 3};
         auto it = facade::make_input_iterator(std::begin(vec));
         REQUIRE(std::same_as<decltype(it), int_iter>);
-        REQUIRE(*it == 1);
+        REQUIRE(*std::as_const(it) == 1);
         REQUIRE(*++it == 2);
         REQUIRE(*it++ == 2);
-        REQUIRE(*it == 3);
+        REQUIRE(*std::as_const(it) == 3);
     }
 
     {
@@ -60,19 +61,19 @@ TEST_CASE("basic")
         auto it = facade::make_input_iterator(vec.cbegin());
         REQUIRE(std::same_as<decltype(it), facade::input_iterator<int, const int &, const int &&>>);
         REQUIRE(std::input_iterator<decltype(it)>);
-        REQUIRE(*it == 1);
+        REQUIRE(*std::as_const(it) == 1);
         REQUIRE(*++it == 2);
         REQUIRE(*it++ == 2);
-        REQUIRE(*it == 3);
+        REQUIRE(*std::as_const(it) == 3);
     }
 
     {
         std::list<int> lst = {1, 2, 3};
         int_iter it(std::begin(lst));
-        REQUIRE(*it == 1);
+        REQUIRE(*std::as_const(it) == 1);
         REQUIRE(*++it == 2);
         REQUIRE(*it++ == 2);
-        REQUIRE(*it == 3);
+        REQUIRE(*std::as_const(it) == 3);
     }
 }
 

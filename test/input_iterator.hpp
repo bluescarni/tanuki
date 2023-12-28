@@ -32,18 +32,32 @@ concept with_iter_move = requires(const T &x) {
     } -> std::same_as<RR>;
 };
 
+template <typename T, typename R>
+concept const_dereferenceable = requires(const T &x) {
+    requires referenceable<R>;
+    {
+        *x
+    } -> std::same_as<R>;
+};
+
 // Gather the minimal requirements for a type T
 // to satisfy the input_iterator concept.
 template <typename T, typename V, typename R, typename RR>
-concept minimal_input_iterator
-    = minimal_io_iterator<T, R> && with_iter_move<T, RR> && std::common_reference_with<R &&, V &>
-      && std::common_reference_with<R &&, RR &&> && std::common_reference_with<RR &&, const V &>;
+concept minimal_input_iterator = minimal_io_iterator<T, R> && with_iter_move<T, RR> && const_dereferenceable<T, R>
+                                 && std::common_reference_with<R &&, V &> && std::common_reference_with<R &&, RR &&>
+                                 && std::common_reference_with<RR &&, const V &>;
 
 // Definition of the interface implementation.
 template <typename Base, typename Holder, typename T, typename V, typename R, typename RR>
     requires minimal_input_iterator<T, V, R, RR>
 struct input_iterator_iface_impl : io_iterator_iface_impl<Base, Holder, T, R>,
                                    tanuki::iface_impl_helper<io_iterator_iface_impl<Base, Holder, T, R>, Holder> {
+    using io_iterator_iface_impl<Base, Holder, T, R>::operator*;
+
+    R operator*() const final
+    {
+        return *(this->value());
+    }
     RR iter_move() const final
     {
         return std::ranges::iter_move(this->value());
@@ -52,6 +66,9 @@ struct input_iterator_iface_impl : io_iterator_iface_impl<Base, Holder, T, R>,
 
 template <typename V, typename R, typename RR>
 struct input_iterator_iface : io_iterator_iface<R> {
+    using io_iterator_iface<R>::operator*;
+
+    virtual R operator*() const = 0;
     virtual RR iter_move() const = 0;
 
     template <typename Base, typename Holder, typename T>
@@ -71,6 +88,12 @@ template <typename R, typename RR>
 struct input_iterator_ref_iface {
     template <typename Wrap>
     struct impl : io_iterator_ref_iface<R>::template impl<Wrap> {
+        using io_iterator_ref_iface<R>::template impl<Wrap>::operator*;
+
+        R operator*() const
+        {
+            return iface_ptr(*static_cast<const Wrap *>(this))->operator*();
+        }
         // Implementation of the iter_move customisation point
         // for input iterators.
         friend RR iter_move(const impl &it)

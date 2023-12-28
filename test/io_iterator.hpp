@@ -33,7 +33,7 @@ concept referenceable = requires() { typename template_arg_with_ref<T>; };
 // Concept to check that a type is dereferenceable,
 // returning the referenceable type R.
 template <typename T, typename R>
-concept dereferenceable = requires(const T &x) {
+concept dereferenceable = requires(T &x) {
     requires referenceable<R>;
     {
         *x
@@ -57,7 +57,7 @@ struct io_iterator_iface_impl : public Base, tanuki::iface_impl_helper<Base, Hol
     {
         static_cast<void>(++this->value());
     }
-    R operator*() const final
+    R operator*() final
     {
         return *(this->value());
     }
@@ -69,7 +69,7 @@ template <typename R>
 struct io_iterator_iface {
     virtual ~io_iterator_iface() = default;
     virtual void operator++() = 0;
-    virtual R operator*() const = 0;
+    virtual R operator*() = 0;
 
     template <typename Base, typename Holder, typename T>
     using impl = io_iterator_iface_impl<Base, Holder, T, R>;
@@ -93,9 +93,9 @@ struct io_iterator_ref_iface {
             ++*this;
             return retval;
         }
-        R operator*() const
+        R operator*()
         {
-            return iface_ptr(*static_cast<const Wrap *>(this))->operator*();
+            return iface_ptr(*static_cast<Wrap *>(this))->operator*();
         }
     };
 };

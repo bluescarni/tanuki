@@ -32,6 +32,9 @@ concept with_iter_move = requires(const T &x) {
     } -> std::same_as<RR>;
 };
 
+// NOTE: the std::input_iterator concept specifies
+// that we must be able to dereference a const-qualified
+// object.
 template <typename T, typename R>
 concept const_dereferenceable = requires(const T &x) {
     requires referenceable<R>;
@@ -52,6 +55,8 @@ template <typename Base, typename Holder, typename T, typename V, typename R, ty
     requires minimal_input_iterator<T, V, R, RR>
 struct input_iterator_iface_impl : io_iterator_iface_impl<Base, Holder, T, R>,
                                    tanuki::iface_impl_helper<io_iterator_iface_impl<Base, Holder, T, R>, Holder> {
+    // NOTE: bring in the non-const version of the dereference
+    // operator from io_iterator_iface_impl.
     using io_iterator_iface_impl<Base, Holder, T, R>::operator*;
 
     R operator*() const final
@@ -66,6 +71,8 @@ struct input_iterator_iface_impl : io_iterator_iface_impl<Base, Holder, T, R>,
 
 template <typename V, typename R, typename RR>
 struct input_iterator_iface : io_iterator_iface<R> {
+    // NOTE: bring in the non-const version of the dereference
+    // operator from io_iterator_iface.
     using io_iterator_iface<R>::operator*;
 
     virtual R operator*() const = 0;
@@ -75,6 +82,9 @@ struct input_iterator_iface : io_iterator_iface<R> {
     using impl = input_iterator_iface_impl<Base, Holder, T, V, R, RR>;
 };
 
+// Helper struct to assign a value_type
+// and iterator_concept to an iterator
+// reference interface.
 template <typename V, typename Tag>
 struct value_tag_ref_iface {
     template <typename Wrap>
@@ -88,6 +98,8 @@ template <typename R, typename RR>
 struct input_iterator_ref_iface {
     template <typename Wrap>
     struct impl : io_iterator_ref_iface<R>::template impl<Wrap> {
+        // NOTE: bring in the non-const version of the dereference
+        // operator from io_iterator_ref_iface.
         using io_iterator_ref_iface<R>::template impl<Wrap>::operator*;
 
         R operator*() const
@@ -120,6 +132,8 @@ using input_iterator = tanuki::wrap<detail::input_iterator_iface<V, R, RR>, deta
 namespace detail
 {
 
+// Machinery to deduce a value type from an iterator-like
+// type T.
 template <typename T>
 concept has_iter_value = requires() { typename std::iter_value_t<T>; };
 
@@ -130,12 +144,16 @@ template <typename T>
 struct deduce_iter_value {
 };
 
+// std::iter_value_t<T> is available, use it.
 template <typename T>
     requires has_iter_value<T>
 struct deduce_iter_value<T> {
     using type = std::iter_value_t<T>;
 };
 
+// std::iter_value_t<T> is not available, but we have
+// std::iter_reference_t<T>: the value type will be
+// the referenced type.
 template <typename T>
     requires(!has_iter_value<T>) && has_iter_ref<T>
 struct deduce_iter_value<T> {

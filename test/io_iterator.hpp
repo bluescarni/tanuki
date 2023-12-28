@@ -32,6 +32,9 @@ concept referenceable = requires() { typename template_arg_with_ref<T>; };
 
 // Concept to check that a type is dereferenceable,
 // returning the referenceable type R.
+// NOTE: the std::input_or_output_iterator concept
+// does not specify the dereference operator must
+// be const.
 template <typename T, typename R>
 concept dereferenceable = requires(T &x) {
     requires referenceable<R>;
@@ -47,7 +50,12 @@ concept pre_incrementable = requires(T &x) { static_cast<void>(++x); };
 // Gather the minimal requirements for a type T
 // to satisfy the io_iterator concept.
 template <typename T, typename R>
-concept minimal_io_iterator = std::movable<T> && std::copyable<T> && dereferenceable<T, R> && pre_incrementable<T>;
+concept minimal_io_iterator = std::movable<T> &&
+                              // NOTE: the copyable requirement is not part of the
+                              // std::input_or_output_iterator - we add it in order
+                              // to be able to synthesise a reasonable post-increment
+                              // operator.
+                              std::copyable<T> && dereferenceable<T, R> && pre_incrementable<T>;
 
 // Definition of the interface implementation.
 template <typename Base, typename Holder, typename T, typename R>
@@ -80,6 +88,7 @@ template <typename R>
 struct io_iterator_ref_iface {
     template <typename Wrap>
     struct impl {
+        // NOTE: required by the std::input_or_output_iterator concept.
         using difference_type = std::ptrdiff_t;
 
         Wrap &operator++()

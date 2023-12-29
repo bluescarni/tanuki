@@ -1,4 +1,3 @@
-#include "catch2/matchers/catch_matchers_string.hpp"
 #include <functional>
 #include <stdexcept>
 #include <type_traits>
@@ -7,6 +6,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_exception.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #if defined(__GNUC__)
 
@@ -50,6 +50,9 @@ struct f1 {
 
 // LCOV_EXCL_STOP
 
+template <typename T>
+concept has_const_foo = requires(const T &x) { x.foo(); };
+
 TEST_CASE("const ref access")
 {
     using Catch::Matchers::MessageMatches;
@@ -63,6 +66,8 @@ TEST_CASE("const ref access")
 
     REQUIRE_THROWS_MATCHES(w->foo(), std::runtime_error,
                            MessageMatches(StartsWith("Invalid access to a const reference of type '")));
+
+    REQUIRE(!has_const_foo<wrap1_t>);
 }
 
 #if defined(__GNUC__)

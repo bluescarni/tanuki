@@ -578,7 +578,8 @@ struct holder_value<holder<T, IFace>> {
     using type = T;
 };
 
-// Implementation of storage for the wrap class.
+// Implementation of storage for the wrap class. This will be used
+// to store an instance of the holder type.
 template <typename IFace, std::size_t StaticStorageSize, std::size_t StaticStorageAlignment>
 struct TANUKI_VISIBLE wrap_storage {
     static_assert(StaticStorageSize > 0u);
@@ -640,7 +641,7 @@ struct TANUKI_VISIBLE config final : detail::config_base {
     // Size of the static storage.
     std::size_t static_size = 48;
     // Alignment of the static storage.
-    std::size_t static_alignment = alignof(std::max_align_t);
+    std::size_t static_align = alignof(std::max_align_t);
     // Default constructor initialises to the invalid state.
     bool invalid_default_ctor = false;
     // Provide pointer interface.
@@ -670,7 +671,7 @@ concept valid_config =
     // This checks that decltype(Cfg) is a specialisation from the primary config template.
     std::derived_from<std::remove_const_t<decltype(Cfg)>, config_base> &&
     // The static alignment value must be a power of 2.
-    power_of_two<Cfg.static_alignment>;
+    power_of_two<Cfg.static_align>;
 
 // Machinery to infer the reference interface from a config instance.
 template <typename>
@@ -791,7 +792,7 @@ using unwrap_cvref_t = std::remove_cvref_t<std::unwrap_reference_t<T>>;
 template <typename IFace, auto Cfg = default_config>
     requires std::is_polymorphic_v<IFace> && std::has_virtual_destructor_v<IFace> && detail::valid_config<Cfg>
 class TANUKI_VISIBLE wrap
-    : private detail::wrap_storage<IFace, Cfg.static_size, Cfg.static_alignment>,
+    : private detail::wrap_storage<IFace, Cfg.static_size, Cfg.static_align>,
       // NOTE: the reference interface is not supposed to hold any data: it will always
       // be def-inited (even when copying/moving a wrap object), its assignment operators
       // will never be invoked, it will never be swapped, etc. This needs to be documented.
@@ -819,10 +820,15 @@ class TANUKI_VISIBLE wrap
     [[nodiscard]] bool stype() const noexcept
         requires(Cfg.static_size > 0u)
     {
-        return (this->m_pv_iface != nullptr)
-               && std::less{}(reinterpret_cast<const std::byte *>(this->m_pv_iface),
-                              this->static_storage + sizeof(this->static_storage))
-               && std::greater_equal{}(reinterpret_cast<const std::byte *>(this->m_pv_iface), this->static_storage);
+        const auto *ptr = reinterpret_cast<const std::byte *>(this->m_pv_iface);
+
+        // NOTE: this is not 100% portable, for the following reasons:
+        // - if ptr is not within static_storage, the results of the comparisons are unspecified;
+        // - even if we used std::less & co. (instead of builtin comparisons), in principle static_storage
+        //   could be interleaved with another object while at the same time respecting the total
+        //   pointer ordering guarantees given by the standard.
+        // In pratice, this should be ok an all contemporary architectures.
+        return ptr >= this->static_storage && ptr < this->static_storage + sizeof(this->static_storage);
     }
 
     // Implementation of generic construction. This will constrcut
@@ -843,46 +849,49 @@ class TANUKI_VISIBLE wrap
         // T must be a valid value type.
         detail::valid_value_type<T> &&
         // T must be constructible from the construction arguments.
-        std::constructible_from<T, U &&...> &&
-        // Alignment checks: if we are going to use dynamic storage, then no checks are needed
-        // as new() takes care of proper alignment; otherwise, we need to ensure that the static
-        // storage is sufficiently aligned.
-        (sizeof(holder_t<T>) > Cfg.static_size || alignof(holder_t<T>) <= Cfg.static_alignment)
+        std::constructible_from<T, U &&...>
         void ctor_impl(U &&...x) noexcept(sizeof(holder_t<T>) <= Cfg.static_size
                                           && std::is_nothrow_constructible_v<holder_t<T>, U &&...>)
     {
-        if constexpr (Cfg.static_size == 0u) {
-            // Static storage disabled.
+        if constexpr (sizeof(holder_t<T>) > Cfg.static_size || alignof(holder_t<T>) > Cfg.static_align) {
+            // Static storage is disabled, or the type is overaligned, or
+            // there is not enough room in static storage.
+            // Use dynamic memory allocation.
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
             this->m_pv_iface = new holder_t<T>(std::forward<U>(x)...);
         } else {
-            if constexpr (sizeof(holder_t<T>) <= Cfg.static_size) {
-                // Static storage.
-                // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-                this->m_pv_iface = ::new (this->static_storage) holder_t<T>(std::forward<U>(x)...);
-            } else {
-                // Dynamic storage.
-                // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-                this->m_pv_iface = new holder_t<T>(std::forward<U>(x)...);
-            }
+            // Static storage is enabled and there is enough room. Construct in-place.
+            // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+            this->m_pv_iface = ::new (this->static_storage) holder_t<T>(std::forward<U>(x)...);
         }
     }
 
 #if defined(TANUKI_WITH_BOOST_S11N)
 
-    // Serialization.
+    // Serialisation.
+    // NOTE: serialisation support has certain prerequisites:
+    // - the value type must be default-initialisable,
+    // - the value type must be move-ctible,
+    // - the value type must not be over-aligned.
+    // The first two come from the way pointer serialisation works
+    // in Boost (i.e., serialisation via pointer to base requires a
+    // default constructor and dynamic allocation of an object instance,
+    // from which we do a move-init of the holder). The last one
+    // I think comes from the way memory is allocated during des11n,
+    // i.e., see here:
+    // https://github.com/boostorg/serialization/blob/a20c4d97c37e5f437c8ba78f296830edb79cff9e/include/boost/archive/detail/iserializer.hpp#L241
+    // Perhaps by providing a custom new operator to the value interface
+    // class we can implement proper over-alignment of dynamically-allocated memory.
     friend class boost::serialization::access;
     void save(boost::archive::binary_oarchive &ar, unsigned) const
     {
-        if constexpr (Cfg.static_size == 0u) {
-            // Store the pointer to the value interface.
-            ar << this->m_pv_iface;
-        } else {
+        if constexpr (Cfg.static_size > 0u) {
             // Store the storage type.
             ar << stype();
-            // Store the pointer to the value interface.
-            ar << this->m_pv_iface;
         }
+
+        // Store the pointer to the value interface.
+        ar << this->m_pv_iface;
     }
     // NOTE: as I have understood, when deserialising a pointer Boost
     // allocates memory only the *first* time the pointer is encountered
@@ -1001,6 +1010,7 @@ public:
         ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x));
     }
 
+    // Generic in-place initialisation.
     // NOTE: this will *value-init* if no args
     // are provided. This must be documented well.
     template <typename T, typename W = wrap, typename... U>
@@ -1227,13 +1237,11 @@ public:
 
     // Free functions interface.
 
-    // NOTE: w is invalid if either its storage type is dynamic and
-    // it has been moved from (note that this also includes the case
+    // NOTE: w is invalid when the value interface pointer is set to null.
+    // This can happen if w has been moved from (note that this also includes the case
     // in which w has been swapped with an invalid object),
     // or if generic assignment failed.
-    // In an invalid wrap, the value interface pointer is set to null.
     // The only valid operations on an invalid object are:
-    //
     // - invocation of is_invalid(),
     // - destruction,
     // - copy/move assignment from, and swapping with, a valid wrap,
@@ -1404,6 +1412,7 @@ struct iface_impl_helper : public detail::iface_impl_helper_base {
 
         if constexpr (detail::is_reference_wrapper<T>::value) {
             if constexpr (std::is_const_v<std::remove_reference_t<std::unwrap_reference_t<T>>>) {
+                // NOLINTNEXTLINE(google-readability-casting)
                 throw std::runtime_error("Invalid access to a const reference of type '"
                                          + detail::demangle(typeid(std::unwrap_reference_t<T>).name())
                                          + "' via a non-const member function");

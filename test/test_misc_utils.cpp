@@ -97,9 +97,8 @@ TEST_CASE("misc utils")
     REQUIRE(tanuki::any_wrap<wrap2_t>);
     REQUIRE(!tanuki::any_wrap<int>);
 
-    using wrap3_t
-        = tanuki::wrap<any_iface, tanuki::config<>{.static_size = tanuki::holder_size<large, any_iface>,
-                                                   .static_alignment = tanuki::holder_align<large, any_iface>}>;
+    using wrap3_t = tanuki::wrap<any_iface, tanuki::config<>{.static_size = tanuki::holder_size<large, any_iface>,
+                                                             .static_align = tanuki::holder_align<large, any_iface>}>;
 
     const wrap3_t w(large{});
 

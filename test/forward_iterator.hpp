@@ -118,6 +118,7 @@ template <typename V, typename R, typename RR>
 inline constexpr auto forward_iterator_config
     = tanuki::config<forward_iterator_mock<V, R, RR>, forward_iterator_c_ref_iface<V, R, RR>>{
         .static_size = tanuki::holder_size<forward_iterator_mock<V, R, RR>, forward_iterator_iface<V, R, RR>>,
+        .static_align = tanuki::holder_align<forward_iterator_mock<V, R, RR>, forward_iterator_iface<V, R, RR>>,
         .pointer_interface = false};
 
 } // namespace detail

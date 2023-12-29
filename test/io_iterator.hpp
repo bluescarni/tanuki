@@ -119,7 +119,9 @@ struct io_iterator_mock {
 
 template <typename R>
 inline constexpr auto io_iterator_config = tanuki::config<void, io_iterator_ref_iface<R>>{
-    .static_size = tanuki::holder_size<io_iterator_mock<R>, io_iterator_iface<R>>, .pointer_interface = false};
+    .static_size = tanuki::holder_size<io_iterator_mock<R>, io_iterator_iface<R>>,
+    .static_align = tanuki::holder_align<io_iterator_mock<R>, io_iterator_iface<R>>,
+    .pointer_interface = false};
 
 } // namespace detail
 

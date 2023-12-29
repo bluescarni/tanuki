@@ -75,6 +75,7 @@ TEST_CASE("basics")
 
     w2 = std::move(w4);
     REQUIRE(old_ptr3 == iface_ptr(w2));
+    // NOLINTNEXTLINE(bugprone-use-after-move,hicpp-invalid-access-moved)
     REQUIRE(!is_invalid(w4));
     REQUIRE(iface_ptr(w4) == old_ptr2);
 }

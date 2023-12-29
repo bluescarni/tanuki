@@ -1394,6 +1394,7 @@ struct iface_impl_helper : public detail::iface_impl_helper_base {
 
         if constexpr (detail::is_reference_wrapper<T>::value) {
             if constexpr (std::is_const_v<std::remove_reference_t<std::unwrap_reference_t<T>>>) {
+                // NOLINTNEXTLINE(google-readability-casting)
                 throw std::runtime_error("Invalid access to a const reference of type '"
                                          + detail::demangle(typeid(std::unwrap_reference_t<T>).name())
                                          + "' via a non-const member function");

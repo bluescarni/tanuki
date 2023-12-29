@@ -37,14 +37,14 @@ TEST_CASE("overaligned")
 {
     using wrap_t = tanuki::wrap<any_iface>;
 
-    wrap_t w1(123);
+    const wrap_t w1(123);
     REQUIRE(has_static_storage(w1));
 
-    wrap_t w2(over{});
+    const wrap_t w2(over{});
     REQUIRE(has_dynamic_storage(w2));
 
     // NOLINTNEXTLINE
-    const auto w3 = w2;
+    const auto w3(w2);
     REQUIRE(has_dynamic_storage(w3));
 }
 

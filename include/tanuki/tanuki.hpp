@@ -820,10 +820,15 @@ class TANUKI_VISIBLE wrap
     [[nodiscard]] bool stype() const noexcept
         requires(Cfg.static_size > 0u)
     {
-        return (this->m_pv_iface != nullptr)
-               && std::less{}(reinterpret_cast<const std::byte *>(this->m_pv_iface),
-                              this->static_storage + sizeof(this->static_storage))
-               && std::greater_equal{}(reinterpret_cast<const std::byte *>(this->m_pv_iface), this->static_storage);
+        const auto *ptr = reinterpret_cast<const std::byte *>(this->m_pv_iface);
+
+        // NOTE: this is not 100% portable, for the following reasons:
+        // - if ptr is not within static_storage, the results of the comparisons are unspecified;
+        // - even if we used std::less & co. (instead of builtin comparisons), in principle static_storage
+        //   could be interleaved with another object while at the same time respecting the total
+        //   pointer ordering guarantees given by the standard.
+        // In pratice, this should be ok an all contemporary architectures.
+        return ptr >= this->static_storage && ptr < this->static_storage + sizeof(this->static_storage);
     }
 
     // Implementation of generic construction. This will constrcut

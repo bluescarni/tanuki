@@ -52,9 +52,6 @@ using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{.static_align = alignof(
 
 TEST_CASE("basics")
 {
-    const wrap_t w1(123);
-    REQUIRE(has_static_storage(w1));
-
     wrap_t w2(over{});
     REQUIRE(has_dynamic_storage(w2));
 

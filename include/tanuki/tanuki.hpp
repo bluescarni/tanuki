@@ -578,7 +578,8 @@ struct holder_value<holder<T, IFace>> {
     using type = T;
 };
 
-// Implementation of storage for the wrap class.
+// Implementation of storage for the wrap class. This will be used
+// to store an instance of the holder type.
 template <typename IFace, std::size_t StaticStorageSize, std::size_t StaticStorageAlignment>
 struct TANUKI_VISIBLE wrap_storage {
     static_assert(StaticStorageSize > 0u);
@@ -843,28 +844,20 @@ class TANUKI_VISIBLE wrap
         // T must be a valid value type.
         detail::valid_value_type<T> &&
         // T must be constructible from the construction arguments.
-        std::constructible_from<T, U &&...> &&
-        // Alignment checks: if we are going to use dynamic storage, then no checks are needed
-        // as new() takes care of proper alignment; otherwise, we need to ensure that the static
-        // storage is sufficiently aligned.
-        (sizeof(holder_t<T>) > Cfg.static_size || alignof(holder_t<T>) <= Cfg.static_alignment)
+        std::constructible_from<T, U &&...>
         void ctor_impl(U &&...x) noexcept(sizeof(holder_t<T>) <= Cfg.static_size
                                           && std::is_nothrow_constructible_v<holder_t<T>, U &&...>)
     {
-        if constexpr (Cfg.static_size == 0u) {
-            // Static storage disabled.
+        if constexpr (sizeof(holder_t<T>) > Cfg.static_size || alignof(holder_t<T>) > Cfg.static_alignment) {
+            // Static storage is disabled, or the type is overaligned, or
+            // there is not enough room in static storage.
+            // Use dynamic memory allocation.
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
             this->m_pv_iface = new holder_t<T>(std::forward<U>(x)...);
         } else {
-            if constexpr (sizeof(holder_t<T>) <= Cfg.static_size) {
-                // Static storage.
-                // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-                this->m_pv_iface = ::new (this->static_storage) holder_t<T>(std::forward<U>(x)...);
-            } else {
-                // Dynamic storage.
-                // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-                this->m_pv_iface = new holder_t<T>(std::forward<U>(x)...);
-            }
+            // Static storage is enabled and there is enough room. Construct in-place.
+            // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+            this->m_pv_iface = ::new (this->static_storage) holder_t<T>(std::forward<U>(x)...);
         }
     }
 
@@ -874,15 +867,13 @@ class TANUKI_VISIBLE wrap
     friend class boost::serialization::access;
     void save(boost::archive::binary_oarchive &ar, unsigned) const
     {
-        if constexpr (Cfg.static_size == 0u) {
-            // Store the pointer to the value interface.
-            ar << this->m_pv_iface;
-        } else {
+        if constexpr (Cfg.static_size > 0u) {
             // Store the storage type.
             ar << stype();
-            // Store the pointer to the value interface.
-            ar << this->m_pv_iface;
         }
+
+        // Store the pointer to the value interface.
+        ar << this->m_pv_iface;
     }
     // NOTE: as I have understood, when deserialising a pointer Boost
     // allocates memory only the *first* time the pointer is encountered
@@ -1001,6 +992,7 @@ public:
         ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x));
     }
 
+    // Generic in-place initialisation.
     // NOTE: this will *value-init* if no args
     // are provided. This must be documented well.
     template <typename T, typename W = wrap, typename... U>
@@ -1227,13 +1219,11 @@ public:
 
     // Free functions interface.
 
-    // NOTE: w is invalid if either its storage type is dynamic and
-    // it has been moved from (note that this also includes the case
+    // NOTE: w is invalid when the value interface pointer is set to null.
+    // This can happen if w has been moved from (note that this also includes the case
     // in which w has been swapped with an invalid object),
     // or if generic assignment failed.
-    // In an invalid wrap, the value interface pointer is set to null.
     // The only valid operations on an invalid object are:
-    //
     // - invocation of is_invalid(),
     // - destruction,
     // - copy/move assignment from, and swapping with, a valid wrap,

@@ -641,7 +641,7 @@ struct TANUKI_VISIBLE config final : detail::config_base {
     // Size of the static storage.
     std::size_t static_size = 48;
     // Alignment of the static storage.
-    std::size_t static_alignment = alignof(std::max_align_t);
+    std::size_t static_align = alignof(std::max_align_t);
     // Default constructor initialises to the invalid state.
     bool invalid_default_ctor = false;
     // Provide pointer interface.
@@ -671,7 +671,7 @@ concept valid_config =
     // This checks that decltype(Cfg) is a specialisation from the primary config template.
     std::derived_from<std::remove_const_t<decltype(Cfg)>, config_base> &&
     // The static alignment value must be a power of 2.
-    power_of_two<Cfg.static_alignment>;
+    power_of_two<Cfg.static_align>;
 
 // Machinery to infer the reference interface from a config instance.
 template <typename>
@@ -792,7 +792,7 @@ using unwrap_cvref_t = std::remove_cvref_t<std::unwrap_reference_t<T>>;
 template <typename IFace, auto Cfg = default_config>
     requires std::is_polymorphic_v<IFace> && std::has_virtual_destructor_v<IFace> && detail::valid_config<Cfg>
 class TANUKI_VISIBLE wrap
-    : private detail::wrap_storage<IFace, Cfg.static_size, Cfg.static_alignment>,
+    : private detail::wrap_storage<IFace, Cfg.static_size, Cfg.static_align>,
       // NOTE: the reference interface is not supposed to hold any data: it will always
       // be def-inited (even when copying/moving a wrap object), its assignment operators
       // will never be invoked, it will never be swapped, etc. This needs to be documented.
@@ -853,7 +853,7 @@ class TANUKI_VISIBLE wrap
         void ctor_impl(U &&...x) noexcept(sizeof(holder_t<T>) <= Cfg.static_size
                                           && std::is_nothrow_constructible_v<holder_t<T>, U &&...>)
     {
-        if constexpr (sizeof(holder_t<T>) > Cfg.static_size || alignof(holder_t<T>) > Cfg.static_alignment) {
+        if constexpr (sizeof(holder_t<T>) > Cfg.static_size || alignof(holder_t<T>) > Cfg.static_align) {
             // Static storage is disabled, or the type is overaligned, or
             // there is not enough room in static storage.
             // Use dynamic memory allocation.

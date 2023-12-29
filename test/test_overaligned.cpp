@@ -48,10 +48,10 @@ struct over {
 
 // LCOV_EXCL_STOP
 
+using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{.static_align = alignof(std::max_align_t) / 2u}>;
+
 TEST_CASE("basics")
 {
-    using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{.static_alignment = alignof(std::max_align_t) / 2u}>;
-
     const wrap_t w1(123);
     REQUIRE(has_static_storage(w1));
 
@@ -85,8 +85,6 @@ TANUKI_S11N_WRAP_EXPORT(over, any_iface)
 
 TEST_CASE("s11n")
 {
-    using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{.static_alignment = alignof(std::max_align_t) / 2u}>;
-
     wrap_t w(over{});
     value_ptr<over>(w)->value = char{1};
 

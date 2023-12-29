@@ -92,6 +92,8 @@ inline constexpr auto bidirectional_iterator_config
     = tanuki::config<bidirectional_iterator_mock<V, R, RR>, bidirectional_iterator_c_ref_iface<V, R, RR>>{
         .static_size
         = tanuki::holder_size<bidirectional_iterator_mock<V, R, RR>, bidirectional_iterator_iface<V, R, RR>>,
+        .static_align
+        = tanuki::holder_align<bidirectional_iterator_mock<V, R, RR>, bidirectional_iterator_iface<V, R, RR>>,
         .pointer_interface = false};
 
 } // namespace detail

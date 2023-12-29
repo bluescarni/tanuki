@@ -229,6 +229,8 @@ template <typename V, typename R, typename RR, typename CR, typename CRR,
 inline constexpr auto generic_range_config = tanuki::config<void, generic_range_ref_iface<V, R, RR, CR, CRR, It>>{
     .static_size
     = tanuki::holder_size<generic_range_mock<V, R, RR, CR, CRR, It>, generic_range_iface<V, R, RR, CR, CRR, It>>,
+    .static_align
+    = tanuki::holder_align<generic_range_mock<V, R, RR, CR, CRR, It>, generic_range_iface<V, R, RR, CR, CRR, It>>,
     .pointer_interface = false};
 
 template <typename V, typename R, typename RR, typename CR, typename CRR,

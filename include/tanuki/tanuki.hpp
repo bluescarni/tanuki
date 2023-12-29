@@ -868,7 +868,20 @@ class TANUKI_VISIBLE wrap
 
 #if defined(TANUKI_WITH_BOOST_S11N)
 
-    // Serialization.
+    // Serialisation.
+    // NOTE: serialisation support has certain prerequisites:
+    // - the value type must be default-initialisable,
+    // - the value type must be move-ctible,
+    // - the value type must not be over-aligned.
+    // The first two come from the way pointer serialisation works
+    // in Boost (i.e., serialisation via pointer to base requires a
+    // default constructor and dynamic allocation of an object instance,
+    // from which we do a move-init of the holder). The last one
+    // I think comes from the way memory is allocated during des11n,
+    // i.e., see here:
+    // https://github.com/boostorg/serialization/blob/a20c4d97c37e5f437c8ba78f296830edb79cff9e/include/boost/archive/detail/iserializer.hpp#L241
+    // Perhaps by providing a custom new operator to the value interface
+    // class we can implement proper over-alignment of dynamically-allocated memory.
     friend class boost::serialization::access;
     void save(boost::archive::binary_oarchive &ar, unsigned) const
     {

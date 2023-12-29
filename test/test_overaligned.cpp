@@ -1,4 +1,3 @@
-#include <cstddef>
 #include <sstream>
 #include <typeinfo>
 #include <utility>
@@ -38,7 +37,7 @@ struct any_iface {
 };
 
 struct over {
-    alignas(alignof(std::max_align_t)) std::byte value{};
+    alignas(alignof(std::max_align_t)) char value{};
 
     template <typename Archive>
     void serialize(Archive &ar, unsigned)
@@ -89,7 +88,7 @@ TEST_CASE("s11n")
     using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{.static_alignment = alignof(std::max_align_t) / 2u}>;
 
     wrap_t w(over{});
-    value_ptr<over>(w)->value = std::byte{1};
+    value_ptr<over>(w)->value = char{1};
 
     std::stringstream ss;
 
@@ -106,7 +105,7 @@ TEST_CASE("s11n")
     }
 
     REQUIRE(value_type_index(w) == typeid(over));
-    REQUIRE(value_ptr<over>(w)->value == std::byte{1});
+    REQUIRE(value_ptr<over>(w)->value == char{1});
 }
 
 #endif

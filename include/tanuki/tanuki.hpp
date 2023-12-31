@@ -828,6 +828,9 @@ class TANUKI_VISIBLE wrap
         //   could be interleaved with another object while at the same time respecting the total
         //   pointer ordering guarantees given by the standard.
         // In pratice, this should be ok an all contemporary architectures.
+        // NOTE: it seems like the only truly portable way of implementing this is to compare ptr
+        // to the addresses of all elements in static_storage. Unfortunately, it seems like compilers
+        // are not able to optimise this to a simple pointer comparison.
         return ptr >= this->static_storage && ptr < this->static_storage + sizeof(this->static_storage);
     }
 
@@ -851,6 +854,7 @@ class TANUKI_VISIBLE wrap
         // T must be constructible from the construction arguments.
         std::constructible_from<T, U &&...>
         void ctor_impl(U &&...x) noexcept(sizeof(holder_t<T>) <= Cfg.static_size
+                                          && alignof(holder_t<T>) <= Cfg.static_align
                                           && std::is_nothrow_constructible_v<holder_t<T>, U &&...>)
     {
         if constexpr (sizeof(holder_t<T>) > Cfg.static_size || alignof(holder_t<T>) > Cfg.static_align) {

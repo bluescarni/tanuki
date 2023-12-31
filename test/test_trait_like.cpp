@@ -16,8 +16,12 @@
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance)
 
-template <typename, typename, typename>
-struct summary_iface_impl;
+// Default implementation of the summary interface:
+// inherits from Base, thus using the default implementation
+// of the summarize() function.
+template <typename Base, typename, typename>
+struct summary_iface_impl : Base {
+};
 
 // Trait definition.
 // NOLINTNEXTLINE
@@ -30,10 +34,6 @@ struct summary_iface {
 
     template <typename Base, typename Holder, typename T>
     using impl = summary_iface_impl<Base, Holder, T>;
-};
-
-template <typename Base, typename, typename>
-struct summary_iface_impl : Base {
 };
 
 // A couple of classes for which we might want to
@@ -72,7 +72,7 @@ struct summary_iface_impl<Base, Holder, T> : Base, tanuki::iface_impl_helper<Bas
 };
 
 // Definition of the wrapper.
-using summary = tanuki::wrap<summary_iface, tanuki::config<>{.explicit_generic_ctor = false}>;
+using summary = tanuki::wrap<summary_iface, tanuki::config<>{.explicit_ctor = tanuki::wrap_ctor::always_implicit}>;
 
 // A function with summary input param.
 summary notify(const summary &s)
@@ -104,8 +104,9 @@ TEST_CASE("summary example")
     REQUIRE(&value_ref<std::reference_wrapper<foo>>(notify(std::ref(f))).get() == &f);
 }
 
-template <typename, typename, typename>
-struct fooable_iface_impl;
+template <typename Base, typename, typename>
+struct fooable_iface_impl : Base {
+};
 
 // NOLINTNEXTLINE
 struct fooable_iface {
@@ -119,15 +120,11 @@ struct fooable_iface {
     using impl = fooable_iface_impl<Base, Holder, T>;
 };
 
-template <typename Base, typename, typename>
-struct fooable_iface_impl : Base {
-};
-
 struct foo_capable {
     std::string foo;
 };
 
-// Implement the summary trait for news_article and tweet.
+// Implement the fooable trait for foo_capable.
 template <typename Base, typename Holder, typename T>
     requires std::same_as<tanuki::unwrap_cvref_t<T>, foo_capable>
 struct fooable_iface_impl<Base, Holder, T> : Base, tanuki::iface_impl_helper<Base, Holder> {
@@ -137,10 +134,12 @@ struct fooable_iface_impl<Base, Holder, T> : Base, tanuki::iface_impl_helper<Bas
     }
 };
 
-using fooable = tanuki::wrap<fooable_iface, tanuki::config<>{.explicit_generic_ctor = false}>;
+// fooable wrap.
+using fooable = tanuki::wrap<fooable_iface, tanuki::config<>{.explicit_ctor = tanuki::wrap_ctor::always_implicit}>;
 
+// Composite wrap.
 using fooable_summary = tanuki::wrap<tanuki::composite_iface<summary_iface, fooable_iface>,
-                                     tanuki::config<>{.explicit_generic_ctor = false}>;
+                                     tanuki::config<>{.explicit_ctor = tanuki::wrap_ctor::always_implicit}>;
 
 fooable_summary notify_fooable(const fooable_summary &s)
 {

@@ -630,6 +630,9 @@ struct TANUKI_VISIBLE composite_ref_iface {
     };
 };
 
+// Enum to select the explicitness of the generic wrap ctors.
+enum class wrap_ctor { always_explicit, ref_implicit, always_implicit };
+
 // Configuration settings for the wrap class.
 // NOTE: the DefaultValueType is subject to the constraints
 // for valid value types.
@@ -647,7 +650,7 @@ struct TANUKI_VISIBLE config final : detail::config_base {
     // Provide pointer interface.
     bool pointer_interface = true;
     // Explicitness of the generic ctor.
-    bool explicit_generic_ctor = true;
+    wrap_ctor explicit_ctor = wrap_ctor::always_explicit;
     // Enable copy construction/assignment.
     bool copyable = true;
     // Enable move construction/assignment.
@@ -671,7 +674,10 @@ concept valid_config =
     // This checks that decltype(Cfg) is a specialisation from the primary config template.
     std::derived_from<std::remove_const_t<decltype(Cfg)>, config_base> &&
     // The static alignment value must be a power of 2.
-    power_of_two<Cfg.static_align>;
+    power_of_two<Cfg.static_align> &&
+    // explicit_ctor must be set to one of the valid
+    // enumerators.
+    (Cfg.explicit_ctor >= wrap_ctor::always_explicit && Cfg.explicit_ctor <= wrap_ctor::always_implicit);
 
 // Machinery to infer the reference interface from a config instance.
 template <typename>
@@ -1006,12 +1012,28 @@ public:
             // We must be able to invoke the construction function.
             w.template ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x));
         })
-    explicit(Cfg.explicit_generic_ctor)
-        // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,cppcoreguidelines-pro-type-member-init,hicpp-member-init,google-explicit-constructor,hicpp-explicit-conversions)
+    explicit(Cfg.explicit_ctor < wrap_ctor::always_implicit)
+        // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,google-explicit-constructor,hicpp-explicit-conversions)
         wrap(T &&x) noexcept(noexcept(this->ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x)))
                              && detail::nothrow_default_initializable<ref_iface_t>)
     {
         ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x));
+    }
+
+    // Generic ctor from std::reference_wrapper.
+    template <typename T, typename W = wrap>
+        requires(requires(W &w, std::reference_wrapper<T> ref) {
+            requires std::default_initializable<ref_iface_t>;
+            // We must be able to invoke the construction function.
+            w.template ctor_impl<std::reference_wrapper<T>>(std::move(ref));
+        })
+    explicit(Cfg.explicit_ctor == wrap_ctor::always_explicit)
+        // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
+        wrap(std::reference_wrapper<T> ref) noexcept(
+            noexcept(this->ctor_impl<std::reference_wrapper<T>>(std::move(ref)))
+            && detail::nothrow_default_initializable<ref_iface_t>)
+    {
+        ctor_impl<std::reference_wrapper<T>>(std::move(ref));
     }
 
     // Generic in-place initialisation.
@@ -1030,7 +1052,6 @@ public:
         ctor_impl<T>(std::forward<U>(args)...);
     }
 
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
     wrap(const wrap &other)
         requires(Cfg.copyable) && std::default_initializable<ref_iface_t>
     {
@@ -1076,7 +1097,6 @@ private:
     }
 
 public:
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
     wrap(wrap &&other) noexcept
         requires(Cfg.movable) && std::default_initializable<ref_iface_t>
     {

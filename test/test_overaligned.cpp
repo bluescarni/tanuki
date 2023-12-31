@@ -1,4 +1,5 @@
 #include <sstream>
+#include <type_traits>
 #include <typeinfo>
 #include <utility>
 
@@ -52,6 +53,9 @@ using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{.static_align = alignof(
 
 TEST_CASE("basics")
 {
+    // Test noexcept specifier.
+    REQUIRE(!std::is_nothrow_constructible_v<wrap_t, over>);
+
     wrap_t w2(over{});
     REQUIRE(has_dynamic_storage(w2));
 

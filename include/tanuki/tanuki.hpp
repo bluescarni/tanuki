@@ -828,6 +828,9 @@ class TANUKI_VISIBLE wrap
         //   could be interleaved with another object while at the same time respecting the total
         //   pointer ordering guarantees given by the standard.
         // In pratice, this should be ok an all contemporary architectures.
+        // NOTE: it seems like the only truly portable way of implementing this is to compare ptr
+        // to the addresses of all elements in static_storage. Unfortunately, it seems like compilers
+        // are not able to optimise this to a simple pointer comparison.
         return ptr >= this->static_storage && ptr < this->static_storage + sizeof(this->static_storage);
     }
 
@@ -851,6 +854,7 @@ class TANUKI_VISIBLE wrap
         // T must be constructible from the construction arguments.
         std::constructible_from<T, U &&...>
         void ctor_impl(U &&...x) noexcept(sizeof(holder_t<T>) <= Cfg.static_size
+                                          && alignof(holder_t<T>) <= Cfg.static_align
                                           && std::is_nothrow_constructible_v<holder_t<T>, U &&...>)
     {
         if constexpr (sizeof(holder_t<T>) > Cfg.static_size || alignof(holder_t<T>) > Cfg.static_align) {
@@ -1332,11 +1336,11 @@ public:
         }
     }
 
-    [[nodiscard]] friend const void *raw_ptr(const wrap &w) noexcept
+    [[nodiscard]] friend const void *raw_value_ptr(const wrap &w) noexcept
     {
         return w.m_pv_iface->_tanuki_value_ptr();
     }
-    [[nodiscard]] friend void *raw_ptr(wrap &w) noexcept
+    [[nodiscard]] friend void *raw_value_ptr(wrap &w) noexcept
     {
         return w.m_pv_iface->_tanuki_value_ptr();
     }
@@ -1460,13 +1464,13 @@ bool has_dynamic_storage(const wrap<IFace, Cfg> &w) noexcept
 template <typename T, typename IFace, auto Cfg>
 const T *value_ptr(const wrap<IFace, Cfg> &w) noexcept
 {
-    return value_type_index(w) == typeid(T) ? static_cast<const T *>(raw_ptr(w)) : nullptr;
+    return value_type_index(w) == typeid(T) ? static_cast<const T *>(raw_value_ptr(w)) : nullptr;
 }
 
 template <typename T, typename IFace, auto Cfg>
 T *value_ptr(wrap<IFace, Cfg> &w) noexcept
 {
-    return value_type_index(w) == typeid(T) ? static_cast<T *>(raw_ptr(w)) : nullptr;
+    return value_type_index(w) == typeid(T) ? static_cast<T *>(raw_value_ptr(w)) : nullptr;
 }
 
 template <typename T, typename IFace, auto Cfg>

@@ -1013,7 +1013,7 @@ public:
             w.template ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x));
         })
     explicit(Cfg.explicit_ctor < wrap_ctor::always_implicit)
-        // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,cppcoreguidelines-pro-type-member-init,hicpp-member-init,google-explicit-constructor,hicpp-explicit-conversions)
+        // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,google-explicit-constructor,hicpp-explicit-conversions)
         wrap(T &&x) noexcept(noexcept(this->ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x)))
                              && detail::nothrow_default_initializable<ref_iface_t>)
     {
@@ -1052,7 +1052,6 @@ public:
         ctor_impl<T>(std::forward<U>(args)...);
     }
 
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
     wrap(const wrap &other)
         requires(Cfg.copyable) && std::default_initializable<ref_iface_t>
     {
@@ -1098,7 +1097,6 @@ private:
     }
 
 public:
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init,hicpp-member-init)
     wrap(wrap &&other) noexcept
         requires(Cfg.movable) && std::default_initializable<ref_iface_t>
     {

@@ -49,7 +49,7 @@ struct f1 {
 
 TEST_CASE("inf loop")
 {
-    using wrap1_t = tanuki::wrap<foo_iface, tanuki::config<f1>{.explicit_generic_ctor = false}>;
+    using wrap1_t = tanuki::wrap<foo_iface, tanuki::config<f1>{.explicit_ctor = tanuki::wrap_ctor::always_implicit}>;
 
     std::vector<std::tuple<wrap1_t>> v;
     // NOTE: GCC and clang (but not MSVC strangely enough) would error out

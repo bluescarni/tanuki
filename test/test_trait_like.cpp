@@ -72,7 +72,7 @@ struct summary_iface_impl<Base, Holder, T> : Base, tanuki::iface_impl_helper<Bas
 };
 
 // Definition of the wrapper.
-using summary = tanuki::wrap<summary_iface, tanuki::config<>{.explicit_generic_ctor = false}>;
+using summary = tanuki::wrap<summary_iface, tanuki::config<>{.explicit_ctor = tanuki::wrap_ctor::always_implicit}>;
 
 // A function with summary input param.
 summary notify(const summary &s)
@@ -137,10 +137,10 @@ struct fooable_iface_impl<Base, Holder, T> : Base, tanuki::iface_impl_helper<Bas
     }
 };
 
-using fooable = tanuki::wrap<fooable_iface, tanuki::config<>{.explicit_generic_ctor = false}>;
+using fooable = tanuki::wrap<fooable_iface, tanuki::config<>{.explicit_ctor = tanuki::wrap_ctor::always_implicit}>;
 
 using fooable_summary = tanuki::wrap<tanuki::composite_iface<summary_iface, fooable_iface>,
-                                     tanuki::config<>{.explicit_generic_ctor = false}>;
+                                     tanuki::config<>{.explicit_ctor = tanuki::wrap_ctor::always_implicit}>;
 
 fooable_summary notify_fooable(const fooable_summary &s)
 {

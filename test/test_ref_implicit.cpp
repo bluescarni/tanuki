@@ -68,7 +68,7 @@ TEST_CASE("implicit ref ctor")
     REQUIRE(std::convertible_to<std::reference_wrapper<const news_article>, summary>);
     REQUIRE(!std::convertible_to<news_article, summary>);
 
-    summary s1{123};
+    const summary s1{123};
     notify(s1);
 
     const news_article n{.author = "Michael Foobar"};

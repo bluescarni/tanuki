@@ -1336,11 +1336,11 @@ public:
         }
     }
 
-    [[nodiscard]] friend const void *raw_ptr(const wrap &w) noexcept
+    [[nodiscard]] friend const void *raw_value_ptr(const wrap &w) noexcept
     {
         return w.m_pv_iface->_tanuki_value_ptr();
     }
-    [[nodiscard]] friend void *raw_ptr(wrap &w) noexcept
+    [[nodiscard]] friend void *raw_value_ptr(wrap &w) noexcept
     {
         return w.m_pv_iface->_tanuki_value_ptr();
     }
@@ -1464,13 +1464,13 @@ bool has_dynamic_storage(const wrap<IFace, Cfg> &w) noexcept
 template <typename T, typename IFace, auto Cfg>
 const T *value_ptr(const wrap<IFace, Cfg> &w) noexcept
 {
-    return value_type_index(w) == typeid(T) ? static_cast<const T *>(raw_ptr(w)) : nullptr;
+    return value_type_index(w) == typeid(T) ? static_cast<const T *>(raw_value_ptr(w)) : nullptr;
 }
 
 template <typename T, typename IFace, auto Cfg>
 T *value_ptr(wrap<IFace, Cfg> &w) noexcept
 {
-    return value_type_index(w) == typeid(T) ? static_cast<T *>(raw_ptr(w)) : nullptr;
+    return value_type_index(w) == typeid(T) ? static_cast<T *>(raw_value_ptr(w)) : nullptr;
 }
 
 template <typename T, typename IFace, auto Cfg>

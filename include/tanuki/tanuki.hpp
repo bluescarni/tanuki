@@ -128,6 +128,9 @@
 TANUKI_BEGIN_NAMESPACE
 
 // Semantics for the wrap class.
+// NOTE: this needs to be marked as visibile because
+// the value_iface class depends on it. If we do not, we have
+// the usual s11n-related visibility issues on OSX.
 enum class TANUKI_VISIBLE wrap_semantics { value, reference };
 
 namespace detail
@@ -1006,6 +1009,9 @@ class TANUKI_VISIBLE wrap
                 }
             }
         } else {
+            // NOTE: not sure what the guarantees from Boost in case
+            // of exceptions are here. Just in case, ensure we reset the wrap
+            // to the invalid state in case of exceptions before rethrowing.
             try {
                 ar >> this->m_pv_iface;
                 // LCOV_EXCL_START
@@ -1352,7 +1358,8 @@ public:
     // NOTE: w is invalid when the value interface pointer is set to null.
     // This can happen if w has been moved from (note that this also includes the case
     // in which w has been swapped with an invalid object),
-    // or if generic assignment failed.
+    // if generic assignment failed, or, in case of reference semantics,
+    // if deserialisation threw an exception.
     // The only valid operations on an invalid object are:
     // - invocation of is_invalid(),
     // - destruction,

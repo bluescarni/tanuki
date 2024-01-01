@@ -179,6 +179,32 @@ TEST_CASE("s11n")
     REQUIRE(value_ptr<foo>(w)->value == -1);
 }
 
+TEST_CASE("s11n invalid")
+{
+    using wrap_t = tanuki::wrap<any_iface, tanuki::config<int>{.invalid_default_ctor = true,
+                                                               .semantics = tanuki::wrap_semantics::reference}>;
+
+    wrap_t w;
+    REQUIRE(is_invalid(w));
+
+    std::stringstream ss;
+
+    {
+        boost::archive::binary_oarchive oa(ss);
+        oa << w;
+    }
+
+    w = wrap_t(3);
+    REQUIRE(!is_invalid(w));
+
+    {
+        boost::archive::binary_iarchive ia(ss);
+        ia >> w;
+    }
+
+    REQUIRE(is_invalid(w));
+}
+
 #endif
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

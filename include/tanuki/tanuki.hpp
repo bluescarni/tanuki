@@ -1370,11 +1370,19 @@ public:
 
     [[nodiscard]] friend const iface_t *iface_ptr(const wrap &w) noexcept
     {
-        return w.m_pv_iface;
+        if constexpr (Cfg.semantics == wrap_semantics::value) {
+            return w.m_pv_iface;
+        } else {
+            return w.m_pv_iface.get();
+        }
     }
     [[nodiscard]] friend iface_t *iface_ptr(wrap &w) noexcept
     {
-        return w.m_pv_iface;
+        if constexpr (Cfg.semantics == wrap_semantics::value) {
+            return w.m_pv_iface;
+        } else {
+            return w.m_pv_iface.get();
+        }
     }
 
     friend void swap(wrap &w1, wrap &w2) noexcept
@@ -1443,7 +1451,7 @@ public:
 
     [[nodiscard]] friend bool has_static_storage(const wrap &w) noexcept
     {
-        if constexpr (Cfg.semantics == wrap_semantics::value && Cfg.static_size == 0u) {
+        if constexpr (Cfg.semantics == wrap_semantics::reference || Cfg.static_size == 0u) {
             return false;
         } else {
             return w.stype();

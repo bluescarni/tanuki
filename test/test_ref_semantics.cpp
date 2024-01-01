@@ -1,6 +1,8 @@
 #include <concepts>
 #include <functional>
 #include <type_traits>
+#include <typeinfo>
+#include <utility>
 
 #include <tanuki/tanuki.hpp>
 
@@ -63,6 +65,7 @@ TEST_CASE("basics")
     REQUIRE(!is_invalid(w4));
     REQUIRE(value_isa<std::reference_wrapper<const foo>>(w4));
     REQUIRE(value_ref<std::reference_wrapper<const foo>>(w4).get().value == 43);
+    REQUIRE(contains_reference(w4));
 
     // Generic in-place constructor.
     const wrap2_t w5(tanuki::in_place<int>, 11);
@@ -85,6 +88,49 @@ TEST_CASE("basics")
     REQUIRE(value_isa<int>(w7));
     REQUIRE(value_ref<int>(w7) == 11);
     REQUIRE(tanuki::value_ptr<int>(w5) == tanuki::value_ptr<int>(w7));
+
+    // Move assignment.
+    REQUIRE(std::is_nothrow_move_assignable_v<wrap2_t>);
+    wrap2_t w8;
+    w8 = std::move(w7);
+    REQUIRE(!is_invalid(w8));
+    REQUIRE(value_isa<int>(w8));
+    REQUIRE(value_ref<int>(w8) == 11);
+    REQUIRE(tanuki::value_ptr<int>(w5) == tanuki::value_ptr<int>(w8));
+
+    // Copy assignment.
+    REQUIRE(std::is_nothrow_copy_assignable_v<wrap2_t>);
+    wrap2_t w9;
+    w9 = w8;
+    REQUIRE(!is_invalid(w9));
+    REQUIRE(value_isa<int>(w9));
+    REQUIRE(value_ref<int>(w9) == 11);
+    REQUIRE(tanuki::value_ptr<int>(w5) == tanuki::value_ptr<int>(w9));
+
+    // Generic assignment.
+    wrap2_t w10;
+    w10 = foo{12};
+    REQUIRE(!is_invalid(w10));
+    REQUIRE(value_isa<foo>(w10));
+    REQUIRE(value_ref<foo>(w10).value == 12);
+
+    // A few tests for the free function interface.
+    REQUIRE(value_type_index(w10) == typeid(foo));
+    REQUIRE(iface_ptr(w10) != nullptr);
+    REQUIRE(iface_ptr(std::as_const(w10)) != nullptr);
+    REQUIRE(!has_static_storage(w10));
+    REQUIRE(value_ptr<foo>(w10) == raw_value_ptr(w10));
+    REQUIRE(value_ptr<foo>(std::as_const(w10)) == raw_value_ptr(std::as_const(w10)));
+    REQUIRE(!contains_reference(w10));
+
+    // Swapping.
+    REQUIRE(std::is_nothrow_swappable_v<wrap2_t>);
+    using std::swap;
+    auto *old_ptr9 = value_ptr<int>(w9);
+    auto *old_ptr10 = value_ptr<foo>(w10);
+    swap(w10, w9);
+    REQUIRE(value_ptr<foo>(w9) == old_ptr10);
+    REQUIRE(value_ptr<int>(w10) == old_ptr9);
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

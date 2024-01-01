@@ -128,7 +128,7 @@
 TANUKI_BEGIN_NAMESPACE
 
 // Semantics for the wrap class.
-enum class wrap_semantics { value, reference };
+enum class TANUKI_VISIBLE wrap_semantics { value, reference };
 
 namespace detail
 {

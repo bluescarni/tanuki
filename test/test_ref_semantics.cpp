@@ -1,8 +1,16 @@
 #include <concepts>
 #include <functional>
+#include <sstream>
 #include <type_traits>
 #include <typeinfo>
 #include <utility>
+
+#if defined(TANUKI_WITH_BOOST_S11N)
+
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+
+#endif
 
 #include <tanuki/tanuki.hpp>
 
@@ -19,6 +27,11 @@
 
 struct foo {
     int value = 42;
+    template <typename Archive>
+    void serialize(Archive &ar, unsigned)
+    {
+        ar & value;
+    }
 };
 
 template <typename Base, typename Holder, typename T>
@@ -32,6 +45,12 @@ struct any_iface {
     template <typename Base, typename Holder, typename T>
     using impl = any_iface_impl<Base, Holder, T>;
 };
+
+#if defined(TANUKI_WITH_BOOST_S11N)
+
+TANUKI_S11N_WRAP_EXPORT(foo, any_iface)
+
+#endif
 
 TEST_CASE("basics")
 {
@@ -132,6 +151,35 @@ TEST_CASE("basics")
     REQUIRE(value_ptr<foo>(w9) == old_ptr10);
     REQUIRE(value_ptr<int>(w10) == old_ptr9);
 }
+
+#if defined(TANUKI_WITH_BOOST_S11N)
+
+TEST_CASE("s11n")
+{
+    using wrap_t = tanuki::wrap<any_iface, tanuki::config<int>{.semantics = tanuki::wrap_semantics::reference}>;
+
+    wrap_t w(foo{});
+    value_ptr<foo>(w)->value = -1;
+
+    std::stringstream ss;
+
+    {
+        boost::archive::binary_oarchive oa(ss);
+        oa << w;
+    }
+
+    w = wrap_t(3);
+
+    {
+        boost::archive::binary_iarchive ia(ss);
+        ia >> w;
+    }
+
+    REQUIRE(value_type_index(w) == typeid(foo));
+    REQUIRE(value_ptr<foo>(w)->value == -1);
+}
+
+#endif
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 

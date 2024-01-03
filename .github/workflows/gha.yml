@@ -56,7 +56,7 @@ jobs:
           conda install -y cmake boost-cpp
           mkdir build
           cd build
-          cmake ../ -G "Visual Studio 17 2022" -A x64 -DTANUKI_BUILD_TESTS=yes -DTANUKI_WITH_BOOST_S11N=yes
+          cmake ../ -G "Visual Studio 17 2022" -A x64 -DTANUKI_BUILD_TESTS=yes -DTANUKI_BUILD_TUTORIALS=yes -DTANUKI_WITH_BOOST_S11N=yes
           cmake --build . --config Release -j4
           ctest -j4 -V -C Release
   conda_coverage:

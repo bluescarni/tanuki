@@ -23,6 +23,7 @@ include(YACMACompilerLinkerSettings)
 
 # The build options.
 option(TANUKI_BUILD_TESTS "Build unit tests." OFF)
+option(TANUKI_BUILD_TUTORIALS "Build tutorials." OFF)
 option(TANUKI_WITH_BOOST_S11N "Enable support for the Boost.Serialization library." OFF)
 option(TANUKI_CLANG_TIDY "Enable clang-tidy when building the unit tests." OFF)
 mark_as_advanced(TANUKI_CLANG_TIDY)
@@ -148,7 +149,17 @@ target_include_directories(tanuki INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 
-if(TANUKI_BUILD_TESTS)
+# Configure the doc files.
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/doc/conf.py.in" "${CMAKE_CURRENT_SOURCE_DIR}/doc/conf.py" @ONLY)
+
+if(TANUKI_BUILD_TESTS OR TANUKI_BUILD_TUTORIALS)
   enable_testing()
+endif()
+
+if(TANUKI_BUILD_TESTS)
   add_subdirectory(test)
+endif()
+
+if(TANUKI_BUILD_TESTS)
+  add_subdirectory(tutorial)
 endif()

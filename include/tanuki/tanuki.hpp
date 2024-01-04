@@ -774,20 +774,7 @@ template <typename T>
 using value_t_from_arg = std::conditional_t<std::is_function_v<std::remove_cvref_t<T>>,
                                             std::decay_t<std::remove_cvref_t<T>>, std::remove_cvref_t<T>>;
 
-} // namespace detail
-
-// Type used to indicate emplace construction in the wrap class.
-template <typename>
-struct in_place_type {
-};
-
-template <typename T>
-inline constexpr auto in_place = in_place_type<T>{};
-
-namespace detail
-{
-
-// Helper to detect if T is an in_place_type. This is used
+// Helper to detect if T is an in_place_type_t. This is used
 // to avoid ambiguities in the wrap class between the nullary emplace ctor
 // and the generic ctor.
 template <typename>
@@ -795,7 +782,7 @@ struct is_in_place_type : std::false_type {
 };
 
 template <typename T>
-struct is_in_place_type<in_place_type<T>> : std::true_type {
+struct is_in_place_type<std::in_place_type_t<T>> : std::true_type {
 };
 
 // Implementation of the pointer interface for the wrap
@@ -1115,8 +1102,8 @@ public:
             requires !std::same_as<T, W>;
             w.template ctor_impl<T>(std::forward<U>(args)...);
         })
-    explicit wrap(in_place_type<T>, U &&...args) noexcept(noexcept(this->ctor_impl<T>(std::forward<U>(args)...))
-                                                          && detail::nothrow_default_initializable<ref_iface_t>)
+    explicit wrap(std::in_place_type_t<T>, U &&...args) noexcept(noexcept(this->ctor_impl<T>(std::forward<U>(args)...))
+                                                                 && detail::nothrow_default_initializable<ref_iface_t>)
     {
         ctor_impl<T>(std::forward<U>(args)...);
     }

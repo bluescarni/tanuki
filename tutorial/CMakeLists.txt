@@ -19,3 +19,4 @@ function(ADD_TANUKI_TUTORIAL arg1)
 endfunction()
 
 ADD_TANUKI_TUTORIAL(hello_world)
+ADD_TANUKI_TUTORIAL(simple_interface)

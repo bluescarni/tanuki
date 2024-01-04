@@ -87,7 +87,7 @@ TEST_CASE("basics")
     REQUIRE(contains_reference(w4));
 
     // Generic in-place constructor.
-    const wrap2_t w5(tanuki::in_place<int>, 11);
+    const wrap2_t w5(std::in_place_type<int>, 11);
     REQUIRE(!is_invalid(w5));
     REQUIRE(value_isa<int>(w5));
     REQUIRE(value_ref<int>(w5) == 11);

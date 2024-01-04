@@ -129,12 +129,12 @@ TEST_CASE("gen assignment")
         REQUIRE(value_ref<large>(w1).str == "bar");
     }
     {
-        wrap_t w1(tanuki::in_place<cm_throw>);
+        wrap_t w1(std::in_place_type<cm_throw>);
         cm_throw cmt;
         REQUIRE_THROWS_MATCHES(w1 = cmt, std::invalid_argument, Message("copy assignment"));
     }
     {
-        wrap_t w1(tanuki::in_place<copythrow>);
+        wrap_t w1(std::in_place_type<copythrow>);
         copythrow ct;
         REQUIRE_THROWS_MATCHES(w1 = std::as_const(ct), std::invalid_argument,
                                Message("Attempting to copy-assign a non-copyable value type"));

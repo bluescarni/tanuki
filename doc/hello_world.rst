@@ -1,3 +1,5 @@
+.. _hello_world:
+
 Hello world
 ===========
 
@@ -65,7 +67,7 @@ Second, we add to the ``any_iface`` definition an ``impl`` template alias to ind
    :lines: 11-16
 
 And we are done! We can now use ``any_iface`` in the definition of a type-erased
-:cpp:class:`wrap` that can store any destructible object:
+:cpp:class:`wrap` that can store **any** destructible object:
 
 .. literalinclude:: ../tutorial/hello_world.cpp
    :language: c++
@@ -76,10 +78,12 @@ key differences:
 
 - no dynamic memory allocation is enforced: the :cpp:class:`wrap` class employs
   an optimisation that stores small values inline,
-- there is no hierarchical coupling: any object of a destructible class can be
+- there is no hierarchical coupling: objects of any destructible class can be
   stored in an ``any_wrap`` without the need to inherit from anything,
 - ``any_wrap`` employs value semantics (that is, its copy constructor will make a copy
   of the internal value).
+
+And that's it for the most minimal example!
 
 Full code listing
 ^^^^^^^^^^^^^^^^^

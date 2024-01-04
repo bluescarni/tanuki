@@ -1,50 +1,125 @@
-#include <any>
-#include <memory>
-#include <string>
-#include <utility>
+#include <iostream>
 
 #include <tanuki/tanuki.hpp>
 
 template <typename Base, typename Holder, typename T>
-struct any_iface_impl : public Base {
+struct foo1_iface_impl : public Base {
+    void foo() const override
+    {
+        std::cout << "foo1_iface_impl calling foo()\n";
+        static_cast<const Holder *>(this)->m_value.foo();
+    }
 };
 
-struct any_iface {
-    virtual ~any_iface() = default;
+struct foo1_iface {
+    virtual ~foo1_iface() = default;
+    virtual void foo() const = 0;
 
     template <typename Base, typename Holder, typename T>
-    using impl = any_iface_impl<Base, Holder, T>;
+    using impl = foo1_iface_impl<Base, Holder, T>;
 };
 
-// An empty implementation.
-struct any1 : any_iface {
+struct foo_model {
+    void foo() const
+    {
+        std::cout << "foo_model calling foo()\n";
+    }
 };
 
-// An implementation storing a string.
-struct any2 : any_iface {
-    std::string str_;
+template <typename Base, typename Holder, typename T>
+struct foo2_iface_impl : public Base, tanuki::iface_impl_helper<Base, Holder> {
+    void foo() const override
+    {
+        std::cout << "foo2_iface_impl calling foo()\n";
+        this->value().foo();
+    }
+};
 
-    explicit any2(std::string s) : str_(std::move(s)) {}
+struct foo2_iface {
+    virtual ~foo2_iface() = default;
+    virtual void foo() const = 0;
+
+    template <typename Base, typename Holder, typename T>
+    using impl = foo2_iface_impl<Base, Holder, T>;
+};
+
+template <typename T>
+concept fooable = requires(const T &x) { x.foo(); };
+
+template <typename Base, typename Holder, typename T>
+    requires fooable<T>
+struct foo3_iface_impl : public Base, tanuki::iface_impl_helper<Base, Holder> {
+    void foo() const override
+    {
+        std::cout << "foo3_iface_impl calling foo()\n";
+        this->value().foo();
+    }
+};
+
+struct foo3_iface {
+    virtual ~foo3_iface() = default;
+    virtual void foo() const = 0;
+
+    template <typename Base, typename Holder, typename T>
+    using impl = foo3_iface_impl<Base, Holder, T>;
+};
+
+template <typename Base, typename Holder, typename T>
+struct foo4_iface_impl {
+};
+
+template <typename Base, typename Holder, typename T>
+    requires fooable<T>
+struct foo4_iface_impl<Base, Holder, T> : public Base, tanuki::iface_impl_helper<Base, Holder> {
+    void foo() const override
+    {
+        std::cout << "foo4_iface_impl calling foo()\n";
+        this->value().foo();
+    }
+};
+
+template <typename Base, typename Holder>
+struct foo4_iface_impl<Base, Holder, int> : public Base, tanuki::iface_impl_helper<Base, Holder> {
+    void foo() const override
+    {
+        std::cout << "foo4_iface_impl implementing foo() for the integer " << this->value() << "\n";
+    }
+};
+
+struct foo4_iface {
+    virtual ~foo4_iface() = default;
+    virtual void foo() const = 0;
+
+    template <typename Base, typename Holder, typename T>
+    using impl = foo4_iface_impl<Base, Holder, T>;
 };
 
 int main()
 {
-    // Traditional OO-style.
-    std::unique_ptr<any_iface> ptr1 = std::make_unique<any1>();
-    std::unique_ptr<any_iface> ptr2 = std::make_unique<any2>("hello world");
+    using foo1_wrap = tanuki::wrap<foo1_iface>;
 
-    // Type-erasure approach.
-    using any_wrap = tanuki::wrap<any_iface>;
+    foo1_wrap w1(foo_model{});
+    w1->foo();
 
-    // Store an integer.
-    any_wrap w1(42);
+    using foo2_wrap = tanuki::wrap<foo2_iface>;
 
-    // Store a string.
-    // any_wrap w2("hello world");
-    std::any blarf("hello world");
+    foo2_wrap w2(foo_model{});
+    w2->foo();
 
-    // Store anything...
-    struct foo {
-    };
-    any_wrap w3(foo{});
+    using foo3_wrap = tanuki::wrap<foo3_iface>;
+
+    foo3_wrap w3(foo_model{});
+    w3->foo();
+
+    std::cout << std::boolalpha;
+    std::cout << "Is foo3_wrap constructible from an int? " << std::is_constructible_v<foo3_wrap, int> << '\n';
+
+    using foo4_wrap = tanuki::wrap<foo4_iface>;
+
+    foo4_wrap w4(foo_model{});
+    w4->foo();
+    foo4_wrap w4a(42);
+    w4a->foo();
+
+    std::cout << "Is foo4_wrap constructible from a float? " << std::is_constructible_v<foo4_wrap, float> << '\n';
 }

@@ -86,7 +86,7 @@ key differences:
 And that's it for the most minimal example!
 
 Full code listing
-^^^^^^^^^^^^^^^^^
+-----------------
    
 .. literalinclude:: ../tutorial/hello_world.cpp
     :language: c++

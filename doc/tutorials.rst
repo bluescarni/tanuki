@@ -6,3 +6,4 @@ Tutorials
 
    hello_world.rst
    simple_interface.rst
+   ref_interface.rst

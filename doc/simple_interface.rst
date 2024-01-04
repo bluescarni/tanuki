@@ -1,5 +1,7 @@
 .. _simple_interface:
 
+.. cpp:namespace-push:: tanuki
+
 A simple interface
 ==================
 

@@ -20,3 +20,4 @@ endfunction()
 
 ADD_TANUKI_TUTORIAL(hello_world)
 ADD_TANUKI_TUTORIAL(simple_interface)
+ADD_TANUKI_TUTORIAL(reference_interface)

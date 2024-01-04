@@ -57,7 +57,7 @@ interface. First, we define a generic implementation of the interface:
    :lines: 7-9
 
 Let us ignore for the moment the ``Holder`` and ``T`` template parameters (their meaning will be
-explained later), and note how an implementation must always derive from its ``Base``.
+explained :ref:`later <simple_interface>`), and note how an implementation must always derive from its ``Base``.
 
 Second, we add to the ``any_iface`` definition an ``impl`` template alias to indicate that
 ``any_iface_impl`` is the interface implementation:

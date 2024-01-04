@@ -34,7 +34,8 @@ also provides an implementation for the ``void foo() const`` function:
 
 The ``Holder`` template parameter is a class defined in the tanuki library which stores the
 value we are type-erasing as the ``m_value`` data member. ``Holder`` derives from ``foo1_iface_impl``
-and thus we can reach the ``m_value`` data member via the
+and thus we can reach the ``m_value`` data member via the cast
+``static_cast<const Holder *>(this)`` leveraging the
 `curiously recurring template pattern (CRTP) <https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern>`__.
 In other words, this implementation of the ``void foo() const`` function will invoke
 the ``foo()`` member function of the type-erased value.
@@ -176,12 +177,12 @@ by checking the ``std::is_constructible`` type trait:
 
    Is foo3_wrap constructible from an int? false
 
-But what if we wanted to provide an implementation of our interface for ``int``? We can do this
-with yet another (final) interface implementation. First off, we begin with an **empty** interface implementation:
+This is all fine and dandy, but what if we wanted to provide an implementation of our interface also for ``int``? We can do this
+with yet another (and final) interface implementation. First off, we begin with an **empty** interface implementation:
 
 .. literalinclude:: ../tutorial/simple_interface.cpp
    :language: c++
-   :lines: 68-70
+   :lines: 67-69
 
 This is an invalid implementation because it does not derive from ``Base``.
 Second, we add a constrained specialisation of the interface implementation
@@ -212,9 +213,9 @@ Let use see the new interface implementation in action:
    foo_model calling foo()
    foo4_iface_impl implementing foo() for the integer 42
 
-What happens if we try to construct a ``foo4_wrap`` from an object that is neither
+It works! Bu what happens if we try to construct a ``foo4_wrap`` from an object that is neither
 ``fooable`` nor an ``int``? The :cpp:class:`wrap` class will detect
-that the interface implementation corresponding to an object of such type is empty (i.e., invalid)
+that the interface implementation corresponding to an object of such type is empty (i.e., invalid),
 and it will thus disable the constructor. We can confirm that this is the case by checking
 the constructability of ``foo4_wrap`` from a ``float`` (which is neither
 ``fooable`` nor an ``int``):

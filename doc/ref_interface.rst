@@ -126,14 +126,14 @@ And we can confirm that indeed we can now invoke the ``foo()`` member function v
 
    foo_iface_impl calling foo()
 
-In the same fashion we can use the non-macro-based ``foo_ref_iface2`` interface instead. First
-we define a custom configuration instance,
+We can use the non-macro-based ``foo_ref_iface2`` reference interface in exactly the same way.
+First, we define a custom configuration instance:
 
 .. literalinclude:: ../tutorial/reference_interface.cpp
    :language: c++
    :lines: 45
 
-which we can use to define another wrap type:
+Second, we can use the custom configuration instance to define another wrap type:
 
 .. literalinclude:: ../tutorial/reference_interface.cpp
    :language: c++

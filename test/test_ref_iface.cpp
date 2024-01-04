@@ -67,7 +67,7 @@ TEST_CASE("ref_iface basics")
     REQUIRE(!noexcept(wrap1_t{}));
     REQUIRE(!noexcept(wrap2_t{}));
     REQUIRE(!noexcept(wrap1_t{fooer{}}));
-    REQUIRE(!noexcept(wrap1_t{tanuki::in_place<fooer>}));
+    REQUIRE(!noexcept(wrap1_t{std::in_place_type<fooer>}));
 }
 
 template <typename, typename, typename>
@@ -102,7 +102,7 @@ TEST_CASE("ref_iface noinit")
     REQUIRE(!std::constructible_from<wrap1_t>);
     REQUIRE(!std::constructible_from<wrap2_t>);
     REQUIRE(!std::constructible_from<wrap1_t, int>);
-    REQUIRE(!std::constructible_from<wrap1_t, tanuki::in_place_type<int>>);
+    REQUIRE(!std::constructible_from<wrap1_t, std::in_place_type_t<int>>);
     REQUIRE(!std::is_copy_constructible_v<wrap1_t>);
     REQUIRE(!std::is_move_constructible_v<wrap1_t>);
 }

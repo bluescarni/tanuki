@@ -1,5 +1,6 @@
 coverage:
   ignore:
   - "test/catch/.*"
+  - "tutorial/.*"
 
 comment: off

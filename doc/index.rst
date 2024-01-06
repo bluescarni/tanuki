@@ -21,6 +21,10 @@ Main features include:
 - support for composite interfaces,
 - optional support for `Boost.serialization <https://www.boost.org/doc/libs/release/libs/serialization/doc/index.html>`__.
 
+Interfaces are defined and implemented blending the familiar language of
+traditional object-oriented programming (i.e., abstract base clasess,
+default implementations, single/multiple inheritance, etc.) with C++20 concepts.
+
 .. toctree::
    :maxdepth: 1
 

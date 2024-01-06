@@ -58,6 +58,8 @@ interface. First, we define a generic implementation of the interface:
 
 Let us ignore for the moment the ``Holder`` and ``T`` template parameters (their meaning will be
 explained :ref:`later <simple_interface>`), and note how an implementation must always derive from its ``Base``.
+Aside from the extra funky template arguments, ``any_iface_impl`` looks very similar to a traditional
+OO programming interface implementation.
 
 Second, we add to the ``any_iface`` definition an ``impl`` template alias to indicate that
 ``any_iface_impl`` is the interface implementation:
@@ -77,7 +79,7 @@ Although this code looks superficially similar to the OO-style approach, there a
 key differences:
 
 - no dynamic memory allocation is enforced: the :cpp:class:`wrap` class employs
-  an optimisation that stores small values inline,
+  an :ref:`optimisation <custom_storage>` that stores small values inline,
 - there is no hierarchical coupling: objects of any destructible class can be
   stored in an ``any_wrap`` without the need to inherit from anything,
 - ``any_wrap`` employs value semantics (that is, its copy constructor will make a copy

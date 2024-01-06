@@ -8,7 +8,7 @@ A simple interface
 The minimal example shown in the :ref:`previous tutorial <hello_world>` was not very
 interesting, as the interface we implemented did not define any behaviour other than
 destruction. In this tutorial, we are going to take the next step and implement
-a slightly more useful interface consisting of a single member function.
+a slightly more useful interface consisting of a single member function called ``foo()``.
 
 Take 1: The basics
 ------------------
@@ -27,8 +27,8 @@ In addition to the destructor, we now have the pure virtual member function
    :lines: 5-12
 
 As explained in the :ref:`previous tutorial <hello_world>`, an interface implementation
-must always derive from its ``Base`` template parameter. Additionally, this implementation
-also provides an implementation for the ``void foo() const`` function:
+must always derive from its ``Base`` template parameter. Additionally, we must provide
+an implementation for the ``void foo() const`` function:
 
 .. literalinclude:: ../tutorial/simple_interface.cpp
    :language: c++
@@ -152,7 +152,8 @@ Here is the new interface implementation in action:
    foo3_iface_impl calling foo()
    foo_model calling foo()
 
-``foo3_iface_impl`` is similar to what Rust calls a "blanket implementation".
+``foo3_iface_impl`` is similar to what Rust calls a
+`blanket implementation <https://doc.rust-lang.org/book/ch10-02-traits.html#using-trait-bounds-to-conditionally-implement-methods>`__.
 
 What happens now if we try to construct a ``foo3_wrap`` from an ``int``? The error message given by the compiler changes:
 
@@ -180,13 +181,15 @@ by checking the ``std::is_constructible`` type trait:
    Is foo3_wrap constructible from an int? false
 
 This is all fine and dandy, but what if we wanted to provide an implementation of our interface also for ``int``? We can do this
-with yet another (and final) interface implementation. First off, we begin with an **empty** interface implementation:
+with yet another (and final) variation on the theme.
+
+First off, we begin with an **empty** interface implementation:
 
 .. literalinclude:: ../tutorial/simple_interface.cpp
    :language: c++
    :lines: 67-69
 
-This is an invalid implementation because it does not derive from ``Base``.
+This is an **invalid** implementation because it does not derive from ``Base``.
 Second, we add a constrained specialisation of the interface implementation
 for ``fooable`` types (that is, types providing a const ``foo()`` member function):
 

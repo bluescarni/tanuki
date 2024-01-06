@@ -95,14 +95,15 @@ then the :cpp:class:`wrap` class will automatically switch to dynamic storage.
 Analogously to :cpp:var:`config::static_size`, :cpp:var:`config::static_align` accounts
 for the alignment constraints imposed not only by the value type but also by the type-erasure
 machinery. That is, if you specify a :cpp:var:`config::static_align` of 8, that does not necessarily
-mean that it is possible to store in static storage values with an alignment of 8, as the
+mean that it is possible to store in static storage values with an alignment of 8 or less, as the
 type-erasure machinery might impose additional alignment constraints.
 
 Similarly to :cpp:var:`holder_size`, the :cpp:var:`holder_align` helper can be used to
 compute the alignment requirement of :cpp:class:`wrap`'s static storage for a specific value type ``T``.
+Let us see a simple example.
 
-Let us see a simple example. First we define a new configuration instance in which we specify
-both a custom static size and a custom alignment:
+First, we define a new configuration instance in which we specify
+both a custom static size **and** a custom alignment:
 
 .. literalinclude:: ../tutorial/custom_storage.cpp
    :language: c++

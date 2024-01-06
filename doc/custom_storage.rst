@@ -130,3 +130,9 @@ memory footprint of the :cpp:class:`wrap` class:
 .. code-block:: console
 
    sizeof(wrap1_t) is 32, sizeof(wrap2_t) is 24
+
+Full code listing
+-----------------
+
+.. literalinclude:: ../tutorial/custom_storage.cpp
+    :language: c++

@@ -8,3 +8,4 @@ Tutorials
    simple_interface.rst
    ref_interface.rst
    custom_storage.rst
+   wrap_reference.rst

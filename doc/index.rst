@@ -17,6 +17,7 @@ Main features include:
 - high configurability,
 - support for both value and reference semantics,
 - small object optimisation to avoid dynamic memory allocation,
+- the ability to type-erase references,
 - support for composite interfaces,
 - optional support for `Boost.serialization <https://www.boost.org/doc/libs/release/libs/serialization/doc/index.html>`__.
 
@@ -24,3 +25,4 @@ Main features include:
    :maxdepth: 1
 
    tutorials.rst
+   api_reference.rst

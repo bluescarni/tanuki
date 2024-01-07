@@ -79,7 +79,7 @@ in action with a second version of the interface implementation:
 
 This time, in addition to deriving from ``Base``, the ``foo2_iface_impl`` implementation also
 derives from :cpp:class:`iface_impl_helper`. :cpp:class:`iface_impl_helper` is itself templated
-on two parameters: the ``Holder`` class and the ``Base`` for the implementation.
+on two parameters: the ``Base`` for the implementation and the ``Holder`` class.
 :cpp:class:`iface_impl_helper` provides ``value()`` getters which return references
 to the type-erased value. This way we can access the type-erased value via ``this->value()``
 without ugly casts:

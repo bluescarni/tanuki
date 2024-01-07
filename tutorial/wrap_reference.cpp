@@ -37,14 +37,14 @@ struct foobar_iface {
     using impl = foobar_iface_impl<Base, Holder, T>;
 };
 
-struct foo_model {
+struct foobar_model {
     void foo() const
     {
-        std::cout << "foo_model calling foo()\n";
+        std::cout << "foobar_model calling foo()\n";
     }
     void bar()
     {
-        std::cout << "foo_model calling bar()\n";
+        std::cout << "foobar_model calling bar()\n";
     }
 };
 
@@ -52,14 +52,26 @@ int main()
 {
     using wrap_t = tanuki::wrap<foobar_iface>;
 
-    wrap_t w1{foo_model{}};
+    // Store the copy of an object.
+    wrap_t w1{foobar_model{}};
     w1->foo();
 
-    foo_model f;
-
+    // Store a reference to an existing object.
+    foobar_model f;
     wrap_t w2{std::ref(f)};
     w2->bar();
 
+    // Check that the value in w2 points to f.
     std::cout << "f points to              : " << &f << '\n';
-    std::cout << "The value in w2 points to: " << &value_ref<std::reference_wrapper<foo_model>>(w2).get() << '\n';
+    std::cout << "The value in w2 points to: " << &value_ref<std::reference_wrapper<foobar_model>>(w2).get() << '\n';
+
+    // Store a const reference to f.
+    wrap_t w3{std::cref(f)};
+    // WARNING: this will throw an exception!
+    // w3->bar();
+
+    // Store a const reference to f.
+    const wrap_t w4{std::cref(f)};
+    // OK: this will not compile.
+    // w4->bar();
 }

@@ -1,6 +1,7 @@
 #include <concepts>
 #include <functional>
 #include <sstream>
+#include <stdexcept>
 #include <type_traits>
 #include <typeinfo>
 #include <utility>
@@ -15,6 +16,7 @@
 #include <tanuki/tanuki.hpp>
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_exception.hpp>
 
 #if defined(__GNUC__)
 
@@ -52,8 +54,17 @@ TANUKI_S11N_WRAP_EXPORT(foo, any_iface)
 
 #endif
 
+struct thrower {
+    explicit thrower(int)
+    {
+        throw std::invalid_argument("boo");
+    }
+};
+
 TEST_CASE("basics")
 {
+    using Catch::Matchers::Message;
+
     // Default init in the invalid state.
     using wrap1_t = tanuki::wrap<any_iface, tanuki::config<>{.invalid_default_ctor = true,
                                                              .semantics = tanuki::wrap_semantics::reference}>;
@@ -167,6 +178,16 @@ TEST_CASE("basics")
     w11 = tanuki::invalid_wrap_t{};
 
     REQUIRE(is_invalid(w11));
+
+    // A couple of emplace tests.
+    emplace<int>(w11, 43);
+
+    REQUIRE(!is_invalid(w11));
+    REQUIRE(value_ref<int>(w11) == 43);
+
+    REQUIRE_THROWS_MATCHES(emplace<thrower>(w11, 33), std::invalid_argument, Message("boo"));
+    REQUIRE(!is_invalid(w11));
+    REQUIRE(value_ref<int>(w11) == 43);
 }
 
 #if defined(TANUKI_WITH_BOOST_S11N)

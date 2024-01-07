@@ -1,10 +1,12 @@
 #include <array>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
 #include <tanuki/tanuki.hpp>
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_exception.hpp>
 
 #if defined(__GNUC__)
 
@@ -36,11 +38,20 @@ struct large {
     std::string str = "hello world                                                                            ";
 };
 
+struct thrower {
+    explicit thrower(int)
+    {
+        throw std::invalid_argument("boo");
+    }
+};
+
 template <typename Wrap, typename T, typename... Args>
 concept emplaceable = requires(Wrap &w, Args &&...args) { emplace<T>(w, std::forward<Args>(args)...); };
 
 TEST_CASE("emplace")
 {
+    using Catch::Matchers::Message;
+
     using wrap_t = tanuki::wrap<any_iface>;
 
     auto w1 = wrap_t(tanuki::invalid_wrap);
@@ -66,6 +77,15 @@ TEST_CASE("emplace")
     emplace<int>(w1, 43);
     REQUIRE(!is_invalid(w1));
     REQUIRE(value_ref<int>(w1) == 43);
+
+    // Try an emplacement that throws.
+    emplace<large>(w1);
+
+    REQUIRE_THROWS_MATCHES(emplace<thrower>(w1, 33), std::invalid_argument, Message("boo"));
+    REQUIRE(is_invalid(w1));
+    emplace<large>(w1);
+    REQUIRE(!is_invalid(w1));
+    REQUIRE(value_isa<large>(w1));
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

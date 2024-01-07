@@ -8,7 +8,9 @@ Type-erasure for references
 In all the examples we have seen so far, :cpp:class:`wrap` objects were constructed
 by copying/moving values. It is however also possible
 to construct :cpp:class:`wrap` objects that contain references to existing values,
-rather than copies of the values. With a small additional effort, it is also possible
+rather than copies of the values. References are stored in a :cpp:class:`wrap` via
+`std::reference_wrapper <https://en.cppreference.com/w/cpp/utility/functional/reference_wrapper>`__, and,
+with a small additional effort, it is possible
 to write interface implementations which work seamlessly with both values and references.
 
 Consider the following interface:

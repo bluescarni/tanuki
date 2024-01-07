@@ -1149,7 +1149,7 @@ public:
     }
 
     wrap(const wrap &other) noexcept(Cfg.semantics == wrap_semantics::reference)
-        requires(Cfg.copyable) && std::default_initializable<ref_iface_t>
+        requires(Cfg.copyable || Cfg.semantics == wrap_semantics::reference) && std::default_initializable<ref_iface_t>
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
             if constexpr (Cfg.static_size == 0u) {
@@ -1199,7 +1199,7 @@ private:
 
 public:
     wrap(wrap &&other) noexcept
-        requires(Cfg.movable) && std::default_initializable<ref_iface_t>
+        requires(Cfg.movable || Cfg.semantics == wrap_semantics::reference) && std::default_initializable<ref_iface_t>
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
             move_init_from(std::move(other));
@@ -1235,7 +1235,7 @@ public:
 
     // Move assignment.
     wrap &operator=(wrap &&other) noexcept
-        requires(Cfg.movable)
+        requires(Cfg.movable || Cfg.semantics == wrap_semantics::reference)
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
             // Handle self-assign.
@@ -1285,7 +1285,7 @@ public:
 
     // Copy assignment.
     wrap &operator=(const wrap &other) noexcept(Cfg.semantics == wrap_semantics::reference)
-        requires(Cfg.copyable)
+        requires(Cfg.copyable || Cfg.semantics == wrap_semantics::reference)
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
             // Handle self-assign.
@@ -1344,8 +1344,7 @@ public:
             // NOTE: not 100% sure about this, but it seems consistent
             // for generic assignment to be enabled only if copy/move
             // assignment are as well.
-            requires Cfg.copyable;
-            requires Cfg.movable;
+            requires(Cfg.copyable && Cfg.movable) || Cfg.semantics == wrap_semantics::reference;
             // Make extra sure this does not compete with the invalid assignment operator.
             requires !std::same_as<invalid_wrap_t, std::remove_cvref_t<T>>;
             // Must not compete with copy/move assignment.

@@ -830,6 +830,8 @@ struct wrap_pointer_iface<false, Wrap, IFace> {
 struct invalid_wrap_t {
 };
 
+inline constexpr invalid_wrap_t invalid_wrap{};
+
 // Helper to unwrap a std::reference_wrapper and remove reference
 // and cv qualifiers from the result.
 template <typename T>
@@ -1030,9 +1032,6 @@ class TANUKI_VISIBLE wrap
 #endif
 
 public:
-    // Store the configuration.
-    static constexpr auto cfg = Cfg;
-
     // Explicit initialisation into the invalid state.
     explicit wrap(invalid_wrap_t) noexcept(detail::nothrow_default_initializable<ref_iface_t>)
         requires std::default_initializable<ref_iface_t>
@@ -1649,6 +1648,24 @@ bool value_isa(const wrap<IFace, Cfg> &w) noexcept
 {
     return value_ptr<T>(w) != nullptr;
 }
+
+namespace detail
+{
+
+template <typename>
+struct cfg_from_wrap {
+};
+
+template <typename IFace, auto Cfg>
+struct cfg_from_wrap<wrap<IFace, Cfg>> {
+    static constexpr auto cfg = Cfg;
+};
+
+} // namespace detail
+
+// Fetch the configuration settings for a wrap type.
+template <any_wrap W>
+inline constexpr auto wrap_cfg = detail::cfg_from_wrap<W>::cfg;
 
 TANUKI_END_NAMESPACE
 

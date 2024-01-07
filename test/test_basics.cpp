@@ -108,6 +108,8 @@ TEST_CASE("basics")
     using tanuki::wrap;
     using wrap_t = wrap<any_iface>;
 
+    REQUIRE(tanuki::default_config.static_size == tanuki::wrap_cfg<wrap_t>.static_size);
+
     // Version macro check.
     REQUIRE(TANUKI_VERSION_STRING
             == std::to_string(TANUKI_VERSION_MAJOR) + "." + std::to_string(TANUKI_VERSION_MINOR) + "."
@@ -301,6 +303,8 @@ TEST_CASE("assignment")
 TEST_CASE("s11n nostatic")
 {
     using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{.static_size = 0}>;
+
+    REQUIRE(tanuki::wrap_cfg<wrap_t>.static_size == 0u);
 
     wrap_t w(large{});
     value_ptr<large>(w)->buffer[0] = 42;

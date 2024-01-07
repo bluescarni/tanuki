@@ -36,7 +36,7 @@ TEST_CASE("invalid ctor/assignment")
     using wrap_t = tanuki::wrap<any_iface>;
 
     {
-        auto w1 = wrap_t(tanuki::invalid_wrap_t{});
+        auto w1 = wrap_t(tanuki::invalid_wrap);
 
         REQUIRE(is_invalid(w1));
 

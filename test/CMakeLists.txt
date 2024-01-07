@@ -41,6 +41,8 @@ ADD_TANUKI_TESTCASE(test_const_ref_access)
 ADD_TANUKI_TESTCASE(test_overaligned)
 ADD_TANUKI_TESTCASE(test_ref_implicit)
 ADD_TANUKI_TESTCASE(test_ref_semantics)
+ADD_TANUKI_TESTCASE(test_make_invalid)
+
 ADD_TANUKI_TESTCASE(std_function)
 
 ADD_TANUKI_TESTCASE(io_iterator)

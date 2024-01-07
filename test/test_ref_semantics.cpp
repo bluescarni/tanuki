@@ -150,6 +150,23 @@ TEST_CASE("basics")
     swap(w10, w9);
     REQUIRE(value_ptr<foo>(w9) == old_ptr10);
     REQUIRE(value_ptr<int>(w10) == old_ptr9);
+
+    // Construction/assignment into the invalid state.
+    wrap2_t w11{tanuki::invalid_wrap_t{}};
+
+    REQUIRE(is_invalid(w11));
+
+    w11 = tanuki::invalid_wrap_t{};
+
+    REQUIRE(is_invalid(w11));
+
+    w11 = 123;
+
+    REQUIRE(!is_invalid(w11));
+
+    w11 = tanuki::invalid_wrap_t{};
+
+    REQUIRE(is_invalid(w11));
 }
 
 #if defined(TANUKI_WITH_BOOST_S11N)

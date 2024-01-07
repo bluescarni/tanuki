@@ -168,6 +168,13 @@ template <typename T>
 struct is_reference_wrapper<std::reference_wrapper<T>> : std::true_type {
 };
 
+// Implementation of the concept to detect any wrap instance.
+// This will be specialised after the definition of the
+// wrap class.
+template <typename>
+struct is_any_wrap_impl : std::false_type {
+};
+
 // This is a base class for value_iface, used
 // to check that an interface implementation
 // is correctly inheriting from its Base.
@@ -301,6 +308,10 @@ concept valid_value_type = std::is_object_v<T> && (!std::is_const_v<T>)&&(!std::
 template <typename IFace0, typename IFace1, typename... IFaceN>
 struct TANUKI_VISIBLE composite_iface : public IFace0, public IFace1, public IFaceN... {
 };
+
+// Concept to detect any wrap instance.
+template <typename T>
+concept any_wrap = detail::is_any_wrap_impl<T>::value;
 
 namespace detail
 {
@@ -814,6 +825,11 @@ struct wrap_pointer_iface<false, Wrap, IFace> {
 
 } // namespace detail
 
+// Tag structure to construct/assign a wrap
+// into the invalid state.
+struct invalid_wrap_t {
+};
+
 // Helper to unwrap a std::reference_wrapper and remove reference
 // and cv qualifiers from the result.
 template <typename T>
@@ -1017,15 +1033,25 @@ public:
     // Store the configuration.
     static constexpr auto cfg = Cfg;
 
-    // Default initialisation into the invalid state.
-    wrap() noexcept(detail::nothrow_default_initializable<ref_iface_t>)
-        requires(Cfg.invalid_default_ctor) && std::default_initializable<ref_iface_t>
+    // Explicit initialisation into the invalid state.
+    explicit wrap(invalid_wrap_t) noexcept(detail::nothrow_default_initializable<ref_iface_t>)
+        requires std::default_initializable<ref_iface_t>
     {
         // NOTE: for reference semantics, the default ctor
         // of shared_ptr already does the right thing.
         if constexpr (Cfg.semantics == wrap_semantics::value) {
             this->m_pv_iface = nullptr;
         }
+    }
+
+    // Default initialisation into the invalid state.
+    // NOTE: there's some repetition here with the invalid state ctor
+    // in the noexcept() and requires() clauses. This helps avoiding
+    // compiler issues on earlier clang versions.
+    wrap() noexcept(detail::nothrow_default_initializable<ref_iface_t>)
+        requires(Cfg.invalid_default_ctor) && std::default_initializable<ref_iface_t>
+        : wrap(invalid_wrap_t{})
+    {
     }
 
     // Default initialisation into the default value type.
@@ -1061,6 +1087,8 @@ public:
     template <typename T, typename W = wrap>
         requires(requires(W &w, T &&x) {
             requires std::default_initializable<ref_iface_t>;
+            // Make extra sure this does not compete with the invalid ctor.
+            requires !std::same_as<invalid_wrap_t, std::remove_cvref_t<T>>;
             // Must not compete with the emplace ctor.
             requires !detail::is_in_place_type<std::remove_cvref_t<T>>::value;
             // Must not compete with copy/move.
@@ -1077,6 +1105,9 @@ public:
     }
 
     // Generic ctor from std::reference_wrapper.
+    // NOTE: this is implemented separately from the generic ctor
+    // only in order to work around compiler bugs when the explicit()
+    // clause contains complex expressions.
     template <typename T, typename W = wrap>
         requires(requires(W &w, std::reference_wrapper<T> ref) {
             requires std::default_initializable<ref_iface_t>;
@@ -1278,6 +1309,26 @@ public:
         return *this;
     }
 
+    // Assignment to the invalid state.
+    wrap &operator=(invalid_wrap_t) noexcept
+    {
+        if constexpr (Cfg.semantics == wrap_semantics::value) {
+            // Don't do anything if this is already
+            // in the invalid state.
+            if (!is_invalid(*this)) {
+                // Destroy the contained value.
+                destroy();
+
+                // Set the invalid state.
+                this->m_pv_iface = nullptr;
+            }
+        } else {
+            this->m_pv_iface.reset();
+        }
+
+        return *this;
+    }
+
     // Generic assignment.
     template <typename T, typename W = wrap>
         requires(requires(W &w, T &&x) {
@@ -1286,6 +1337,8 @@ public:
             // assignment are as well.
             requires Cfg.copyable;
             requires Cfg.movable;
+            // Make extra sure this does not compete with the invalid assignment operator.
+            requires !std::same_as<invalid_wrap_t, std::remove_cvref_t<T>>;
             // Must not compete with copy/move assignment.
             requires !std::same_as<std::remove_cvref_t<T>, W>;
             w.template ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x));
@@ -1347,6 +1400,8 @@ public:
     // in which w has been swapped with an invalid object),
     // if generic assignment failed, or, in case of reference semantics,
     // if deserialisation threw an exception.
+    // The invalid state can also be explicitly set by constructing/assigning
+    // from invalid_wrap_t.
     // The only valid operations on an invalid object are:
     // - invocation of is_invalid(),
     // - destruction,
@@ -1470,22 +1525,10 @@ public:
 namespace detail
 {
 
-template <typename>
-struct is_any_wrap_impl : std::false_type {
-};
-
+// Specialise is_any_wrap_impl.
 template <typename IFace, auto Cfg>
 struct is_any_wrap_impl<wrap<IFace, Cfg>> : std::true_type {
 };
-
-} // namespace detail
-
-// Concept to detect any wrap instance.
-template <typename T>
-concept any_wrap = detail::is_any_wrap_impl<T>::value;
-
-namespace detail
-{
 
 // Base class for iface_impl_helper.
 struct iface_impl_helper_base {

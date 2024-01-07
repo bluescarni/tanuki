@@ -823,6 +823,16 @@ template <typename Wrap, typename IFace>
 struct wrap_pointer_iface<false, Wrap, IFace> {
 };
 
+// This is a re-implementation of std::same_as
+// in order to work around a GCC 10 bug.
+template <typename, typename>
+struct same_as : std::false_type {
+};
+
+template <typename T>
+struct same_as<T, T> : std::true_type {
+};
+
 } // namespace detail
 
 // Tag structure to construct/assign a wrap
@@ -1402,21 +1412,25 @@ public:
 #endif
 
     // Emplacement.
-    template <typename T, typename... Args>
-        requires(requires(wrap &w, Args &&...args) {
+    // NOTE: usual extra W parameter to work around compiler bugs.
+    template <typename T, typename W = wrap, typename... Args>
+        requires(requires(W &w, Args &&...args) {
             // Forbid emplacing a wrap inside a wrap.
-            requires !std::same_as<T, wrap>;
-            w.ctor_impl<T>(std::forward<Args>(args)...);
+            requires !detail::same_as<T, W>::value;
+            w.template ctor_impl<T>(std::forward<Args>(args)...);
         })
-    friend void emplace(wrap &w, Args &&...args) noexcept(noexcept(w.ctor_impl<T>(std::forward<Args>(args)...)))
+    friend void
+    emplace(W &w,
+            Args &&...args) noexcept(noexcept(std::declval<W &>().template ctor_impl<T>(std::forward<Args>(args)...)))
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
+            // Destroy the value in w if necessary.
             if (!is_invalid(w)) {
                 w.destroy();
             }
 
             try {
-                w.ctor_impl<T>(std::forward<Args>(args)...);
+                w.template ctor_impl<T>(std::forward<Args>(args)...);
             } catch (...) {
                 // NOTE: if ctor_impl fails there's no cleanup required.
                 // Invalidate this before rethrowing.
@@ -1425,7 +1439,7 @@ public:
                 throw;
             }
         } else {
-            w.ctor_impl<T>(std::forward<Args>(args)...);
+            w.template ctor_impl<T>(std::forward<Args>(args)...);
         }
     }
 

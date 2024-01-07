@@ -188,6 +188,18 @@ TEST_CASE("basics")
     REQUIRE_THROWS_MATCHES(emplace<thrower>(w11, 33), std::invalid_argument, Message("boo"));
     REQUIRE(!is_invalid(w11));
     REQUIRE(value_ref<int>(w11) == 43);
+
+    // Revive via emplacement.
+    w11 = tanuki::invalid_wrap;
+    REQUIRE(is_invalid(w11));
+    emplace<foo>(w11);
+    REQUIRE(!is_invalid(w11));
+    REQUIRE(value_isa<foo>(w11));
+
+    // noexcept testing.
+    REQUIRE(!noexcept(emplace<int>(w11, 43)));
+    REQUIRE(!noexcept(emplace<foo>(w11)));
+    REQUIRE(!noexcept(emplace<thrower>(w11, 33)));
 }
 
 #if defined(TANUKI_WITH_BOOST_S11N)

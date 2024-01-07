@@ -1468,7 +1468,7 @@ public:
     // NOTE: w is invalid when the value interface pointer is set to null.
     // This can happen if w has been moved from (note that this also includes the case
     // in which w has been swapped with an invalid object),
-    // if generic assignment failed, or, in case of reference semantics,
+    // if generic assignment or emplacement failed, or, in case of reference semantics,
     // if deserialisation threw an exception.
     // The invalid state can also be explicitly set by constructing/assigning
     // from invalid_wrap_t.
@@ -1476,7 +1476,8 @@ public:
     // - invocation of is_invalid(),
     // - destruction,
     // - copy/move assignment from, and swapping with, a valid wrap,
-    // - generic assignment.
+    // - generic assignment,
+    // - emplacement.
     [[nodiscard]] friend bool is_invalid(const wrap &w) noexcept
     {
         return w.m_pv_iface == nullptr;

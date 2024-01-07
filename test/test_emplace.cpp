@@ -78,6 +78,13 @@ TEST_CASE("emplace")
     REQUIRE(!is_invalid(w1));
     REQUIRE(value_ref<int>(w1) == 43);
 
+    // Revive via emplacement.
+    w1 = tanuki::invalid_wrap;
+    REQUIRE(is_invalid(w1));
+    emplace<large>(w1);
+    REQUIRE(!is_invalid(w1));
+    REQUIRE(value_isa<large>(w1));
+
     // Try an emplacement that throws.
     emplace<large>(w1);
 
@@ -86,6 +93,11 @@ TEST_CASE("emplace")
     emplace<large>(w1);
     REQUIRE(!is_invalid(w1));
     REQUIRE(value_isa<large>(w1));
+
+    // noexcept testing.
+    REQUIRE(noexcept(emplace<int>(w1, 43)));
+    REQUIRE(!noexcept(emplace<large>(w1)));
+    REQUIRE(!noexcept(emplace<thrower>(w1, 33)));
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

@@ -64,7 +64,6 @@ stored in the ``Holder``. Let us see a usage example:
    foobar_iface_impl calling bar()
    foobar_model calling bar()
 
-
 Because the :cpp:class:`wrap` ``w2`` is constructed from ``std::ref(f)``, it will store a reference
 to ``f`` rather than a copy. We can confirm that this is the case by comparing the address of ``f``
 to the address of the object contained in ``w2``:

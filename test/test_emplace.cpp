@@ -1,5 +1,6 @@
 #include <array>
 #include <string>
+#include <utility>
 
 #include <tanuki/tanuki.hpp>
 
@@ -18,6 +19,10 @@ template <typename Base, typename, typename>
 struct any_iface_impl : Base {
 };
 
+template <typename Base, typename Holder>
+struct any_iface_impl<Base, Holder, std::string> {
+};
+
 // NOLINTNEXTLINE
 struct any_iface {
     virtual ~any_iface() = default;
@@ -31,11 +36,18 @@ struct large {
     std::string str = "hello world                                                                            ";
 };
 
+template <typename Wrap, typename T, typename... Args>
+concept emplaceable = requires(Wrap &w, Args &&...args) { emplace<T>(w, std::forward<Args>(args)...); };
+
 TEST_CASE("emplace")
 {
     using wrap_t = tanuki::wrap<any_iface>;
 
     auto w1 = wrap_t(tanuki::invalid_wrap);
+
+    REQUIRE(emplaceable<wrap_t, int, int>);
+    REQUIRE(!emplaceable<wrap_t, std::string>);
+    REQUIRE(!emplaceable<wrap_t, wrap_t, int>);
 
     emplace<int>(w1, 43);
 
@@ -44,6 +56,14 @@ TEST_CASE("emplace")
 
     emplace<int>(w1, 43);
 
+    REQUIRE(!is_invalid(w1));
+    REQUIRE(value_ref<int>(w1) == 43);
+
+    emplace<large>(w1);
+    REQUIRE(!is_invalid(w1));
+    REQUIRE(value_isa<large>(w1));
+
+    emplace<int>(w1, 43);
     REQUIRE(!is_invalid(w1));
     REQUIRE(value_ref<int>(w1) == 43);
 }

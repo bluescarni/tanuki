@@ -785,7 +785,7 @@ template <typename T>
 using value_t_from_arg = std::conditional_t<std::is_function_v<std::remove_cvref_t<T>>,
                                             std::decay_t<std::remove_cvref_t<T>>, std::remove_cvref_t<T>>;
 
-// Helper to detect if T is an in_place_type_t. This is used
+// Helper to detect if T is a std::in_place_type_t. This is used
 // to avoid ambiguities in the wrap class between the nullary emplace ctor
 // and the generic ctor.
 template <typename>
@@ -1393,6 +1393,47 @@ public:
     }
 
     // Free functions interface.
+
+#if defined(__GNUC__) && !defined(__clang__)
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wterminate"
+
+#endif
+
+    // Emplacement.
+    template <typename T, typename... Args>
+        requires(requires(wrap &w, Args &&...args) {
+            // Forbid emplacing a wrap inside a wrap.
+            requires !std::same_as<T, wrap>;
+            w.ctor_impl<T>(std::forward<Args>(args)...);
+        })
+    friend void emplace(wrap &w, Args &&...args) noexcept(noexcept(w.ctor_impl<T>(std::forward<Args>(args)...)))
+    {
+        if constexpr (Cfg.semantics == wrap_semantics::value) {
+            if (!is_invalid(w)) {
+                w.destroy();
+            }
+
+            try {
+                w.ctor_impl<T>(std::forward<Args>(args)...);
+            } catch (...) {
+                // NOTE: if ctor_impl fails there's no cleanup required.
+                // Invalidate this before rethrowing.
+                w.m_pv_iface = nullptr;
+
+                throw;
+            }
+        } else {
+            w.ctor_impl<T>(std::forward<Args>(args)...);
+        }
+    }
+
+#if defined(__GNUC__) && !defined(__clang__)
+
+#pragma GCC diagnostic pop
+
+#endif
 
     // NOTE: w is invalid when the value interface pointer is set to null.
     // This can happen if w has been moved from (note that this also includes the case

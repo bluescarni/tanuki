@@ -31,7 +31,7 @@ Configuration options
    .. cpp:var:: bool invalid_default_ctor = false
 
       If this option is set to ``true``, then the default constructor of :cpp:class:`wrap`
-      initialises to the invalid state. Otherwise, the default constructor of :cpp:class:`wrap`
+      initialises to the :ref:`invalid state <invalid_state>`. Otherwise, the default constructor of :cpp:class:`wrap`
       is disabled, unless a non-``void`` :cpp:type:`DefaultValueType` is selected.
 
    .. cpp:var:: bool pointer_interface = true
@@ -56,7 +56,7 @@ Configuration options
       This option selects whether or not the :cpp:class:`wrap` class is swappable.
 
 
-.. cpp:var:: inline constexpr auto default_config = config{};
+.. cpp:var:: inline constexpr auto default_config = config{}
 
    Default configuration for the :cpp:class:`wrap` class.
 

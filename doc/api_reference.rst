@@ -8,3 +8,4 @@ API reference
 
    wrap.rst
    config.rst
+   utils.rst

@@ -105,7 +105,7 @@ first write:
    :lines: 43
 
 The :cpp:class:`config` class is templated over two types. Ignoring the first one for the time
-being (which defaults to ``void``), the second parameter is the reference interface, which
+being (its meaning will be explained :ref:`later <def_ctor>`), the second parameter is the reference interface, which
 we set to ``foo_ref_iface1`` to select the macro-based reference interface. We also switch off
 the pointer interface in :cpp:class:`wrap` via the ``.pointer_interface = false``
 `designated initializer <https://en.cppreference.com/w/cpp/language/aggregate_initialization>`__.

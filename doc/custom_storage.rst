@@ -49,7 +49,8 @@ This will ensure that value types whose size is up to ``sizeof(void *)`` can be 
 in static storage.
 
 We can then define a :cpp:class:`wrap` class using the custom :cpp:class:`config` instance and
-verify that indeed static storage is employed when the :cpp:class:`wrap` contains a pointer:
+verify that indeed static storage is employed when the :cpp:class:`wrap` contains a pointer
+using the :cpp:func:`~wrap::has_static_storage()` function:
 
 .. literalinclude:: ../tutorial/custom_storage.cpp
    :language: c++
@@ -130,3 +131,9 @@ memory footprint of the :cpp:class:`wrap` class:
 .. code-block:: console
 
    sizeof(wrap1_t) is 32, sizeof(wrap2_t) is 24
+
+Full code listing
+-----------------
+
+.. literalinclude:: ../tutorial/custom_storage.cpp
+    :language: c++

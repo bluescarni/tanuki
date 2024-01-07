@@ -144,6 +144,23 @@ TEST_CASE("basics")
     const wrap_t wfunc2(&my_func);
     REQUIRE(value_isa<void (*)(int)>(wfunc1));
     REQUIRE(value_isa<void (*)(int)>(wfunc2));
+
+    // Construction/assignment into the invalid state.
+    wrap_t w11{tanuki::invalid_wrap_t{}};
+
+    REQUIRE(is_invalid(w11));
+
+    w11 = tanuki::invalid_wrap_t{};
+
+    REQUIRE(is_invalid(w11));
+
+    w11 = 123;
+
+    REQUIRE(!is_invalid(w11));
+
+    w11 = tanuki::invalid_wrap_t{};
+
+    REQUIRE(is_invalid(w11));
 }
 
 TEST_CASE("assignment")

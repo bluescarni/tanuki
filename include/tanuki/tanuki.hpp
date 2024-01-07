@@ -1412,9 +1412,11 @@ public:
 #endif
 
     // Emplacement.
-    // NOTE: usual extra W parameter to work around compiler bugs.
-    template <typename T, typename W = wrap, typename... Args>
+    // NOTE: this is a mess on earlier clang/GCC versions...
+#if defined(__clang__)
+    template <typename T, typename W, typename... Args>
         requires(requires(W &w, Args &&...args) {
+            requires detail::same_as<W, wrap>::value;
             // Forbid emplacing a wrap inside a wrap.
             requires !detail::same_as<T, W>::value;
             w.template ctor_impl<T>(std::forward<Args>(args)...);
@@ -1422,6 +1424,20 @@ public:
     friend void
     emplace(W &w,
             Args &&...args) noexcept(noexcept(std::declval<W &>().template ctor_impl<T>(std::forward<Args>(args)...)))
+#elif defined(__GNUC__)
+    template <typename T, std::enable_if_t<!detail::same_as<T, wrap>::value, int> = 0, typename... Args>
+        requires(requires(wrap &w, Args &&...args) { w.ctor_impl<T>(std::forward<Args>(args)...); })
+    friend void emplace(wrap &w, Args &&...args) noexcept(noexcept(w.ctor_impl<T>(std::forward<Args>(args)...)))
+#else
+    // This should be the canonical version.
+    template <typename T, typename... Args>
+        requires(requires(wrap &w, Args &&...args) {
+            // Forbid emplacing a wrap inside a wrap.
+            requires !std::same_as<T, wrap>;
+            w.ctor_impl<T>(std::forward<Args>(args)...);
+        })
+    friend void emplace(wrap &w, Args &&...args) noexcept(noexcept(w.ctor_impl<T>(std::forward<Args>(args)...)))
+#endif
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
             // Destroy the value in w if necessary.

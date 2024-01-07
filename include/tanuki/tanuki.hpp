@@ -1499,9 +1499,7 @@ consteval bool iface_impl_value_getter_is_noexcept()
     using T = typename detail::holder_value<Holder>::type;
 
     if constexpr (detail::is_reference_wrapper<T>::value) {
-        if constexpr (std::is_const_v<std::remove_reference_t<std::unwrap_reference_t<T>>>) {
-            return false;
-        }
+        return !std::is_const_v<std::remove_reference_t<std::unwrap_reference_t<T>>>;
     }
 
     return true;

@@ -214,7 +214,7 @@ TEST_CASE("basics")
     REQUIRE(value_ptr<int>(w12) != value_ptr<int>(w12_copy));
     REQUIRE(value_ref<int>(w12_copy) == 123);
 
-    wrap2_t w13(noncopyable{});
+    const wrap2_t w13(noncopyable{});
     REQUIRE_THROWS_MATCHES(copy(w13), std::invalid_argument, Message("Attempting to clone a non-copyable value type"));
 }
 

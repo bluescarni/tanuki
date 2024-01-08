@@ -61,6 +61,13 @@ struct thrower {
     }
 };
 
+// NOLINTNEXTLINE
+struct noncopyable {
+    noncopyable() = default;
+    noncopyable(const noncopyable &) = delete;
+    noncopyable(noncopyable &&) noexcept = default;
+};
+
 TEST_CASE("basics")
 {
     using Catch::Matchers::Message;
@@ -200,6 +207,15 @@ TEST_CASE("basics")
     REQUIRE(!noexcept(emplace<int>(w11, 43)));
     REQUIRE(!noexcept(emplace<foo>(w11)));
     REQUIRE(!noexcept(emplace<thrower>(w11, 33)));
+
+    // Test deep copying.
+    wrap2_t w12(123);
+    auto w12_copy = copy(w12);
+    REQUIRE(value_ptr<int>(w12) != value_ptr<int>(w12_copy));
+    REQUIRE(value_ref<int>(w12_copy) == 123);
+
+    wrap2_t w13(noncopyable{});
+    REQUIRE_THROWS_MATCHES(copy(w13), std::invalid_argument, Message("Attempting to clone a non-copyable value type"));
 }
 
 #if defined(TANUKI_WITH_BOOST_S11N)

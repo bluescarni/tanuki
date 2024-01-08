@@ -225,6 +225,11 @@ struct TANUKI_VISIBLE value_iface : public IFace, value_iface_base {
         assert(false);
         return {};
     }
+    [[nodiscard]] virtual std::shared_ptr<value_iface> _tanuki_shared_clone() const
+    {
+        assert(false);
+        return {};
+    }
     [[nodiscard]] virtual value_iface *_tanuki_copy_init_holder(void *) const
     {
         assert(false);
@@ -484,6 +489,15 @@ private:
         if constexpr (std::copy_constructible<T>) {
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
             return new holder(m_value);
+        } else {
+            throw std::invalid_argument("Attempting to clone a non-copyable value type");
+        }
+    }
+    // Same as above, but return a shared ptr.
+    [[nodiscard]] std::shared_ptr<value_iface<IFace, Sem>> _tanuki_shared_clone() const final
+    {
+        if constexpr (std::copy_constructible<T>) {
+            return std::make_shared<holder>(m_value);
         } else {
             throw std::invalid_argument("Attempting to clone a non-copyable value type");
         }
@@ -1589,6 +1603,14 @@ public:
     [[nodiscard]] friend bool contains_reference(const wrap &w) noexcept
     {
         return w.m_pv_iface->_tanuki_is_reference();
+    }
+
+    [[nodiscard]] friend wrap copy(const wrap &w)
+        requires(Cfg.semantics == wrap_semantics::reference)
+    {
+        wrap retval(invalid_wrap);
+        retval.m_pv_iface = w.m_pv_iface->_tanuki_shared_clone();
+        return retval;
     }
 };
 

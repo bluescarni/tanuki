@@ -68,6 +68,21 @@
 
 #endif
 
+// std::unreachable() implementation.
+#if defined(__GNUC__) || defined(__clang__)
+
+#define TANUKI_UNREACHABLE __builtin_unreachable()
+
+#elif defined(_MSC_VER)
+
+#define TANUKI_UNREACHABLE __assume(false)
+
+#else
+
+#define TANUKI_UNREACHABLE
+
+#endif
+
 // ABI tag setup.
 #if defined(__GNUC__) || defined(__clang__)
 
@@ -211,16 +226,19 @@ struct TANUKI_VISIBLE value_iface : public IFace, value_iface_base {
     // Access to the value and its type.
     [[nodiscard]] virtual void *_tanuki_value_ptr() noexcept
     {
+        TANUKI_UNREACHABLE;
         assert(false);
         return {};
     }
     [[nodiscard]] virtual std::type_index _tanuki_value_type_index() const noexcept
     {
+        TANUKI_UNREACHABLE;
         assert(false);
         return typeid(void);
     }
     [[nodiscard]] virtual bool _tanuki_is_reference() const noexcept
     {
+        TANUKI_UNREACHABLE;
         assert(false);
         return {};
     }
@@ -228,42 +246,51 @@ struct TANUKI_VISIBLE value_iface : public IFace, value_iface_base {
     // Methods to implement virtual copy/move primitives for the holder class.
     [[nodiscard]] virtual value_iface *_tanuki_clone() const
     {
+        TANUKI_UNREACHABLE;
         assert(false);
         return {};
     }
     [[nodiscard]] virtual std::shared_ptr<value_iface> _tanuki_shared_clone() const
     {
+        TANUKI_UNREACHABLE;
         assert(false);
         return {};
     }
     [[nodiscard]] virtual value_iface *_tanuki_copy_init_holder(void *) const
     {
+        TANUKI_UNREACHABLE;
         assert(false);
         return {};
     }
     [[nodiscard]] virtual value_iface *_tanuki_move_init_holder(void *) && noexcept
     {
+        TANUKI_UNREACHABLE;
         assert(false);
         return {};
     }
     virtual void _tanuki_copy_assign_value_to(value_iface *) const
     {
+        TANUKI_UNREACHABLE;
         assert(false);
     }
     virtual void _tanuki_move_assign_value_to(value_iface *) && noexcept
     {
+        TANUKI_UNREACHABLE;
         assert(false);
     }
     virtual void _tanuki_copy_assign_value_from(const void *)
     {
+        TANUKI_UNREACHABLE;
         assert(false);
     }
     virtual void _tanuki_move_assign_value_from(void *) noexcept
     {
+        TANUKI_UNREACHABLE;
         assert(false);
     }
     virtual void _tanuki_swap_value(value_iface *) noexcept
     {
+        TANUKI_UNREACHABLE;
         assert(false);
     }
     // LCOV_EXCL_STOP
@@ -1894,6 +1921,7 @@ struct tracking_level<tanuki::detail::value_iface<IFace, tanuki::wrap_semantics:
 
 #undef TANUKI_ABI_TAG_ATTR
 #undef TANUKI_NO_UNIQUE_ADDRESS
+#undef TANUKI_UNREACHABLE
 #undef TANUKI_VISIBLE
 
 #endif

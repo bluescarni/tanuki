@@ -98,6 +98,12 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-align"
 
+#if !defined(__clang__)
+
+#pragma GCC diagnostic ignored "-Wsuggest-final-methods"
+
+#endif
+
 #endif
 
 // Visibility setup.
@@ -1605,12 +1611,22 @@ public:
         return w.m_pv_iface->_tanuki_is_reference();
     }
 
+    // Specific functions for reference semantics.
+
+    // Deep copy.
     [[nodiscard]] friend wrap copy(const wrap &w)
         requires(Cfg.semantics == wrap_semantics::reference)
     {
         wrap retval(invalid_wrap);
         retval.m_pv_iface = w.m_pv_iface->_tanuki_shared_clone();
         return retval;
+    }
+
+    // Check if two wraps point to the same underlying value.
+    [[nodiscard]] friend bool same_value(const wrap &w1, const wrap &w2) noexcept
+        requires(Cfg.semantics == wrap_semantics::reference)
+    {
+        return w1.m_pv_iface == w2.m_pv_iface;
     }
 };
 
@@ -1713,13 +1729,24 @@ bool has_dynamic_storage(const wrap<IFace, Cfg> &w) noexcept
 template <typename T, typename IFace, auto Cfg>
 const T *value_ptr(const wrap<IFace, Cfg> &w) noexcept
 {
-    return value_type_index(w) == typeid(T) ? static_cast<const T *>(raw_value_ptr(w)) : nullptr;
+    // NOTE: if T is cv-qualified, always return null.
+    // No need to remove reference as we cannot form pointers
+    // to references in the return value.
+    if constexpr (std::same_as<T, std::remove_cv_t<T>>) {
+        return value_type_index(w) == typeid(T) ? static_cast<const T *>(raw_value_ptr(w)) : nullptr;
+    } else {
+        return nullptr;
+    }
 }
 
 template <typename T, typename IFace, auto Cfg>
 T *value_ptr(wrap<IFace, Cfg> &w) noexcept
 {
-    return value_type_index(w) == typeid(T) ? static_cast<T *>(raw_value_ptr(w)) : nullptr;
+    if constexpr (std::same_as<T, std::remove_cv_t<T>>) {
+        return value_type_index(w) == typeid(T) ? static_cast<T *>(raw_value_ptr(w)) : nullptr;
+    } else {
+        return nullptr;
+    }
 }
 
 template <typename T, typename IFace, auto Cfg>

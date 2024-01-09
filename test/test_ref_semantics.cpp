@@ -168,6 +168,13 @@ TEST_CASE("basics")
     swap(w10, w9);
     REQUIRE(value_ptr<foo>(w9) == old_ptr10);
     REQUIRE(value_ptr<int>(w10) == old_ptr9);
+    auto w10a = w10;
+    REQUIRE(!same_value(w10, w9));
+    REQUIRE(same_value(w10, w10a));
+    REQUIRE(same_value(w10a, w10));
+    auto w10b = std::move(w10a);
+    REQUIRE(same_value(w10, w10b));
+    REQUIRE(same_value(w10b, w10));
 
     // Construction/assignment into the invalid state.
     wrap2_t w11{tanuki::invalid_wrap_t{}};
@@ -211,6 +218,7 @@ TEST_CASE("basics")
     // Test deep copying.
     wrap2_t w12(123);
     auto w12_copy = copy(w12);
+    REQUIRE(!same_value(w12, w12_copy));
     REQUIRE(value_ptr<int>(w12) != value_ptr<int>(w12_copy));
     REQUIRE(value_ref<int>(w12_copy) == 123);
 

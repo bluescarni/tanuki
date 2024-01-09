@@ -30,7 +30,6 @@ struct bar_iface_impl : foo_iface_impl<Base, Holder, T>,
 
 // The bar() interface.
 struct bar_iface : foo_iface {
-    virtual ~bar_iface() = default;
     virtual void bar() const = 0;
 
     template <typename Base, typename Holder, typename T>

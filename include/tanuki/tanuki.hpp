@@ -98,6 +98,12 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-align"
 
+#if !defined(__clang__)
+
+#pragma GCC diagnostic ignored "-Wsuggest-final-methods"
+
+#endif
+
 #endif
 
 // Visibility setup.
@@ -135,6 +141,21 @@ enum class TANUKI_VISIBLE wrap_semantics { value, reference };
 
 namespace detail
 {
+
+// LCOV_EXCL_START
+
+// std::unreachable() implementation:
+// https://en.cppreference.com/w/cpp/utility/unreachable
+[[noreturn]] inline void unreachable()
+{
+#if defined(__GNUC__) || defined(__clang__)
+    __builtin_unreachable();
+#elif defined(_MSC_VER)
+    __assume(false);
+#endif
+}
+
+// LCOV_EXCL_STOP
 
 // Helper to demangle a type name.
 inline std::string demangle(const char *s)
@@ -205,16 +226,19 @@ struct TANUKI_VISIBLE value_iface : public IFace, value_iface_base {
     // Access to the value and its type.
     [[nodiscard]] virtual void *_tanuki_value_ptr() noexcept
     {
+        unreachable();
         assert(false);
         return {};
     }
     [[nodiscard]] virtual std::type_index _tanuki_value_type_index() const noexcept
     {
+        unreachable();
         assert(false);
         return typeid(void);
     }
     [[nodiscard]] virtual bool _tanuki_is_reference() const noexcept
     {
+        unreachable();
         assert(false);
         return {};
     }
@@ -222,37 +246,51 @@ struct TANUKI_VISIBLE value_iface : public IFace, value_iface_base {
     // Methods to implement virtual copy/move primitives for the holder class.
     [[nodiscard]] virtual value_iface *_tanuki_clone() const
     {
+        unreachable();
+        assert(false);
+        return {};
+    }
+    [[nodiscard]] virtual std::shared_ptr<value_iface> _tanuki_shared_clone() const
+    {
+        unreachable();
         assert(false);
         return {};
     }
     [[nodiscard]] virtual value_iface *_tanuki_copy_init_holder(void *) const
     {
+        unreachable();
         assert(false);
         return {};
     }
     [[nodiscard]] virtual value_iface *_tanuki_move_init_holder(void *) && noexcept
     {
+        unreachable();
         assert(false);
         return {};
     }
     virtual void _tanuki_copy_assign_value_to(value_iface *) const
     {
+        unreachable();
         assert(false);
     }
     virtual void _tanuki_move_assign_value_to(value_iface *) && noexcept
     {
+        unreachable();
         assert(false);
     }
     virtual void _tanuki_copy_assign_value_from(const void *)
     {
+        unreachable();
         assert(false);
     }
     virtual void _tanuki_move_assign_value_from(void *) noexcept
     {
+        unreachable();
         assert(false);
     }
     virtual void _tanuki_swap_value(value_iface *) noexcept
     {
+        unreachable();
         assert(false);
     }
     // LCOV_EXCL_STOP
@@ -484,6 +522,15 @@ private:
         if constexpr (std::copy_constructible<T>) {
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
             return new holder(m_value);
+        } else {
+            throw std::invalid_argument("Attempting to clone a non-copyable value type");
+        }
+    }
+    // Same as above, but return a shared ptr.
+    [[nodiscard]] std::shared_ptr<value_iface<IFace, Sem>> _tanuki_shared_clone() const final
+    {
+        if constexpr (std::copy_constructible<T>) {
+            return std::make_shared<holder>(m_value);
         } else {
             throw std::invalid_argument("Attempting to clone a non-copyable value type");
         }
@@ -1590,6 +1637,24 @@ public:
     {
         return w.m_pv_iface->_tanuki_is_reference();
     }
+
+    // Specific functions for reference semantics.
+
+    // Deep copy.
+    [[nodiscard]] friend wrap copy(const wrap &w)
+        requires(Cfg.semantics == wrap_semantics::reference)
+    {
+        wrap retval(invalid_wrap);
+        retval.m_pv_iface = w.m_pv_iface->_tanuki_shared_clone();
+        return retval;
+    }
+
+    // Check if two wraps point to the same underlying value.
+    [[nodiscard]] friend bool same_value(const wrap &w1, const wrap &w2) noexcept
+        requires(Cfg.semantics == wrap_semantics::reference)
+    {
+        return w1.m_pv_iface == w2.m_pv_iface;
+    }
 };
 
 namespace detail
@@ -1691,13 +1756,24 @@ bool has_dynamic_storage(const wrap<IFace, Cfg> &w) noexcept
 template <typename T, typename IFace, auto Cfg>
 const T *value_ptr(const wrap<IFace, Cfg> &w) noexcept
 {
-    return value_type_index(w) == typeid(T) ? static_cast<const T *>(raw_value_ptr(w)) : nullptr;
+    // NOTE: if T is cv-qualified, always return null.
+    // No need to remove reference as we cannot form pointers
+    // to references in the return value.
+    if constexpr (std::same_as<T, std::remove_cv_t<T>>) {
+        return value_type_index(w) == typeid(T) ? static_cast<const T *>(raw_value_ptr(w)) : nullptr;
+    } else {
+        return nullptr;
+    }
 }
 
 template <typename T, typename IFace, auto Cfg>
 T *value_ptr(wrap<IFace, Cfg> &w) noexcept
 {
-    return value_type_index(w) == typeid(T) ? static_cast<T *>(raw_value_ptr(w)) : nullptr;
+    if constexpr (std::same_as<T, std::remove_cv_t<T>>) {
+        return value_type_index(w) == typeid(T) ? static_cast<T *>(raw_value_ptr(w)) : nullptr;
+    } else {
+        return nullptr;
+    }
 }
 
 template <typename T, typename IFace, auto Cfg>

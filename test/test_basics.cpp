@@ -121,9 +121,16 @@ TEST_CASE("basics")
     REQUIRE(has_dynamic_storage(w2));
     REQUIRE(value_type_index(w1) == typeid(double));
     REQUIRE(*value_ptr<double>(w1) == 3.);
+    REQUIRE(value_ptr<const double>(w1) == nullptr);
+    REQUIRE(value_ptr<volatile double>(w1) == nullptr);
+    REQUIRE(value_ptr<const volatile double>(w1) == nullptr);
+
     REQUIRE(value_isa<large>(w2));
     value_ref<large>(w2).buffer[0] = 2;
     REQUIRE(value_ptr<large>(std::as_const(w2))->buffer[0] == 2);
+    REQUIRE(value_ptr<const large>(std::as_const(w2)) == nullptr);
+    REQUIRE(value_ptr<volatile large>(std::as_const(w2)) == nullptr);
+    REQUIRE(value_ptr<const volatile large>(std::as_const(w2)) == nullptr);
     REQUIRE(value_type_index(w3) == typeid(std::function<void()>));
     REQUIRE(!(*value_ptr<std::function<void()>>(w3)));
 

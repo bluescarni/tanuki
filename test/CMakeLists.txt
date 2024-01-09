@@ -43,6 +43,7 @@ ADD_TANUKI_TESTCASE(test_ref_implicit)
 ADD_TANUKI_TESTCASE(test_ref_semantics)
 ADD_TANUKI_TESTCASE(test_make_invalid)
 ADD_TANUKI_TESTCASE(test_emplace)
+ADD_TANUKI_TESTCASE(test_invalid_composite)
 
 ADD_TANUKI_TESTCASE(std_function)
 

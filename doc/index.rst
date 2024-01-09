@@ -29,4 +29,5 @@ default implementations, single/multiple inheritance, etc.) with C++20 concepts.
    :maxdepth: 1
 
    tutorials.rst
+   case_studies.rst
    api_reference.rst

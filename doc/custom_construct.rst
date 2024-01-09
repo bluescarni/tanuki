@@ -121,4 +121,4 @@ The copy/move constructors and assignment operators can be disabled by switching
 the :cpp:var:`config::copyable` and :cpp:var:`config::movable` configuration settings.
 
 The :cpp:class:`wrap` is also by default `swappable <https://en.cppreference.com/w/cpp/types/is_swappable>`__.
-Swappability can be controlled via the :cpp:var:`config::swappable` configuration setting.
+Swappability can be switched on/off via the :cpp:var:`config::swappable` configuration setting.

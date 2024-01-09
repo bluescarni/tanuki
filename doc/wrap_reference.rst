@@ -86,7 +86,7 @@ is not used after the destruction of ``f``.
 A caveat about const references
 -------------------------------
 
-Storing const references in a :cpp:class:`wrap` object is possible, but it come with a caveat:
+Storing const references in a :cpp:class:`wrap` object is possible, but it comes with a caveat:
 if you try to invoke a non-const member function of the interface on a :cpp:class:`wrap` object
 containing a const reference, then a ``std::runtime_error`` exception will be thrown by the
 :cpp:func:`iface_impl_helper::value()` accessor:

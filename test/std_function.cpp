@@ -25,7 +25,7 @@ template <typename R, typename... Args>
 struct is_any_function<std::function<R(Args...)>> : std::true_type {
 };
 
-template <typename, typename, typename, typename...>
+template <typename Base, typename Holder, typename T, typename R, typename... Args>
 struct func_iface_impl {
 };
 
@@ -41,19 +41,21 @@ struct func_iface {
 };
 
 template <typename Base, typename Holder, typename T, typename R, typename... Args>
-    requires std::is_invocable_r_v<R, const T &, Args...>
+    requires std::is_invocable_r_v<R, const tanuki::unwrap_cvref_t<T> &, Args...>
 struct func_iface_impl<Base, Holder, T, R, Args...> : Base, tanuki::iface_impl_helper<Base, Holder> {
     R operator()(Args... args) const final
     {
-        if constexpr (std::is_pointer_v<T> || std::is_member_pointer_v<T>) {
+        using uT = tanuki::unwrap_cvref_t<T>;
+
+        if constexpr (std::is_pointer_v<uT> || std::is_member_pointer_v<uT>) {
             if (this->value() == nullptr) {
                 throw std::bad_function_call{};
             }
-        } else if constexpr (tanuki::any_wrap<T>) {
+        } else if constexpr (tanuki::any_wrap<uT>) {
             if (is_invalid(this->value())) {
                 throw std::bad_function_call{};
             }
-        } else if constexpr (is_any_function<T>::value) {
+        } else if constexpr (is_any_function<uT>::value) {
             if (!this->value()) {
                 throw std::bad_function_call{};
             }
@@ -67,11 +69,13 @@ struct func_iface_impl<Base, Holder, T, R, Args...> : Base, tanuki::iface_impl_h
     }
     explicit operator bool() const noexcept final
     {
-        if constexpr (std::is_pointer_v<T> || std::is_member_pointer_v<T>) {
+        using uT = tanuki::unwrap_cvref_t<T>;
+
+        if constexpr (std::is_pointer_v<uT> || std::is_member_pointer_v<uT>) {
             return this->value() != nullptr;
-        } else if constexpr (tanuki::any_wrap<T>) {
+        } else if constexpr (tanuki::any_wrap<uT>) {
             return !is_invalid(this->value());
-        } else if constexpr (is_any_function<T>::value) {
+        } else if constexpr (is_any_function<uT>::value) {
             return static_cast<bool>(this->value());
         } else {
             return true;

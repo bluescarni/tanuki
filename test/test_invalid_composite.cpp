@@ -1,5 +1,4 @@
 #include <concepts>
-#include <type_traits>
 
 #include <tanuki/tanuki.hpp>
 
@@ -98,6 +97,10 @@ struct bar2_iface : foo_iface {
     using impl = bar2_iface_impl<Base, Holder, T>;
 };
 
+// NOTE: this test is meant to check that
+// for graceful failures (as opposed to hard
+// compile errors) when only part of a composite
+// interface is implemented by a type.
 TEST_CASE("invalid composite")
 {
     using wrap_t = tanuki::wrap<tanuki::composite_iface<foo_iface, bar_iface>>;

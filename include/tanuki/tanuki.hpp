@@ -142,6 +142,8 @@ enum class TANUKI_VISIBLE wrap_semantics { value, reference };
 namespace detail
 {
 
+// LCOV_EXCL_START
+
 // std::unreachable() implementation:
 // https://en.cppreference.com/w/cpp/utility/unreachable
 [[noreturn]] inline void unreachable()
@@ -152,6 +154,8 @@ namespace detail
     __assume(false);
 #endif
 }
+
+// LCOV_EXCL_STOP
 
 // Helper to demangle a type name.
 inline std::string demangle(const char *s)

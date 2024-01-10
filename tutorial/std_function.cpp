@@ -152,7 +152,7 @@ int main()
     assert(&value_ref<std::reference_wrapper<decltype(lambda_double)>>(c0_ref).get() == &lambda_double);
 
     auto mutable_lambda = [m = 5](int n) mutable {
-        ++m;
+        m = m + n;
         return n * 2;
     };
     assert((!std::constructible_from<callable<int(int) const>, decltype(mutable_lambda)>));

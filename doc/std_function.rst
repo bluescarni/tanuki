@@ -124,7 +124,7 @@ will raise an error.
 
 The implementation of the call operator of the reference interface employs, as usual, the
 `CRTP <https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern>`__ to reach
-the pointer to the interface via the :cpp:func:`iface_ptr()` function, which is the used to invoke
+the pointer to the interface via the :cpp:func:`iface_ptr()` function, which is then used to invoke
 the interface's call operator. The arguments are perfectly forwarded, and expression SFINAE is used
 (via the trailing ``decltype(...)``) to disable the call operator if it is malformed.
 
@@ -195,7 +195,7 @@ Next, let us see an example with a lambda:
 
 .. literalinclude:: ../tutorial/std_function.cpp
    :language: c++
-   :lines: 139-148
+   :lines: 146-148
 
 Here, a copy of ``lambda_double`` is stored in ``c0``. Let us see an example storing a reference
 to ``lambda_double`` instead:

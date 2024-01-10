@@ -40,7 +40,7 @@ to access the begin/end functions as ``.begin()`` and ``.end()``, rather than
 The not-so-good news is that at this time the C++ language offers no clean solution to automatically
 enable dot-style access to the member functions of the interface from the :cpp:class:`wrap` class. This would require
 `dot operator overloading <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4477.pdf>`__
-or perhaps `reflection <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2996r0.html>`__,
+or perhaps `reflection/metaclasses <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2996r0.html>`__,
 neither of which are currently available.
 
 The better news is that tanuki provides a mechanism to deactivate the pointer interface (i.e., operator ``->``)

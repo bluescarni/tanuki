@@ -103,3 +103,9 @@ reference is itself declared as ``const``:
    :lines: 73-76
 
 This way, the error will happen at compile time rather than at runtime.
+
+Full code listing
+-----------------
+
+.. literalinclude:: ../tutorial/wrap_reference.cpp
+    :language: c++

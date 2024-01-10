@@ -40,7 +40,7 @@ to access the begin/end functions as ``.begin()`` and ``.end()``, rather than
 The not-so-good news is that at this time the C++ language offers no clean solution to automatically
 enable dot-style access to the member functions of the interface from the :cpp:class:`wrap` class. This would require
 `dot operator overloading <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4477.pdf>`__
-or perhaps `reflection <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2996r0.html>`__,
+or perhaps `reflection/metaclasses <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2996r0.html>`__,
 neither of which are currently available.
 
 The better news is that tanuki provides a mechanism to deactivate the pointer interface (i.e., operator ``->``)
@@ -108,7 +108,8 @@ The :cpp:class:`config` class is templated over two types. Ignoring the first on
 being (its meaning will be explained :ref:`later <def_ctor>`), the second parameter is the reference interface, which
 we set to ``foo_ref_iface1`` to select the macro-based reference interface. We also switch off
 the pointer interface in :cpp:class:`wrap` via the ``.pointer_interface = false``
-`designated initializer <https://en.cppreference.com/w/cpp/language/aggregate_initialization>`__.
+`designated initializer <https://en.cppreference.com/w/cpp/language/aggregate_initialization>`__ -- this
+will ensure that access to the interface functions via the arrow operator is disabled.
 
 We can now use the custom configuration instance in the definition of the wrap class:
 

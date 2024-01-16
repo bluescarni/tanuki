@@ -10,7 +10,7 @@ tanuki
 <br />
 <p align="center">
   <p align="center">
-    A type-erasure library for C++20
+    A type-erasure toolkit for C++20
     <br />
     <a href="https://bluescarni.github.io/tanuki/index.html"><strong>Explore the docs »</strong></a>
     <br />
@@ -27,7 +27,7 @@ tanuki
 > classics and in the folklore and legends of various places in Japan. They are reputed to be mischievous and jolly,
 > masters of disguise and shapeshifting but somewhat gullible and absent-minded.
 
-tanuki is a small, single-header and self-contained C++20 library for
+tanuki is a small, single-header and self-contained C++20 toolkit for
 [type-erasure](https://en.wikibooks.org/wiki/More_C%2B%2B_Idioms/Type_Erasure).
 Main features include:
 
@@ -82,6 +82,8 @@ int main()
     any_wrap w3(foo{});
 }
 ```
+
+[Try it](https://godbolt.org/z/T3r6eoafT) on [compiler explorer](https://godbolt.org/)!
 
 Documentation
 -------------

@@ -57,8 +57,11 @@ interface. First, we define a generic implementation of the interface:
    :lines: 7-9
 
 Let us ignore for the moment the ``Holder`` and ``T`` template parameters (their meaning will be
-explained :ref:`later <simple_interface>`), and note how an implementation must always derive from its ``Base``.
-Aside from the extra funky template arguments, ``any_iface_impl`` looks very similar to a traditional
+explained :ref:`later <simple_interface>`), and note how an implementation **must** always derive from its ``Base``.
+Behind the scenes, tanuki will ensure that ``Base`` derives from ``any_iface``.
+
+Aside from the additional funky template arguments and from the fact that it does not derive
+*directly* from ``any_iface``, ``any_iface_impl`` looks very similar to a traditional
 OO programming interface implementation.
 
 Second, we add to the ``any_iface`` definition an ``impl`` template alias to indicate that
@@ -66,7 +69,12 @@ Second, we add to the ``any_iface`` definition an ``impl`` template alias to ind
 
 .. literalinclude:: ../tutorial/hello_world.cpp
    :language: c++
+   :emphasize-lines: 4-5
    :lines: 11-16
+
+Note that this is an *intrusive* way of specifying the implementation of an interface.
+A non-intrusive alternative is also available, so that it is possible to provide
+implementations for existing interfaces without modifying them.
 
 And we are done! We can now use ``any_iface`` in the definition of a type-erased
 :cpp:class:`wrap` that can store **any** destructible object:

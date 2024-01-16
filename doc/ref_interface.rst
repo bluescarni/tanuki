@@ -65,9 +65,11 @@ Let us see first a macro-based implementation of a reference interface:
    :lines: 26-31
 
 A reference interface must be a class which defines in its scope an ``impl`` class
-template depending on (at least) one parameter, conventionally named ``Wrap``.
+template depending on one parameter, conventionally named ``Wrap``.
 The ``impl`` class is the actual reference interface, and the ``Wrap`` parameter
 represents the :cpp:class:`wrap` class to which the reference interface is applied.
+``impl`` will be used as a static `mixin <https://en.wikipedia.org/wiki/Mixin>`__
+to augment the :cpp:class:`wrap` class.
 
 In the body of the ``impl`` class, we should declare and implement the list of member
 functions of ``foo_iface`` that we want to be able to access via the dot operator in the

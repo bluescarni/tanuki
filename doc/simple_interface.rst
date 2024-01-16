@@ -20,11 +20,11 @@ Here is the first version of our interface:
    :lines: 14-20
 
 In addition to the destructor, we now have the pure virtual member function
-``void foo() const``. Here is a tanuki implementation for this interface:
+``void foo() const``. Here is the declaration of a tanuki implementation for this interface:
 
 .. literalinclude:: ../tutorial/simple_interface.cpp
    :language: c++
-   :lines: 5-12
+   :lines: 5-6
 
 As explained in the :ref:`previous tutorial <hello_world>`, an interface implementation
 must always derive from its ``Base`` template parameter. Additionally, we must provide
@@ -32,7 +32,7 @@ an implementation for the ``void foo() const`` function:
 
 .. literalinclude:: ../tutorial/simple_interface.cpp
    :language: c++
-   :lines: 7-11
+   :lines: 5-12
 
 The ``Holder`` template parameter is a class defined in the tanuki library which stores the
 value we are type-erasing as the ``m_value`` data member. ``Holder`` derives from ``foo1_iface_impl``

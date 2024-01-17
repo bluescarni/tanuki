@@ -83,7 +83,7 @@ int main()
 }
 ```
 
-[Try it](https://godbolt.org/z/T3r6eoafT) on [compiler explorer](https://godbolt.org/)!
+[Try it](https://godbolt.org/z/T3r6eoafT) on compiler explorer!
 
 Documentation
 -------------

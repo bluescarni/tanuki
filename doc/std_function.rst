@@ -48,7 +48,7 @@ a bit at a time, beginning with the declaration:
    :lines: 37-39
 
 We can see that the ``requires`` clause enables this implementation for all
-value (or :ref:`references <wrap_reference>`) types which are
+value (or :ref:`reference <wrap_reference>`) types which are
 `invocable <https://en.cppreference.com/w/cpp/types/is_invocable>`__ and
 `copy-constructible <https://en.cppreference.com/w/cpp/concepts/copy_constructible>`__.
 As mentioned earlier, our objective is to implement an immutable function wrapper,
@@ -62,7 +62,7 @@ Next, we see how the call operator is implemented:
    :language: c++
    :lines: 40-56
 
-The call operator will ultimately `invoke <https://en.cppreference.com/w/cpp/utility/functional/invoke>`__
+The call operator will ultimately invoke (via `std::invoke <https://en.cppreference.com/w/cpp/utility/functional/invoke>`__)
 the value type with the supplied arguments ``args`` (possibly going through a cast to ``void`` in order
 to emulate C++23's `std::invoke_r() <https://en.cppreference.com/w/cpp/utility/functional/invoke>`__).
 Before doing that, however, we must check that the object we are invoking is not a null pointer to
@@ -79,7 +79,7 @@ This operator must detect if the internal type-erased value is in an empty state
 case the operator will return ``false``. What an "empty state" is depends on
 the value type:
 
-- if the value is a pointer, then the empty state is a ``nullptr``;
+- if the value is a pointer, then the empty state is represented by a ``nullptr``;
 - if the value is a ``std::function`` or a ``callable`` (yes, we can put
   type-erased containers inside other type-erased containers,
   `Russian doll <https://en.wikipedia.org/wiki/Matryoshka_doll>`__-style),

@@ -80,7 +80,7 @@ struct callable_ref_iface {
         auto operator()(FArgs &&...fargs) const
             -> decltype(iface_ptr(*static_cast<const JustWrap *>(this))->operator()(std::forward<FArgs>(fargs)...))
         {
-            // NOTE: a wrap in invalid state is considered empty.
+            // NOTE: a wrap in the invalid state is considered empty.
             if (is_invalid(*static_cast<const Wrap *>(this))) {
                 throw std::bad_function_call{};
             }
@@ -90,7 +90,7 @@ struct callable_ref_iface {
 
         explicit operator bool() const noexcept
         {
-            // NOTE: a wrap in invalid state is considered empty.
+            // NOTE: a wrap in the invalid state is considered empty.
             if (is_invalid(*static_cast<const Wrap *>(this))) {
                 return false;
             } else {

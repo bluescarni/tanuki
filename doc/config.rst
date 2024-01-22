@@ -63,6 +63,7 @@ Configuration options
 .. cpp:struct:: no_ref_iface
 
    A placeholder type that represents an empty :ref:`reference interface <ref_interface>`.
+   This is a trivial empty struct.
 
 .. cpp:enum-class:: wrap_ctor
 

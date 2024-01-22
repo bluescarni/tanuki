@@ -94,6 +94,7 @@ The ``wrap`` class
 .. cpp:struct:: invalid_wrap_t
 
    A tag structure used to set a :cpp:class:`wrap` to the :ref:`invalid state <invalid_state>`.
+   This is a trivial empty struct.
 
 .. cpp:var:: inline constexpr auto invalid_wrap = invalid_wrap_t{}
 

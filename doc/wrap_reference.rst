@@ -46,7 +46,9 @@ And here is the implementation for values *or references* providing ``foo()`` an
 
 The only thing that has changed with respect to the :ref:`original example <simple_interface>` is that
 the concept checks ``fooable`` and ``barable`` are not applied any more to ``T`` directly, but
-rather to :cpp:type:`unwrap_cvref_t` of ``T``.
+rather to :cpp:type:`unwrap_cvref_t` of ``T``. That is, the implementation is enabled not only
+if ``T`` satisfies the ``fooable`` and ``barable`` concepts, but also if ``T`` is a ``std::reference_wrapper``
+of a type which satisfies these concepts.
 
 Here is what is going on: when a :cpp:class:`wrap` is constructed from
 a `std::reference_wrapper <https://en.cppreference.com/w/cpp/utility/functional/reference_wrapper>`__,

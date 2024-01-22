@@ -35,7 +35,7 @@ The ``wrap`` class
       :param w: the target :cpp:class:`wrap`.
       :param args: the construction arguments.
 
-      :throws unspecified: any exception thrown by memory allocation primitives or by the
+      :throws: any exception thrown by memory allocation primitives or by the
          invoked constructor of :cpp:type:`T`.
 
    .. cpp:function:: [[nodiscard]] friend bool has_static_storage(const wrap &w) noexcept

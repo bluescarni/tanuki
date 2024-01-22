@@ -5,6 +5,43 @@ The ``wrap`` class
 
 .. cpp:class:: template <typename IFace, auto Cfg = default_config> wrap
 
+   .. cpp:function:: wrap()
+
+      Default constructor.
+
+      The default constructor is enabled in the following circumstances:
+
+      - the configuration option :cpp:var:`config::invalid_default_ctor` is set to
+        ``true``. In this case, the default constructor initialises into the
+        :ref:`invalid state <invalid_state>`. Otherwise,
+      - a non-``void`` default-initialisable ``DefaultValueType`` with a valid :cpp:type:`IFace` implementation
+        has been specified as first template argument in the in :cpp:struct:`config` structure. In this case,
+        the default constructor value-initialises an instance of ``DefaultValueType`` as
+        the internal type-erased type.
+
+      In both cases, :cpp:type:`IFace`, its implementation and the :ref:`reference interface <ref_interface>` must
+      all be default-initialisable in order for this constructor to be available.
+
+      :throws: any exception thrown by the default constructor of :cpp:type:`IFace`, its implementation, or
+        the :ref:`reference interface <ref_interface>`, by the value-initialisation of a
+        non-``void`` ``DefaultValueType`` or by memory allocation errors
+        if the non-``void`` ``DefaultValueType`` does not fit in static storage. If it can be
+        determined at compile time that none of these conditions can occurr, then this constructor
+        is marked ``noexcept``.
+
+   .. cpp:function:: explicit wrap(invalid_wrap_t)
+
+      Explicit initialisation into the :ref:`invalid state <invalid_state>`.
+
+      This constructor is enabled only if the :ref:`reference interface <ref_interface>` is
+      default-initialisable.
+
+      :throws: any exception thrown by the default constructor of the :ref:`reference interface <ref_interface>`.
+        If the default constructor of the reference interface does not throw, then this constructor
+        is marked ``noexcept``.
+
+   .. cpp:function:: template <typename T> explicit wrap(T &&x)
+
    .. cpp:function:: [[nodiscard]] friend bool is_invalid(const wrap &w) noexcept
 
       This function will return ``true`` if *w* is in the :ref:`invalid state <invalid_state>`,

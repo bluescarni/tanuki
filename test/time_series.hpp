@@ -14,56 +14,75 @@
 #include <type_traits>
 #include <utility>
 
-#include "forward_iterator.hpp"
 #include "ranges.hpp"
 
 namespace facade
 {
 
-template <typename K, typename V>
-class forward_time_series
+namespace detail
 {
-public:
-    using value_type = std::pair<K, V>;
-    using iterator = forward_iterator<value_type, value_type &, value_type &&>;
-    using const_iterator = forward_iterator<value_type, const value_type &, const value_type &&>;
 
-private:
-    using range_t = forward_range<value_type, value_type &, value_type &&, const value_type &, const value_type &&>;
+template <typename T>
+concept is_ts_key = std::totally_ordered<T>;
 
-    range_t m_range;
-
-public:
-    template <typename R>
-        requires(!std::same_as<std::remove_cvref_t<R>, forward_time_series>) && std::constructible_from<range_t, R &&>
-    explicit forward_time_series(R &&r) : m_range(std::forward<R>(r))
-    {
-    }
-
-    forward_time_series(const forward_time_series &) = default;
-    forward_time_series(forward_time_series &&) noexcept = default;
-    forward_time_series &operator=(const forward_time_series &) = default;
-    forward_time_series &operator=(forward_time_series &&) noexcept = default;
-    ~forward_time_series() = default;
-
-    iterator begin()
-    {
-        return std::ranges::begin(m_range);
-    }
-    iterator end()
-    {
-        return std::ranges::end(m_range);
-    }
-
-    const_iterator begin() const
-    {
-        return std::ranges::begin(m_range);
-    }
-    const_iterator end() const
-    {
-        return std::ranges::end(m_range);
-    }
+template <typename>
+struct is_ts_pair : std::false_type {
 };
+
+template <typename T, typename U>
+struct is_ts_pair<std::pair<T, U>> : std::bool_constant<is_ts_key<T>> {
+};
+
+template <typename>
+struct any_forward_ts_impl : std::false_type {
+};
+
+template <typename V, typename R, typename RR, typename CR, typename CRR>
+struct any_forward_ts_impl<forward_range<V, R, RR, CR, CRR>> : is_ts_pair<V> {
+};
+
+template <typename>
+struct any_random_access_ts_impl : std::false_type {
+};
+
+template <typename V, typename R, typename RR, typename CR, typename CRR>
+struct any_random_access_ts_impl<random_access_range<V, R, RR, CR, CRR>> : is_ts_pair<V> {
+};
+
+} // namespace detail
+
+template <typename T>
+concept ud_forward_ts = requires(T &&x) {
+    make_forward_range(std::forward<T>(x));
+    requires detail::is_ts_pair<std::ranges::range_value_t<decltype(make_forward_range(std::forward<T>(x)))>>::value;
+};
+
+template <typename T>
+    requires ud_forward_ts<T>
+auto make_forward_ts(T &&x)
+{
+    return make_forward_range(std::forward<T>(x));
+}
+
+template <typename T>
+concept any_forward_ts = detail::any_forward_ts_impl<T>::value;
+
+template <typename T>
+concept ud_random_access_ts = requires(T &&x) {
+    make_random_access_range(std::forward<T>(x));
+    requires detail::is_ts_pair<
+        std::ranges::range_value_t<decltype(make_random_access_range(std::forward<T>(x)))>>::value;
+};
+
+template <typename T>
+    requires ud_random_access_ts<T>
+auto make_random_access_ts(T &&x)
+{
+    return make_random_access_range(std::forward<T>(x));
+}
+
+template <typename T>
+concept any_random_access_ts = detail::any_random_access_ts_impl<T>::value;
 
 } // namespace facade
 

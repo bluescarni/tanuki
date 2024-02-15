@@ -67,27 +67,26 @@ struct minimal_forward_ts {
 
 TEST_CASE("forward_time_series")
 {
-    using fts = facade::forward_time_series<double, double>;
+    using facade::make_forward_ts;
 
     using vec_t = std::vector<std::pair<double, double>>;
 
     {
-        fts f{vec_t{}};
+        auto f = make_forward_ts(vec_t{});
         REQUIRE(f.begin() == f.end());
+        REQUIRE(facade::any_forward_ts<decltype(f)>);
     }
 
-    {
-        // fts f{123.};
-        REQUIRE(!std::constructible_from<fts, double>);
-    }
+    // forward_ts(123.);
+    REQUIRE(!facade::ud_forward_ts<double>);
 
     {
-        minimal_forward_ts mfts{{{1, 1}, {2, 2}, {3, 3}}};
+        auto f1 = make_forward_ts(minimal_forward_ts{{{1, 1}, {2, 2}, {3, 3}}});
+        auto f2 = make_forward_ts(vec_t{{1, 1}, {2, 2}, {3, 3}});
 
-        fts f1{mfts};
-        fts f2{vec_t{{1, 1}, {2, 2}, {3, 3}}};
-
+        REQUIRE(std::same_as<decltype(f1), decltype(f2)>);
         REQUIRE(std::ranges::equal(f1, f2));
+        REQUIRE(facade::any_forward_ts<decltype(f1)>);
     }
 }
 

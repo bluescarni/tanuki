@@ -65,7 +65,7 @@ auto make_forward_ts(T &&x)
 }
 
 template <typename T>
-concept any_forward_ts = detail::any_forward_ts_impl<T>::value;
+concept any_forward_ts = detail::any_forward_ts_impl<std::remove_cvref<T>>::value;
 
 template <typename T>
 concept ud_random_access_ts = requires(T &&x) {
@@ -82,7 +82,7 @@ auto make_random_access_ts(T &&x)
 }
 
 template <typename T>
-concept any_random_access_ts = detail::any_random_access_ts_impl<T>::value;
+concept any_random_access_ts = detail::any_random_access_ts_impl<std::remove_cvref<T>>::value;
 
 } // namespace facade
 

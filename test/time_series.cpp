@@ -147,6 +147,7 @@ struct minimal_ra_ts {
 
 template <typename TS, typename Key>
     requires facade::any_random_access_ts<TS> && std::same_as<Key, facade::ts_key_t<TS>>
+// NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
 auto lagrange_interpolation(TS &&ts, const Key &key, std::size_t order)
 {
     assert(order >= 2u);
@@ -201,7 +202,7 @@ TEST_CASE("lagrange interpolation")
     using vec_t = std::vector<std::pair<double, double>>;
 
     {
-        auto f = make_random_access_ts(minimal_ra_ts(vec_t{}));
+        auto f = make_random_access_ts(minimal_ra_ts{vec_t{}});
         REQUIRE(f.begin() == f.end());
         REQUIRE(facade::any_random_access_ts<decltype(f)>);
 
@@ -209,9 +210,9 @@ TEST_CASE("lagrange interpolation")
     }
 
     {
-        vec_t v{{1, 2}, {2, 4}, {3, 6}, {4, 8}};
+        const vec_t v{{1, 2}, {2, 4}, {3, 6}, {4, 8}};
 
-        auto f = make_random_access_ts(minimal_ra_ts(v));
+        auto f = make_random_access_ts(minimal_ra_ts{v});
 
         REQUIRE(lagrange_interpolation(f, 2.5, 2) == 5.);
     }
@@ -219,15 +220,14 @@ TEST_CASE("lagrange interpolation")
     using vvec_t = std::vector<std::pair<double, std::vector<double>>>;
 
     {
-        vvec_t v{{1, {2, 0}}, {2, {4, 0}}, {3, {6, 0}}, {4, {8, 0}}};
+        const vvec_t v{{1, {2, 0}}, {2, {4, 0}}, {3, {6, 0}}, {4, {8, 0}}};
 
         // auto f = make_random_access_ts(v)
         //          | std::ranges::views::transform([](const auto &p) { return std::make_pair(p.first, p.second[0]); });
 
         // REQUIRE(lagrange_interpolation(f, 2.5, 2) == 5.);
-        // auto flup = make_random_access_ts(v)
-        //             | std::ranges::views::transform([](const auto &p) { return std::make_pair(p.first, p.second[0]);
-        //             });
+        auto flup = make_random_access_ts(v)
+                    | std::ranges::views::transform([](const auto &p) { return std::make_pair(p.first, p.second[0]); });
     }
 }
 

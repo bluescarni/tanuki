@@ -819,6 +819,13 @@ struct cfg_ref_type<config<DefaultValueType, RefIFace>> {
         return std::move(*iface_ptr(*static_cast<const Wrap *>(this))).name(std::forward<MemFunArgs>(args)...);        \
     }
 
+// Tag structure to construct/assign a wrap
+// into the invalid state.
+struct invalid_wrap_t {
+};
+
+inline constexpr invalid_wrap_t invalid_wrap{};
+
 namespace detail
 {
 
@@ -880,14 +887,22 @@ template <typename T>
 struct same_as<T, T> : std::true_type {
 };
 
-} // namespace detail
-
-// Tag structure to construct/assign a wrap
-// into the invalid state.
-struct invalid_wrap_t {
+// Helper concepts to avoid repetition in the generic ctors
+// of the wrap class.
+template <typename T, typename W, typename RefIFace>
+concept generic_wrap_ctor_reqs = requires(W &w, T &&x) {
+    requires std::default_initializable<RefIFace>;
+    // Make extra sure this does not compete with the invalid ctor.
+    requires !std::same_as<invalid_wrap_t, std::remove_cvref_t<T>>;
+    // Must not compete with the emplace ctor.
+    requires !is_in_place_type<std::remove_cvref_t<T>>::value;
+    // Must not compete with copy/move.
+    requires !std::same_as<std::remove_cvref_t<T>, W>;
+    // We must be able to invoke the construction function.
+    w.template ctor_impl<value_t_from_arg<T &&>>(std::forward<T>(x));
 };
 
-inline constexpr invalid_wrap_t invalid_wrap{};
+} // namespace detail
 
 // Helper to unwrap a std::reference_wrapper and remove reference
 // and cv qualifiers from the result.
@@ -1110,11 +1125,10 @@ public:
     {
     }
 
-    // Default initialisation into the default value type.
-    // NOTE: need to document that this value-inits.
-    // NOTE: the extra W template argument appearing
-    // here and in the other ctors/assignment operators
-    // is to work around compiler issues: earlier versions
+    // NOTE: the following constructors are more verbose and numerous than
+    // necessary in order to work around several compiler issues.
+    //
+    // E.g., the extra W template argument is there because earlier versions
     // of clang error out complaining about an incomplete type
     // if we just use wrap instead of W. Older clang versions
     // also suffer from this bug
@@ -1124,6 +1138,13 @@ public:
     // I.e., trailing-style concept checks may not short
     // circuit, which is particularly problematic for a default
     // constructor.
+    //
+    // The generic ctors have duplicated explicit/implicit forms because
+    // conditionally-explicit constructors seem to be buggy in both GCC
+    // and clang.
+
+    // Default initialisation into the default value type.
+    // NOTE: need to document that this value-inits.
     template <typename W = wrap>
         requires(requires(W &w) {
             requires !Cfg.invalid_default_ctor;
@@ -1139,42 +1160,53 @@ public:
         ctor_impl<default_value_t>();
     }
 
-    // Generic ctor from a wrappable value.
+    // Generic ctors from a wrappable value.
     template <typename T, typename W = wrap>
         requires(requires(W &w, T &&x) {
-            requires std::default_initializable<ref_iface_t>;
-            // Make extra sure this does not compete with the invalid ctor.
-            requires !std::same_as<invalid_wrap_t, std::remove_cvref_t<T>>;
-            // Must not compete with the emplace ctor.
-            requires !detail::is_in_place_type<std::remove_cvref_t<T>>::value;
-            // Must not compete with copy/move.
-            requires !std::same_as<std::remove_cvref_t<T>, W>;
-            // We must be able to invoke the construction function.
-            w.template ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x));
+            requires Cfg.explicit_ctor < wrap_ctor::always_implicit;
+            requires detail::generic_wrap_ctor_reqs<T, W, ref_iface_t>;
         })
-    explicit(Cfg.explicit_ctor < wrap_ctor::always_implicit)
-        // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,google-explicit-constructor,hicpp-explicit-conversions)
-        wrap(T &&x) noexcept(noexcept(this->ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x)))
-                             && detail::nothrow_default_initializable<ref_iface_t>)
+    explicit wrap(T &&x) noexcept(noexcept(this->ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x)))
+                                  && detail::nothrow_default_initializable<ref_iface_t>)
+    {
+        ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x));
+    }
+    template <typename T, typename W = wrap>
+        requires(requires(W &w, T &&x) {
+            requires Cfg.explicit_ctor == wrap_ctor::always_implicit;
+            requires detail::generic_wrap_ctor_reqs<T, W, ref_iface_t>;
+        })
+    // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
+    wrap(T &&x) noexcept(noexcept(this->ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x)))
+                         && detail::nothrow_default_initializable<ref_iface_t>)
     {
         ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x));
     }
 
-    // Generic ctor from std::reference_wrapper.
-    // NOTE: this is implemented separately from the generic ctor
-    // only in order to work around compiler bugs when the explicit()
-    // clause contains complex expressions.
+    // Generic ctors from std::reference_wrapper.
     template <typename T, typename W = wrap>
         requires(requires(W &w, std::reference_wrapper<T> ref) {
+            requires Cfg.explicit_ctor == wrap_ctor::always_explicit;
             requires std::default_initializable<ref_iface_t>;
             // We must be able to invoke the construction function.
             w.template ctor_impl<std::reference_wrapper<T>>(std::move(ref));
         })
-    explicit(Cfg.explicit_ctor == wrap_ctor::always_explicit)
-        // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
-        wrap(std::reference_wrapper<T> ref) noexcept(
-            noexcept(this->ctor_impl<std::reference_wrapper<T>>(std::move(ref)))
-            && detail::nothrow_default_initializable<ref_iface_t>)
+    explicit wrap(std::reference_wrapper<T> ref) noexcept(
+        noexcept(this->ctor_impl<std::reference_wrapper<T>>(std::move(ref)))
+        && detail::nothrow_default_initializable<ref_iface_t>)
+    {
+        ctor_impl<std::reference_wrapper<T>>(std::move(ref));
+    }
+    template <typename T, typename W = wrap>
+        requires(requires(W &w, std::reference_wrapper<T> ref) {
+            requires Cfg.explicit_ctor != wrap_ctor::always_explicit;
+            requires std::default_initializable<ref_iface_t>;
+            // We must be able to invoke the construction function.
+            w.template ctor_impl<std::reference_wrapper<T>>(std::move(ref));
+        })
+    // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
+    wrap(std::reference_wrapper<T> ref) noexcept(noexcept(this->ctor_impl<std::reference_wrapper<T>>(std::move(ref)))
+                                                 && detail::nothrow_default_initializable<ref_iface_t>)
     {
         ctor_impl<std::reference_wrapper<T>>(std::move(ref));
     }

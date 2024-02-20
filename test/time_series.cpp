@@ -230,9 +230,14 @@ TEST_CASE("lagrange interpolation")
         [[maybe_unused]] auto flup
             = tmp | std::ranges::views::transform([](const auto &p) { return std::make_pair(p.first, p.second[0]); });
 
+#if __cpp_lib_ranges > 202106L
+        // NOTE: post C++20 rvalue ranges can be used to construct views pipelines. See:
+        // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p2415r2.html
+
         [[maybe_unused]] auto tmp2 = make_random_access_ts(v) | std::ranges::views::transform([](const auto &p) {
                                          return std::make_pair(p.first, p.second[0]);
                                      });
+#endif
     }
 }
 

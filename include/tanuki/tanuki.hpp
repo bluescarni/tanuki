@@ -1161,6 +1161,16 @@ public:
     }
 
     // Generic ctors from a wrappable value.
+#if defined(_MSC_VER) && !defined(__clang__)
+    template <typename T, typename W = wrap>
+        requires(requires(W &w, T &&x) { requires detail::generic_wrap_ctor_reqs<T, W, ref_iface_t>; })
+    explicit(Cfg.explicit_ctor < wrap_ctor::always_implicit)
+        wrap(T &&x) noexcept(noexcept(this->ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x)))
+                             && detail::nothrow_default_initializable<ref_iface_t>)
+    {
+        ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x));
+    }
+#else
     template <typename T, typename W = wrap>
         requires(requires(W &w, T &&x) {
             requires Cfg.explicit_ctor < wrap_ctor::always_implicit;
@@ -1182,8 +1192,23 @@ public:
     {
         ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x));
     }
+#endif
 
-    // Generic ctors from std::reference_wrapper.
+// Generic ctors from std::reference_wrapper.
+#if defined(_MSC_VER) && !defined(__clang__)
+    template <typename T, typename W = wrap>
+        requires(requires(W &w, std::reference_wrapper<T> ref) {
+            requires std::default_initializable<ref_iface_t>;
+            // We must be able to invoke the construction function.
+            w.template ctor_impl<std::reference_wrapper<T>>(std::move(ref));
+        })
+    explicit(Cfg.explicit_ctor == wrap_ctor::always_explicit) wrap(std::reference_wrapper<T> ref) noexcept(
+        noexcept(this->ctor_impl<std::reference_wrapper<T>>(std::move(ref)))
+        && detail::nothrow_default_initializable<ref_iface_t>)
+    {
+        ctor_impl<std::reference_wrapper<T>>(std::move(ref));
+    }
+#else
     template <typename T, typename W = wrap>
         requires(requires(W &w, std::reference_wrapper<T> ref) {
             requires Cfg.explicit_ctor == wrap_ctor::always_explicit;
@@ -1210,6 +1235,7 @@ public:
     {
         ctor_impl<std::reference_wrapper<T>>(std::move(ref));
     }
+#endif
 
     // Generic in-place initialisation.
     // NOTE: this will *value-init* if no args

@@ -226,8 +226,9 @@ TEST_CASE("lagrange interpolation")
         //          | std::ranges::views::transform([](const auto &p) { return std::make_pair(p.first, p.second[0]); });
 
         // REQUIRE(lagrange_interpolation(f, 2.5, 2) == 5.);
-        auto flup = make_random_access_ts(v)
-                    | std::ranges::views::transform([](const auto &p) { return std::make_pair(p.first, p.second[0]); });
+        auto tmp = make_random_access_ts(v);
+        [[maybe_unused]] auto flup
+            = tmp | std::ranges::views::transform([](const auto &p) { return std::make_pair(p.first, p.second[0]); });
     }
 }
 

@@ -222,13 +222,9 @@ TEST_CASE("lagrange interpolation")
     {
         const vvec_t v{{1, {2, 0}}, {2, {4, 0}}, {3, {6, 0}}, {4, {8, 0}}};
 
-        // auto f = make_random_access_ts(v)
-        //          | std::ranges::views::transform([](const auto &p) { return std::make_pair(p.first, p.second[0]); });
-
-        // REQUIRE(lagrange_interpolation(f, 2.5, 2) == 5.);
         auto tmp = make_random_access_ts(v);
-        [[maybe_unused]] auto flup
-            = tmp | std::ranges::views::transform([](const auto &p) { return std::make_pair(p.first, p.second[0]); });
+        REQUIRE(lagrange_interpolation(tmp | std::ranges::views::transform([](const auto &p) { return std::make_pair(p.first, p.second[0]); }), 2.5, 2) == 5.);
+        REQUIRE(lagrange_interpolation(std::as_const(tmp) | std::ranges::views::transform([](const auto &p) { return std::make_pair(p.first, p.second[0]); }), 2.5, 2) == 5.);
 
 #if __cpp_lib_ranges > 202106L
         // NOTE: post C++20 rvalue ranges can be used to construct views pipelines. See:

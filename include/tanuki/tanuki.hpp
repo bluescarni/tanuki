@@ -460,6 +460,7 @@ concept iface_has_impl = requires() {
 // Class for holding an instance of the value type T.
 // The inheritance diagram is:
 // holder -> iface impl -> value_iface -> iface.
+// The holder class implements the value_iface interface.
 // NOTE: this class has several conceptual requirements which
 // are checked in wrap::ctor_impl().
 template <typename T, typename IFace, wrap_semantics Sem>
@@ -1061,6 +1062,15 @@ class TANUKI_VISIBLE wrap
                 if (st) {
                     // Move-init the value from pv_iface.
                     this->m_pv_iface = std::move(*pv_iface)._tanuki_move_init_holder(this->static_storage);
+
+                    // NOTE: when we loaded the serialised pointer, the value contained in the holder
+                    // was deserialised into the address pv_iface->_tanuki_value_ptr() (i.e., somewhere
+                    // in dynamically-allocated memory). However we now have moved the value
+                    // into this->m_pv_iface->_tanuki_value_ptr() via _tanuki_move_init_holder().
+                    // Inform the archive of the new address of the value, so that the address tracking
+                    // machinery keeps on working. See:
+                    // https://www.boost.org/doc/libs/1_82_0/libs/serialization/doc/special.html#objecttracking
+                    ar.reset_object_address(this->m_pv_iface->_tanuki_value_ptr(), pv_iface->_tanuki_value_ptr());
 
                     // Clean up pv_iface.
                     // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)

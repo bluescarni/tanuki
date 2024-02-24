@@ -82,6 +82,17 @@ struct noniter {
     void operator++() {}
 };
 
+// NOTE: missing equality comparability.
+struct failiter {
+    double operator*() const
+    {
+        return {};
+    }
+    void operator++() {}
+};
+
+bool operator==(const noniter &, const noniter &);
+
 TEST_CASE("noniter")
 {
     using iter_t = facade::io_iterator<double>;
@@ -91,6 +102,8 @@ TEST_CASE("noniter")
     REQUIRE(std::input_or_output_iterator<iter_t>);
     REQUIRE(!std::default_initializable<iter_t>);
     REQUIRE(!std::constructible_from<iter_t, int>);
+
+    REQUIRE(!can_make_io_iterator<failiter>);
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

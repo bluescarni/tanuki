@@ -11,10 +11,7 @@
 
 #include <concepts>
 #include <iterator>
-#include <memory>
 #include <stdexcept>
-#include <typeindex>
-#include <typeinfo>
 
 #include <tanuki/tanuki.hpp>
 
@@ -26,14 +23,10 @@ namespace facade
 namespace detail
 {
 
-template <typename T>
-concept minimal_eq_comparable = requires(const T &a, const T &b) { static_cast<bool>(a == b); };
-
 // Gather the minimal requirements for a type T
 // to satisfy the forward_iterator concept.
 template <typename T, typename V, typename R, typename RR>
-concept minimal_forward_iterator
-    = minimal_input_iterator<T, V, R, RR> && std::default_initializable<T> && minimal_eq_comparable<T>;
+concept minimal_forward_iterator = minimal_input_iterator<T, V, R, RR> && std::default_initializable<T>;
 
 // Fwd declaration of the interface.
 template <typename, typename, typename>
@@ -45,30 +38,10 @@ template <typename Base, typename Holder, typename T, typename V, typename R, ty
 struct forward_iterator_iface_impl
     : input_iterator_iface_impl<Base, Holder, T, V, R, RR>,
       tanuki::iface_impl_helper<input_iterator_iface_impl<Base, Holder, T, V, R, RR>, Holder> {
-    [[nodiscard]] std::type_index get_type_index() const noexcept final
-    {
-        return typeid(T);
-    }
-    [[nodiscard]] const void *get_ptr() const noexcept final
-    {
-        return std::addressof(this->value());
-    }
-    bool equal_to(const forward_iterator_iface<V, R, RR> &other) const final
-    {
-        if (typeid(T) == other.get_type_index()) {
-            return static_cast<bool>(this->value() == *static_cast<const T *>(other.get_ptr()));
-        } else {
-            throw std::runtime_error("Cannot compare iterators of different types");
-        }
-    }
 };
 
 template <typename V, typename R, typename RR>
 struct forward_iterator_iface : input_iterator_iface<V, R, RR> {
-    virtual bool equal_to(const forward_iterator_iface &) const = 0;
-    [[nodiscard]] virtual std::type_index get_type_index() const noexcept = 0;
-    [[nodiscard]] virtual const void *get_ptr() const noexcept = 0;
-
     template <typename Base, typename Holder, typename T>
     using impl = forward_iterator_iface_impl<Base, Holder, T, V, R, RR>;
 };
@@ -77,14 +50,6 @@ template <typename R, typename RR>
 struct forward_iterator_ref_iface {
     template <typename Wrap>
     struct impl : input_iterator_ref_iface<R, RR>::template impl<Wrap> {
-        friend bool operator==(const impl &a, const impl &b)
-        {
-            return iface_ptr(*static_cast<const Wrap *>(&a))->equal_to(*iface_ptr(*static_cast<const Wrap *>(&b)));
-        }
-        friend bool operator!=(const impl &a, const impl &b)
-        {
-            return !(a == b);
-        }
     };
 };
 

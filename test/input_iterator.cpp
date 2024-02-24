@@ -87,6 +87,11 @@ struct noniter1 {
     void operator++() {}
 };
 
+bool operator==(const noniter1 &, const noniter1 &)
+{
+    return false;
+}
+
 struct noniter2 {
     double &operator*() const
     {
@@ -95,6 +100,11 @@ struct noniter2 {
     }
     void operator++() {}
 };
+
+bool operator==(const noniter2 &, const noniter2 &)
+{
+    return false;
+}
 
 struct noniter3 {
     const double &operator*() const
@@ -105,6 +115,11 @@ struct noniter3 {
     void operator++() {}
 };
 
+bool operator==(const noniter3 &, const noniter3 &)
+{
+    return false;
+}
+
 struct noniter4 {
     double &&operator*() const
     {
@@ -114,6 +129,11 @@ struct noniter4 {
     void operator++() {}
 };
 
+bool operator==(const noniter4 &, const noniter4 &)
+{
+    return false;
+}
+
 struct noniter5 {
     const double &&operator*() const
     {
@@ -122,6 +142,11 @@ struct noniter5 {
     }
     void operator++() {}
 };
+
+bool operator==(const noniter5 &, const noniter5 &)
+{
+    return false;
+}
 
 // LCOV_EXCL_STOP
 
@@ -195,6 +220,11 @@ struct iter_move1 {
     }
     void operator++() {}
 };
+
+bool operator==(const iter_move1 &, const iter_move1 &)
+{
+    return false;
+}
 
 // LCOV_EXCL_STOP
 

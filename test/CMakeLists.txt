@@ -1,5 +1,8 @@
 add_subdirectory(catch)
 
+add_library(tanuki_sqlite STATIC sqlite3.c)
+set_property(TARGET tanuki_sqlite PROPERTY LINKER_LANGUAGE)
+
 function(ADD_TANUKI_TESTCASE arg1)
   add_executable(${arg1} ${arg1}.cpp)
   target_link_libraries(${arg1} PRIVATE tanuki Catch2::Catch2WithMain)
@@ -78,3 +81,7 @@ if(TANUKI_WITH_BOOST_S11N)
   ADD_TANUKI_TESTCASE(test_lib_s11n)
   target_link_libraries(test_lib_s11n PRIVATE fooable)
 endif()
+
+ADD_TANUKI_TESTCASE(sqlite_ts)
+target_link_libraries(sqlite_ts PRIVATE tanuki_sqlite)
+target_compile_definitions(sqlite_ts PRIVATE "-DTANUKI_SQLITE_FILE=\"${CMAKE_CURRENT_SOURCE_DIR}/simple.db\"")

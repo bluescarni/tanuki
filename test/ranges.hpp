@@ -54,6 +54,15 @@ template <template <typename, typename, typename> typename>
 struct make_generic_iterator;
 
 template <>
+struct make_generic_iterator<input_iterator> {
+    template <typename T>
+    auto operator()(T it) const -> decltype(make_input_iterator(std::move(it)))
+    {
+        return make_input_iterator(std::move(it));
+    }
+};
+
+template <>
 struct make_generic_iterator<forward_iterator> {
     template <typename T>
     auto operator()(T it) const -> decltype(make_forward_iterator(std::move(it)))
@@ -244,6 +253,9 @@ using unwrap_cvref2_t = tanuki::unwrap_cvref_t<std::remove_cvref_t<T>>;
 } // namespace detail
 
 template <typename V, typename R, typename RR, typename CR, typename CRR>
+using input_range = detail::generic_range<V, R, RR, CR, CRR, input_iterator>;
+
+template <typename V, typename R, typename RR, typename CR, typename CRR>
 using forward_range = detail::generic_range<V, R, RR, CR, CRR, forward_iterator>;
 
 template <typename V, typename R, typename RR, typename CR, typename CRR>
@@ -271,6 +283,7 @@ using random_access_range = detail::generic_range<V, R, RR, CR, CRR, random_acce
             std::forward<T>(x));                                                                                       \
     }
 
+FACADE_DEFINE_RANGE_FACTORY(input)
 FACADE_DEFINE_RANGE_FACTORY(forward)
 FACADE_DEFINE_RANGE_FACTORY(bidirectional)
 FACADE_DEFINE_RANGE_FACTORY(random_access)

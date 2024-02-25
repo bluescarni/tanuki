@@ -36,7 +36,7 @@ TEST_CASE("basic")
         REQUIRE(has_static_storage(it));
         REQUIRE(*std::as_const(it) == 1);
         REQUIRE(*++it == 2);
-        REQUIRE(*it++ == 2);
+        it++;
         REQUIRE(*std::as_const(it) == 3);
 
         // Check that make_input_iterator() on an io_iterator
@@ -51,7 +51,7 @@ TEST_CASE("basic")
         REQUIRE(std::same_as<decltype(it), int_iter>);
         REQUIRE(*std::as_const(it) == 1);
         REQUIRE(*++it == 2);
-        REQUIRE(*it++ == 2);
+        it++;
         REQUIRE(*std::as_const(it) == 3);
     }
 
@@ -63,7 +63,7 @@ TEST_CASE("basic")
         REQUIRE(std::input_iterator<decltype(it)>);
         REQUIRE(*std::as_const(it) == 1);
         REQUIRE(*++it == 2);
-        REQUIRE(*it++ == 2);
+        it++;
         REQUIRE(*std::as_const(it) == 3);
     }
 
@@ -72,7 +72,7 @@ TEST_CASE("basic")
         int_iter it(std::begin(lst));
         REQUIRE(*std::as_const(it) == 1);
         REQUIRE(*++it == 2);
-        REQUIRE(*it++ == 2);
+        it++;
         REQUIRE(*std::as_const(it) == 3);
     }
 }

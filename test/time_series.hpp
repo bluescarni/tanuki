@@ -99,6 +99,22 @@ concept common_ts_reqs = ts_pair<std::remove_cvref_t<std::ranges::range_referenc
                          && std::same_as<detail::ts_value_from_ref_t<TS>, detail::ts_value_from_rref_t<TS>>;
 
 template <typename T>
+concept any_input_ts = std::ranges::input_range<T> && common_ts_reqs<T>;
+
+template <typename T>
+concept ud_input_ts = requires(T &&x) {
+    make_input_range(std::forward<T>(x));
+    requires any_input_ts<decltype(make_input_range(std::forward<T>(x)))>;
+};
+
+template <typename T>
+    requires ud_input_ts<T>
+auto make_input_ts(T &&x)
+{
+    return make_input_range(std::forward<T>(x));
+}
+
+template <typename T>
 concept any_forward_ts = std::ranges::forward_range<T> && common_ts_reqs<T>;
 
 template <typename T>

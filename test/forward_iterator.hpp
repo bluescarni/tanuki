@@ -54,8 +54,7 @@ struct forward_iterator_ref_iface {
         // that we re-define the pre-incremenet operator as well.
         Wrap &operator++()
         {
-            // NOTE: typename still needed by clang 14 here.
-            using base = typename input_iterator_ref_iface<R, RR>::template impl<Wrap>;
+            using base = input_iterator_ref_iface<R, RR>::template impl<Wrap>;
             return static_cast<base *>(this)->operator++();
         }
         Wrap operator++(int)

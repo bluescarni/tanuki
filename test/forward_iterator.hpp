@@ -26,14 +26,11 @@ namespace facade
 namespace detail
 {
 
-template <typename T>
-concept minimal_eq_comparable = requires(const T &a, const T &b) { static_cast<bool>(a == b); };
-
 // Gather the minimal requirements for a type T
 // to satisfy the forward_iterator concept.
 template <typename T, typename V, typename R, typename RR>
 concept minimal_forward_iterator
-    = minimal_input_iterator<T, V, R, RR> && std::default_initializable<T> && minimal_eq_comparable<T>;
+    = minimal_input_iterator<T, V, R, RR> && std::semiregular<T> && minimal_eq_comparable<T>;
 
 // Fwd declaration of the interface.
 template <typename, typename, typename>
@@ -53,19 +50,21 @@ struct forward_iterator_iface_impl
     {
         return std::addressof(this->value());
     }
-    bool equal_to(const forward_iterator_iface<V, R, RR> &other) const final
+    bool equal_to_iter(const forward_iterator_iface<V, R, RR> &other) const final
     {
         if (typeid(T) == other.get_type_index()) {
             return static_cast<bool>(this->value() == *static_cast<const T *>(other.get_ptr()));
         } else {
-            throw std::runtime_error("Cannot compare iterators of different types");
+            throw std::runtime_error("Unable to compare an iterator of type '" + tanuki::demangle(typeid(T).name())
+                                     + "' to an iterator of type '" + tanuki::demangle(other.get_type_index().name())
+                                     + "'");
         }
     }
 };
 
 template <typename V, typename R, typename RR>
 struct forward_iterator_iface : input_iterator_iface<V, R, RR> {
-    virtual bool equal_to(const forward_iterator_iface &) const = 0;
+    virtual bool equal_to_iter(const forward_iterator_iface &) const = 0;
     [[nodiscard]] virtual std::type_index get_type_index() const noexcept = 0;
     [[nodiscard]] virtual const void *get_ptr() const noexcept = 0;
 
@@ -77,9 +76,22 @@ template <typename R, typename RR>
 struct forward_iterator_ref_iface {
     template <typename Wrap>
     struct impl : input_iterator_ref_iface<R, RR>::template impl<Wrap> {
+        // NOTE: the override of the post-incremenet operator apparently requires
+        // that we re-define the pre-incremenet operator as well.
+        Wrap &operator++()
+        {
+            using base = typename input_iterator_ref_iface<R, RR>::template impl<Wrap>;
+            return static_cast<base *>(this)->operator++();
+        }
+        Wrap operator++(int)
+        {
+            auto retval(*static_cast<const Wrap *>(this));
+            ++*this;
+            return retval;
+        }
         friend bool operator==(const impl &a, const impl &b)
         {
-            return iface_ptr(*static_cast<const Wrap *>(&a))->equal_to(*iface_ptr(*static_cast<const Wrap *>(&b)));
+            return iface_ptr(*static_cast<const Wrap *>(&a))->equal_to_iter(*iface_ptr(*static_cast<const Wrap *>(&b)));
         }
         friend bool operator!=(const impl &a, const impl &b)
         {

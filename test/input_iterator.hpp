@@ -123,7 +123,8 @@ template <typename V, typename R, typename RR>
 inline constexpr auto input_iterator_config = tanuki::config<void, input_iterator_c_ref_iface<V, R, RR>>{
     .static_size = tanuki::holder_size<io_iterator_mock<R>, input_iterator_iface<V, R, RR>>,
     .static_align = tanuki::holder_align<io_iterator_mock<R>, input_iterator_iface<V, R, RR>>,
-    .pointer_interface = false};
+    .pointer_interface = false,
+    .copyable = false};
 
 } // namespace detail
 
@@ -167,8 +168,18 @@ using deduce_iter_value_t = typename detail::deduce_iter_value<T>::type;
 } // namespace detail
 
 template <typename T>
-auto make_input_iterator(T it) -> decltype(input_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>,
-                                                          std::iter_rvalue_reference_t<T>>(std::move(it)))
+concept ud_input_iterator = requires() {
+    typename detail::deduce_iter_value_t<T>;
+    typename std::iter_reference_t<T>;
+    typename std::iter_rvalue_reference_t<T>;
+    requires std::constructible_from<
+        input_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>, std::iter_rvalue_reference_t<T>>, T>;
+};
+
+template <typename T>
+    requires ud_input_iterator<T>
+input_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>, std::iter_rvalue_reference_t<T>>
+make_input_iterator(T it)
 {
     return input_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>, std::iter_rvalue_reference_t<T>>(
         std::move(it));

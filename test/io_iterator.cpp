@@ -7,6 +7,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "io_iterator.hpp"
+#include "sentinel.hpp"
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
@@ -33,13 +34,17 @@ TEST_CASE("basic")
         REQUIRE(has_static_storage(it));
         REQUIRE(*it == 1);
         REQUIRE(*++it == 2);
-        REQUIRE(*it++ == 2);
+        it++;
         REQUIRE(*it == 3);
 
         // Check that make_io_iterator() on an io_iterator
         // returns a copy.
         auto it2 = facade::make_io_iterator(facade::make_io_iterator(std::begin(arr)));
         REQUIRE(value_isa<int *>(it2));
+
+        REQUIRE(it == facade::sentinel(arr + 2));
+        REQUIRE(it != facade::sentinel(arr + 1));
+        REQUIRE(std::sentinel_for<facade::sentinel, int_iter>);
     }
 
     {
@@ -48,8 +53,12 @@ TEST_CASE("basic")
         REQUIRE(std::same_as<decltype(it), int_iter>);
         REQUIRE(*it == 1);
         REQUIRE(*++it == 2);
-        REQUIRE(*it++ == 2);
+        it++;
         REQUIRE(*it == 3);
+
+        REQUIRE(it == facade::sentinel(vec.begin() + 2));
+        REQUIRE(it != facade::sentinel(vec.begin() + 1));
+        REQUIRE(std::sentinel_for<facade::sentinel, int_iter>);
     }
 
     {
@@ -60,7 +69,7 @@ TEST_CASE("basic")
         REQUIRE(std::input_or_output_iterator<decltype(it)>);
         REQUIRE(*it == 1);
         REQUIRE(*++it == 2);
-        REQUIRE(*it++ == 2);
+        it++;
         REQUIRE(*it == 3);
     }
 
@@ -69,28 +78,45 @@ TEST_CASE("basic")
         int_iter it(std::begin(lst));
         REQUIRE(*it == 1);
         REQUIRE(*++it == 2);
-        REQUIRE(*it++ == 2);
+        it++;
         REQUIRE(*it == 3);
     }
 }
 
-struct noniter {
+struct noniter1 {
+    struct sentinel_t {
+    };
+
     double operator*() const
     {
         return {};
     }
     void operator++() {}
+
+    friend bool operator==(const noniter1 &, const sentinel_t &);
+};
+
+struct noniter2 {
+    double operator*() const
+    {
+        return {};
+    }
+    void operator++() {}
+
+    friend bool operator==(const noniter2 &, const noniter2 &);
 };
 
 TEST_CASE("noniter")
 {
     using iter_t = facade::io_iterator<double>;
 
-    REQUIRE(std::same_as<iter_t, decltype(facade::make_io_iterator(noniter{}))>);
+    REQUIRE(std::same_as<iter_t, decltype(facade::make_io_iterator(noniter1{}))>);
 
     REQUIRE(std::input_or_output_iterator<iter_t>);
     REQUIRE(!std::default_initializable<iter_t>);
     REQUIRE(!std::constructible_from<iter_t, int>);
+
+    REQUIRE(std::same_as<iter_t, decltype(facade::make_io_iterator(noniter2{}))>);
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

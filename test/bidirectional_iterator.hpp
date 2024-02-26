@@ -59,7 +59,7 @@ struct bidirectional_iterator_ref_iface {
     struct impl : forward_iterator_ref_iface<R, RR>::template impl<Wrap> {
         // NOTE: in these operators we need the value type
         // to be copyable/movable. These requirements are part
-        // of the input-output iterator concept.
+        // of the forward iterator concept.
         Wrap &operator--()
         {
             iface_ptr(*static_cast<Wrap *>(this))->operator--();

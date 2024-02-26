@@ -133,6 +133,29 @@
 
 TANUKI_BEGIN_NAMESPACE
 
+// Helper to demangle a type name.
+inline std::string demangle(const char *s)
+{
+#if defined(__GNUC__) || (defined(__clang__) && !defined(_MSC_VER))
+    // NOTE: wrap std::free() in a local lambda, so we avoid
+    // potential ambiguities when taking the address of std::free().
+    // See:
+    // https://stackoverflow.com/questions/27440953/stdunique-ptr-for-c-functions-that-need-free
+    // NOLINTNEXTLINE(cppcoreguidelines-no-malloc, cppcoreguidelines-owning-memory, hicpp-no-malloc)
+    auto deleter = [](void *ptr) { std::free(ptr); };
+
+    // NOTE: abi::__cxa_demangle will return a pointer allocated by std::malloc, which we will delete via std::free().
+    std::unique_ptr<char, decltype(deleter)> res{::abi::__cxa_demangle(s, nullptr, nullptr, nullptr), deleter};
+
+    // NOTE: return the original string if demangling fails.
+    return res ? std::string(res.get()) : std::string(s);
+#else
+    // If no demangling is available, just return the mangled name.
+    // NOTE: MSVC already returns the demangled name from typeid.
+    return std::string(s);
+#endif
+}
+
 // Semantics for the wrap class.
 // NOTE: this needs to be marked as visibile because
 // the value_iface class depends on it. If we do not, we have
@@ -156,29 +179,6 @@ namespace detail
 }
 
 // LCOV_EXCL_STOP
-
-// Helper to demangle a type name.
-inline std::string demangle(const char *s)
-{
-#if defined(__GNUC__) || (defined(__clang__) && !defined(_MSC_VER))
-    // NOTE: wrap std::free() in a local lambda, so we avoid
-    // potential ambiguities when taking the address of std::free().
-    // See:
-    // https://stackoverflow.com/questions/27440953/stdunique-ptr-for-c-functions-that-need-free
-    // NOLINTNEXTLINE(cppcoreguidelines-no-malloc, cppcoreguidelines-owning-memory, hicpp-no-malloc)
-    auto deleter = [](void *ptr) { std::free(ptr); };
-
-    // NOTE: abi::__cxa_demangle will return a pointer allocated by std::malloc, which we will delete via std::free().
-    std::unique_ptr<char, decltype(deleter)> res{::abi::__cxa_demangle(s, nullptr, nullptr, nullptr), deleter};
-
-    // NOTE: return the original string if demangling fails.
-    return res ? std::string(res.get()) : std::string(s);
-#else
-    // If no demangling is available, just return the mangled name.
-    // NOTE: MSVC already returns the demangled name from typeid.
-    return std::string(s);
-#endif
-}
 
 // Type-trait to detect instances of std::reference_wrapper.
 template <typename T>
@@ -1725,7 +1725,7 @@ struct iface_impl_helper : public detail::iface_impl_helper_base {
             if constexpr (std::is_const_v<std::remove_reference_t<std::unwrap_reference_t<T>>>) {
                 // NOLINTNEXTLINE(google-readability-casting)
                 throw std::runtime_error("Invalid access to a const reference of type '"
-                                         + detail::demangle(typeid(std::unwrap_reference_t<T>).name())
+                                         + demangle(typeid(std::unwrap_reference_t<T>).name())
                                          + "' via a non-const member function");
 
                 // LCOV_EXCL_START

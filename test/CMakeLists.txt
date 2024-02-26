@@ -1,7 +1,10 @@
 add_subdirectory(catch)
 
+set(THREADS_PREFER_PTHREAD_FLAG YES)
+find_package(Threads REQUIRED)
+unset(THREADS_PREFER_PTHREAD_FLAG)
 add_library(tanuki_sqlite STATIC sqlite3.c)
-set_property(TARGET tanuki_sqlite PROPERTY LINKER_LANGUAGE)
+target_link_libraries(tanuki_sqlite PUBLIC ${CMAKE_DL_LIBS} Threads::Threads)
 
 function(ADD_TANUKI_TESTCASE arg1)
   add_executable(${arg1} ${arg1}.cpp)

@@ -1098,6 +1098,11 @@ class TANUKI_VISIBLE wrap
 
 #endif
 
+    // NOTE: store the ctor explicitness into a separate variable.
+    // This helps as a workaround for compiler issues in conditionally
+    // explicit constructors.
+    static constexpr auto explicit_ctor = Cfg.explicit_ctor;
+
 public:
     // Explicit initialisation into the invalid state.
     explicit wrap(invalid_wrap_t) noexcept(detail::nothrow_default_initializable<ref_iface_t>)
@@ -1162,7 +1167,7 @@ public:
             // We must be able to invoke the construction function.
             w.template ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x));
         })
-    explicit(Cfg.explicit_ctor < wrap_ctor::always_implicit)
+    explicit(explicit_ctor < wrap_ctor::always_implicit)
         // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,google-explicit-constructor,hicpp-explicit-conversions)
         wrap(T &&x) noexcept(noexcept(this->ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x)))
                              && detail::nothrow_default_initializable<ref_iface_t>)
@@ -1180,7 +1185,7 @@ public:
             // We must be able to invoke the construction function.
             w.template ctor_impl<std::reference_wrapper<T>>(std::move(ref));
         })
-    explicit(Cfg.explicit_ctor == wrap_ctor::always_explicit)
+    explicit(explicit_ctor == wrap_ctor::always_explicit)
         // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
         wrap(std::reference_wrapper<T> ref) noexcept(
             noexcept(this->ctor_impl<std::reference_wrapper<T>>(std::move(ref)))

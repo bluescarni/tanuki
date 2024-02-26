@@ -26,7 +26,7 @@ namespace detail
 // Gather the minimal requirements for a type T
 // to satisfy the forward_iterator concept.
 template <typename T, typename V, typename R, typename RR>
-concept minimal_forward_iterator = minimal_input_iterator<T, V, R, RR> && std::semiregular<T>;
+concept minimal_forward_iterator = minimal_input_iterator<T, V, R, RR> && std::default_initializable<T>;
 
 // Fwd declaration of the interface.
 template <typename, typename, typename>
@@ -50,19 +50,6 @@ template <typename R, typename RR>
 struct forward_iterator_ref_iface {
     template <typename Wrap>
     struct impl : input_iterator_ref_iface<R, RR>::template impl<Wrap> {
-        // NOTE: the override of the post-incremenet operator apparently requires
-        // that we re-define the pre-incremenet operator as well.
-        Wrap &operator++()
-        {
-            using base = input_iterator_ref_iface<R, RR>::template impl<Wrap>;
-            return static_cast<base *>(this)->operator++();
-        }
-        Wrap operator++(int)
-        {
-            auto retval(*static_cast<const Wrap *>(this));
-            ++*this;
-            return retval;
-        }
     };
 };
 

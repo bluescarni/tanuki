@@ -33,7 +33,7 @@ TEST_CASE("basic")
         REQUIRE(has_static_storage(it));
         REQUIRE(*it == 1);
         REQUIRE(*++it == 2);
-        it++;
+        REQUIRE(*it++ == 2);
         REQUIRE(*it == 3);
 
         // Check that make_io_iterator() on an io_iterator
@@ -48,7 +48,7 @@ TEST_CASE("basic")
         REQUIRE(std::same_as<decltype(it), int_iter>);
         REQUIRE(*it == 1);
         REQUIRE(*++it == 2);
-        it++;
+        REQUIRE(*it++ == 2);
         REQUIRE(*it == 3);
     }
 
@@ -60,7 +60,7 @@ TEST_CASE("basic")
         REQUIRE(std::input_or_output_iterator<decltype(it)>);
         REQUIRE(*it == 1);
         REQUIRE(*++it == 2);
-        it++;
+        REQUIRE(*it++ == 2);
         REQUIRE(*it == 3);
     }
 
@@ -69,7 +69,7 @@ TEST_CASE("basic")
         int_iter it(std::begin(lst));
         REQUIRE(*it == 1);
         REQUIRE(*++it == 2);
-        it++;
+        REQUIRE(*it++ == 2);
         REQUIRE(*it == 3);
     }
 }

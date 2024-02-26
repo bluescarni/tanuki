@@ -58,7 +58,12 @@ concept minimal_eq_comparable = requires(const T &a, const T &b) { static_cast<b
 // Gather the minimal requirements for a type T
 // to satisfy the io_iterator concept.
 template <typename T, typename R>
-concept minimal_io_iterator = std::movable<T> && dereferenceable<T, R> && pre_incrementable<T> &&
+concept minimal_io_iterator = std::movable<T> &&
+                              // NOTE: the copyable requirement is not part of the
+                              // std::input_or_output_iterator - we add it in order
+                              // to be able to synthesise a reasonable post-increment
+                              // operator.
+                              std::copyable<T> && dereferenceable<T, R> && pre_incrementable<T> &&
                               // NOTE: equality comparability is not required in C++20,
                               // but we require it as at this time we don't implement
                               // a type-erased version of sentinels.
@@ -126,9 +131,11 @@ struct io_iterator_ref_iface {
             iface_ptr(*static_cast<Wrap *>(this))->operator++();
             return *static_cast<Wrap *>(this);
         }
-        void operator++(int)
+        Wrap operator++(int)
         {
-            this->operator++();
+            auto retval(*static_cast<const Wrap *>(this));
+            ++*this;
+            return retval;
         }
         R operator*()
         {

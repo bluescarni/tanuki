@@ -120,10 +120,33 @@ using input_iterator_c_ref_iface
     = tanuki::composite_ref_iface<input_iterator_ref_iface<R, RR>, value_tag_ref_iface<V, std::input_iterator_tag>>;
 
 template <typename V, typename R, typename RR>
-inline constexpr auto input_iterator_config = tanuki::config<void, input_iterator_c_ref_iface<V, R, RR>>{
-    .static_size = tanuki::holder_size<io_iterator_mock<R>, input_iterator_iface<V, R, RR>>,
-    .static_align = tanuki::holder_align<io_iterator_mock<R>, input_iterator_iface<V, R, RR>>,
-    .pointer_interface = false};
+struct input_iterator_mock {
+    void *ptr = nullptr;
+
+    [[noreturn]] void operator++()
+    {
+        throw std::runtime_error("Attempting to increase a default-constructed iterator");
+    }
+    [[noreturn]] R operator*() const
+    {
+        throw std::runtime_error("Attempting to dereference a default-constructed iterator");
+    }
+    [[nodiscard]] friend bool operator==(const input_iterator_mock &, const input_iterator_mock &) noexcept
+    {
+        return true;
+    }
+    [[noreturn]] friend RR iter_move(const input_iterator_mock &)
+    {
+        throw std::runtime_error("Attempting to invoke iter_move() on a default-constructed iterator");
+    }
+};
+
+template <typename V, typename R, typename RR>
+inline constexpr auto input_iterator_config
+    = tanuki::config<input_iterator_mock<V, R, RR>, input_iterator_c_ref_iface<V, R, RR>>{
+        .static_size = tanuki::holder_size<input_iterator_mock<V, R, RR>, input_iterator_iface<V, R, RR>>,
+        .static_align = tanuki::holder_align<input_iterator_mock<V, R, RR>, input_iterator_iface<V, R, RR>>,
+        .pointer_interface = false};
 
 } // namespace detail
 

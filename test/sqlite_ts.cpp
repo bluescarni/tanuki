@@ -11,7 +11,6 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "input_iterator.hpp"
 #include "sqlite3.h"
 #include "time_series.hpp"
 
@@ -21,15 +20,17 @@ struct sqlite_ts {
     ::sqlite3 *db = nullptr;
     std::string tb;
 
-    // TODO: forbid copy, replace shared ptr with unique ptr?
-    // TODO: moved from state?
     struct const_iterator {
         ::sqlite3 *db = nullptr;
         std::shared_ptr<::sqlite3_stmt> stmt;
 
         const_iterator() = default;
         const_iterator(const const_iterator &) = default;
-        const_iterator(const_iterator &&) noexcept = default;
+        const_iterator(const_iterator &&other) noexcept : db(other.db), stmt(std::move(other.stmt))
+        {
+            // Set other in the invalid state.
+            other.db = nullptr;
+        }
         explicit const_iterator(::sqlite3 *d, const std::string &sql) : db(d)
         {
             ::sqlite3_stmt *pstmt = nullptr;
@@ -41,7 +42,7 @@ struct sqlite_ts {
             }
 
             try {
-                stmt.reset(pstmt, [](::sqlite3_stmt *s) { ::sqlite3_finalize(s); });
+                stmt.reset(pstmt, &::sqlite3_finalize);
             } catch (...) {
                 ::sqlite3_finalize(pstmt);
                 throw;
@@ -52,9 +53,25 @@ struct sqlite_ts {
             // to the first row of the result of the query.
             ++*this;
         }
-        const_iterator &operator=(const const_iterator &) = delete;
-        const_iterator &operator=(const_iterator &&) noexcept = default;
-        ~const_iterator() = default;
+        const_iterator &operator=(const const_iterator &) = default;
+        const_iterator &operator=(const_iterator &&other) noexcept
+        {
+            if (this != &other) {
+                db = other.db;
+                stmt = std::move(other.stmt);
+
+                // Set other in the invalid state.
+                other.db = nullptr;
+            }
+
+            return *this;
+        }
+        ~const_iterator()
+        {
+            if (db == nullptr) {
+                assert(!stmt);
+            }
+        }
 
         void operator++()
         {
@@ -184,23 +201,11 @@ struct sqlite_ts {
 
 TEST_CASE("basic")
 {
-    sqlite_ts ts{TANUKI_SQLITE_FILE, "my_table"};
-    // auto its = facade::make_input_ts(std::move(ts));
-    // facade::make_input_iterator(ts.begin());
-    using iter_t = decltype(ts.begin());
-    facade::input_iterator<facade::detail::deduce_iter_value_t<iter_t>, std::iter_reference_t<iter_t>,
-                           std::iter_rvalue_reference_t<iter_t>>(ts.begin());
-    // facade::make_input_range(std::move(ts));
+    auto ts = facade::make_input_ts(sqlite_ts{TANUKI_SQLITE_FILE, "my_table"});
 
-    // auto it = ts.begin();
-    // std::cout << (*it).first << '\n';
-    // ++it;
-    // std::cout << (*it).first << '\n';
-    // ++it;
-    // std::cout << (*it).first << '\n';
-    // ++it;
-    // std::cout << (*it).first << '\n';
-    // ++it;
+    for (const auto &[k, v] : ts) {
+        std::cout << k << '\n';
+    }
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

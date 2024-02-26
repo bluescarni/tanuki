@@ -20,7 +20,7 @@ TEST_CASE("basic")
 
     REQUIRE(std::input_or_output_iterator<int_iter>);
     REQUIRE(std::input_iterator<int_iter>);
-    REQUIRE(!std::default_initializable<int_iter>);
+    REQUIRE(std::default_initializable<int_iter>);
     REQUIRE(!std::constructible_from<int_iter, int>);
     REQUIRE(!can_make_input_iterator<int>);
 
@@ -159,7 +159,7 @@ TEST_CASE("noniter")
         REQUIRE(std::same_as<iter_t, decltype(nit)>);
 
         REQUIRE(std::input_iterator<iter_t>);
-        REQUIRE(!std::default_initializable<iter_t>);
+        REQUIRE(std::default_initializable<iter_t>);
         REQUIRE(!std::constructible_from<iter_t, int>);
     }
 
@@ -170,7 +170,7 @@ TEST_CASE("noniter")
         REQUIRE(std::same_as<iter_t, decltype(nit)>);
 
         REQUIRE(std::input_iterator<iter_t>);
-        REQUIRE(!std::default_initializable<iter_t>);
+        REQUIRE(std::default_initializable<iter_t>);
         REQUIRE(!std::constructible_from<iter_t, int>);
     }
 
@@ -181,7 +181,7 @@ TEST_CASE("noniter")
         REQUIRE(std::same_as<iter_t, decltype(nit)>);
 
         REQUIRE(std::input_iterator<iter_t>);
-        REQUIRE(!std::default_initializable<iter_t>);
+        REQUIRE(std::default_initializable<iter_t>);
         REQUIRE(!std::constructible_from<iter_t, int>);
     }
 
@@ -192,7 +192,7 @@ TEST_CASE("noniter")
         REQUIRE(std::same_as<iter_t, decltype(nit)>);
 
         REQUIRE(std::input_iterator<iter_t>);
-        REQUIRE(!std::default_initializable<iter_t>);
+        REQUIRE(std::default_initializable<iter_t>);
         REQUIRE(!std::constructible_from<iter_t, int>);
     }
 
@@ -203,7 +203,7 @@ TEST_CASE("noniter")
         REQUIRE(std::same_as<iter_t, decltype(nit)>);
 
         REQUIRE(std::input_iterator<iter_t>);
-        REQUIRE(!std::default_initializable<iter_t>);
+        REQUIRE(std::default_initializable<iter_t>);
         REQUIRE(!std::constructible_from<iter_t, int>);
     }
 }

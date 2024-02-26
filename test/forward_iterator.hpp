@@ -26,7 +26,7 @@ namespace detail
 // Gather the minimal requirements for a type T
 // to satisfy the forward_iterator concept.
 template <typename T, typename V, typename R, typename RR>
-concept minimal_forward_iterator = minimal_input_iterator<T, V, R, RR> && std::default_initializable<T>;
+concept minimal_forward_iterator = minimal_input_iterator<T, V, R, RR>;
 
 // Fwd declaration of the interface.
 template <typename, typename, typename>
@@ -58,32 +58,10 @@ using forward_iterator_c_ref_iface
     = tanuki::composite_ref_iface<forward_iterator_ref_iface<R, RR>, value_tag_ref_iface<V, std::forward_iterator_tag>>;
 
 template <typename V, typename R, typename RR>
-struct forward_iterator_mock {
-    void *ptr = nullptr;
-
-    [[noreturn]] void operator++()
-    {
-        throw std::runtime_error("Attempting to increase a default-constructed iterator");
-    }
-    [[noreturn]] R operator*() const
-    {
-        throw std::runtime_error("Attempting to dereference a default-constructed iterator");
-    }
-    [[nodiscard]] friend bool operator==(const forward_iterator_mock &, const forward_iterator_mock &) noexcept
-    {
-        return true;
-    }
-    [[noreturn]] friend RR iter_move(const forward_iterator_mock &)
-    {
-        throw std::runtime_error("Attempting to invoke iter_move() on a default-constructed iterator");
-    }
-};
-
-template <typename V, typename R, typename RR>
 inline constexpr auto forward_iterator_config
-    = tanuki::config<forward_iterator_mock<V, R, RR>, forward_iterator_c_ref_iface<V, R, RR>>{
-        .static_size = tanuki::holder_size<forward_iterator_mock<V, R, RR>, forward_iterator_iface<V, R, RR>>,
-        .static_align = tanuki::holder_align<forward_iterator_mock<V, R, RR>, forward_iterator_iface<V, R, RR>>,
+    = tanuki::config<input_iterator_mock<V, R, RR>, forward_iterator_c_ref_iface<V, R, RR>>{
+        .static_size = tanuki::holder_size<input_iterator_mock<V, R, RR>, forward_iterator_iface<V, R, RR>>,
+        .static_align = tanuki::holder_align<input_iterator_mock<V, R, RR>, forward_iterator_iface<V, R, RR>>,
         .pointer_interface = false};
 
 } // namespace detail

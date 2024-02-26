@@ -80,7 +80,7 @@ using bidirectional_iterator_c_ref_iface
                                   value_tag_ref_iface<V, std::bidirectional_iterator_tag>>;
 
 template <typename V, typename R, typename RR>
-struct bidirectional_iterator_mock : forward_iterator_mock<V, R, RR> {
+struct bidirectional_iterator_mock : input_iterator_mock<V, R, RR> {
     [[noreturn]] void operator--()
     {
         throw std::runtime_error("Attempting to decrease a default-constructed iterator");

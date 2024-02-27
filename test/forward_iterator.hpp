@@ -144,8 +144,7 @@ concept ud_forward_iterator = detail::generic_ud_input_iterator<T, forward_itera
 
 template <typename T>
     requires ud_forward_iterator<T>
-forward_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>, std::iter_rvalue_reference_t<T>>
-make_forward_iterator(T it)
+auto make_forward_iterator(T it)
 {
     return forward_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>, std::iter_rvalue_reference_t<T>>(
         std::move(it));

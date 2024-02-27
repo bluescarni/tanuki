@@ -189,7 +189,7 @@ concept ud_io_iterator = requires() {
 
 template <typename T>
     requires ud_io_iterator<T>
-io_iterator<std::iter_reference_t<T>> make_io_iterator(T it)
+auto make_io_iterator(T it)
 {
     return io_iterator<std::iter_reference_t<T>>(std::move(it));
 }

@@ -24,38 +24,23 @@ namespace detail
 {
 
 template <typename T>
-concept subtractable = requires(const T &x) { x - x; };
-
-} // namespace detail
-
-// Requirements for a time series key:
-// - must support strict total ordering,
-// - must be subtractable.
-template <typename T>
-concept ts_key = std::totally_ordered<T> && detail::subtractable<T>;
-
-namespace detail
-{
-
-template <typename T>
-struct is_ts_pair : std::false_type {
+struct is_ts_record : std::false_type {
 };
 
 template <typename T, typename U>
-struct is_ts_pair<std::pair<T, U>> : std::bool_constant<ts_key<std::remove_cvref_t<T>>> {
+struct is_ts_record<std::pair<T, U>> : std::true_type {
 };
 
 template <typename T, typename U>
-struct is_ts_pair<std::tuple<T, U>> : std::bool_constant<ts_key<std::remove_cvref_t<T>>> {
+struct is_ts_record<std::tuple<T, U>> : std::true_type {
 };
 
 } // namespace detail
 
-// Detect if T is a time series pair, that is, a std::pair or a std::tuple
-// of two elements in which the first element, after the removal of cv and ref qualifiers,
-// is a time series key.
+// Detect if T is a time series record, that is, a std::pair or a std::tuple
+// of two elements.
 template <typename T>
-concept ts_pair = detail::is_ts_pair<T>::value;
+concept ts_record = detail::is_ts_record<T>::value;
 
 namespace detail
 {
@@ -87,23 +72,25 @@ template <typename TS>
 using ts_value_t = detail::ts_value_from_ref_t<TS>;
 
 // Common requirements for all time series types:
+// - std::ranges::range_value_t must satisfy ts_record,
 // - after the removal of cv and ref qualifiers,
 //   the reference and rvalue reference types must
-//   satisfy ts_pair;
+//   satisfy ts_record;
 // - the key and value types deduced from the reference and
 //   rvalue reference types must be the same.
 template <typename TS>
-concept common_ts_reqs = ts_pair<std::remove_cvref_t<std::ranges::range_reference_t<TS>>>
-                         && ts_pair<std::remove_cvref_t<std::ranges::range_rvalue_reference_t<TS>>>
-                         && std::same_as<detail::ts_key_from_ref_t<TS>, detail::ts_key_from_rref_t<TS>>
-                         && std::same_as<detail::ts_value_from_ref_t<TS>, detail::ts_value_from_rref_t<TS>>;
+concept common_ts_reqs
+    = ts_record<std::ranges::range_value_t<TS>> && ts_record<std::remove_cvref_t<std::ranges::range_reference_t<TS>>>
+      && ts_record<std::remove_cvref_t<std::ranges::range_rvalue_reference_t<TS>>>
+      && std::same_as<detail::ts_key_from_ref_t<TS>, detail::ts_key_from_rref_t<TS>>
+      && std::same_as<detail::ts_value_from_ref_t<TS>, detail::ts_value_from_rref_t<TS>>;
 
 template <typename T>
 concept any_input_ts = std::ranges::input_range<T> && common_ts_reqs<T>;
 
 template <typename T>
 concept ud_input_ts = requires(T &&x) {
-    make_input_range(std::forward<T>(x));
+    requires ud_input_range<T>;
     requires any_input_ts<decltype(make_input_range(std::forward<T>(x)))>;
 };
 
@@ -119,7 +106,7 @@ concept any_forward_ts = std::ranges::forward_range<T> && common_ts_reqs<T>;
 
 template <typename T>
 concept ud_forward_ts = requires(T &&x) {
-    make_forward_range(std::forward<T>(x));
+    requires ud_forward_range<T>;
     requires any_forward_ts<decltype(make_forward_range(std::forward<T>(x)))>;
 };
 
@@ -131,11 +118,27 @@ auto make_forward_ts(T &&x)
 }
 
 template <typename T>
+concept any_bidirectional_ts = std::ranges::bidirectional_range<T> && common_ts_reqs<T>;
+
+template <typename T>
+concept ud_bidirectional_ts = requires(T &&x) {
+    requires ud_bidirectional_range<T>;
+    requires any_bidirectional_ts<decltype(make_bidirectional_range(std::forward<T>(x)))>;
+};
+
+template <typename T>
+    requires ud_bidirectional_ts<T>
+auto make_bidirectional_ts(T &&x)
+{
+    return make_bidirectional_range(std::forward<T>(x));
+}
+
+template <typename T>
 concept any_random_access_ts = std::ranges::random_access_range<T> && common_ts_reqs<T>;
 
 template <typename T>
 concept ud_random_access_ts = requires(T &&x) {
-    make_random_access_range(std::forward<T>(x));
+    requires ud_random_access_range<T>;
     requires any_random_access_ts<decltype(make_random_access_range(std::forward<T>(x)))>;
 };
 

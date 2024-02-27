@@ -236,8 +236,7 @@ concept ud_random_access_iterator = detail::generic_ud_input_iterator<T, random_
 
 template <typename T>
     requires ud_random_access_iterator<T>
-random_access_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>, std::iter_rvalue_reference_t<T>>
-make_random_access_iterator(T it)
+auto make_random_access_iterator(T it)
 {
     return random_access_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>,
                                   std::iter_rvalue_reference_t<T>>(std::move(it));

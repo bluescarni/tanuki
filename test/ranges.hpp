@@ -271,16 +271,23 @@ using bidirectional_range = detail::generic_range<V, R, RR, CR, CRR, bidirection
 template <typename V, typename R, typename RR, typename CR, typename CRR>
 using random_access_range = detail::generic_range<V, R, RR, CR, CRR, random_access_iterator>;
 
+template <typename T>
+concept ud_input_range = detail::generic_ud_input_range<T, input_range>;
+
+template <typename T>
+concept ud_forward_range = detail::generic_ud_input_range<T, forward_range>;
+
+template <typename T>
+concept ud_bidirectional_range = detail::generic_ud_input_range<T, bidirectional_range>;
+
+template <typename T>
+concept ud_random_access_range = detail::generic_ud_input_range<T, random_access_range>;
+
 // Factory functions.
 #define FACADE_DEFINE_RANGE_FACTORY(tp)                                                                                \
     template <typename T>                                                                                              \
         requires detail::generic_ud_input_range<T, tp##_range>                                                         \
-    tp##_range<detail::deduce_iter_value_t<detail::iter_t<detail::unwrap_cvref2_t<T>>>,                                \
-               std::iter_reference_t<detail::iter_t<detail::unwrap_cvref2_t<T>>>,                                      \
-               std::iter_rvalue_reference_t<detail::iter_t<detail::unwrap_cvref2_t<T>>>,                               \
-               std::iter_reference_t<detail::iter_t<const detail::unwrap_cvref2_t<T>>>,                                \
-               std::iter_rvalue_reference_t<detail::iter_t<const detail::unwrap_cvref2_t<T>>>>                         \
-        make_##tp##_range(T &&x)                                                                                       \
+    auto make_##tp##_range(T &&x)                                                                                      \
     {                                                                                                                  \
         return tp##_range<detail::deduce_iter_value_t<detail::iter_t<detail::unwrap_cvref2_t<T>>>,                     \
                           std::iter_reference_t<detail::iter_t<detail::unwrap_cvref2_t<T>>>,                           \

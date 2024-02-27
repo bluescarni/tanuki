@@ -181,8 +181,7 @@ concept ud_input_iterator = detail::generic_ud_input_iterator<T, input_iterator>
 
 template <typename T>
     requires ud_input_iterator<T>
-input_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>, std::iter_rvalue_reference_t<T>>
-make_input_iterator(T it)
+auto make_input_iterator(T it)
 {
     return input_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>, std::iter_rvalue_reference_t<T>>(
         std::move(it));

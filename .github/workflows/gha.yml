@@ -77,11 +77,3 @@ jobs:
           fetch-depth: 2
       - name: Build
         run: bash tools/gha_conda_coverage.sh
-  manylinux2014:
-     runs-on: ubuntu-latest
-     container:
-      image: pagmo2/manylinux2014_x86_64_with_deps:latest
-     steps:
-       - uses: actions/checkout@v4
-       - name: Build
-         run: bash tools/gha_manylinux.sh

@@ -133,6 +133,29 @@
 
 TANUKI_BEGIN_NAMESPACE
 
+// Helper to demangle a type name.
+inline std::string demangle(const char *s)
+{
+#if defined(__GNUC__) || (defined(__clang__) && !defined(_MSC_VER))
+    // NOTE: wrap std::free() in a local lambda, so we avoid
+    // potential ambiguities when taking the address of std::free().
+    // See:
+    // https://stackoverflow.com/questions/27440953/stdunique-ptr-for-c-functions-that-need-free
+    // NOLINTNEXTLINE(cppcoreguidelines-no-malloc, cppcoreguidelines-owning-memory, hicpp-no-malloc)
+    auto deleter = [](void *ptr) { std::free(ptr); };
+
+    // NOTE: abi::__cxa_demangle will return a pointer allocated by std::malloc, which we will delete via std::free().
+    std::unique_ptr<char, decltype(deleter)> res{::abi::__cxa_demangle(s, nullptr, nullptr, nullptr), deleter};
+
+    // NOTE: return the original string if demangling fails.
+    return res ? std::string(res.get()) : std::string(s);
+#else
+    // If no demangling is available, just return the mangled name.
+    // NOTE: MSVC already returns the demangled name from typeid.
+    return std::string(s);
+#endif
+}
+
 // Semantics for the wrap class.
 // NOTE: this needs to be marked as visibile because
 // the value_iface class depends on it. If we do not, we have
@@ -156,29 +179,6 @@ namespace detail
 }
 
 // LCOV_EXCL_STOP
-
-// Helper to demangle a type name.
-inline std::string demangle(const char *s)
-{
-#if defined(__GNUC__) || (defined(__clang__) && !defined(_MSC_VER))
-    // NOTE: wrap std::free() in a local lambda, so we avoid
-    // potential ambiguities when taking the address of std::free().
-    // See:
-    // https://stackoverflow.com/questions/27440953/stdunique-ptr-for-c-functions-that-need-free
-    // NOLINTNEXTLINE(cppcoreguidelines-no-malloc, cppcoreguidelines-owning-memory, hicpp-no-malloc)
-    auto deleter = [](void *ptr) { std::free(ptr); };
-
-    // NOTE: abi::__cxa_demangle will return a pointer allocated by std::malloc, which we will delete via std::free().
-    std::unique_ptr<char, decltype(deleter)> res{::abi::__cxa_demangle(s, nullptr, nullptr, nullptr), deleter};
-
-    // NOTE: return the original string if demangling fails.
-    return res ? std::string(res.get()) : std::string(s);
-#else
-    // If no demangling is available, just return the mangled name.
-    // NOTE: MSVC already returns the demangled name from typeid.
-    return std::string(s);
-#endif
-}
 
 // Type-trait to detect instances of std::reference_wrapper.
 template <typename T>
@@ -1098,6 +1098,11 @@ class TANUKI_VISIBLE wrap
 
 #endif
 
+    // NOTE: store the ctor explicitness into a separate variable.
+    // This helps as a workaround for compiler issues in conditionally
+    // explicit constructors.
+    static constexpr auto explicit_ctor = Cfg.explicit_ctor;
+
 public:
     // Explicit initialisation into the invalid state.
     explicit wrap(invalid_wrap_t) noexcept(detail::nothrow_default_initializable<ref_iface_t>)
@@ -1162,7 +1167,7 @@ public:
             // We must be able to invoke the construction function.
             w.template ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x));
         })
-    explicit(Cfg.explicit_ctor < wrap_ctor::always_implicit)
+    explicit(explicit_ctor < wrap_ctor::always_implicit)
         // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,google-explicit-constructor,hicpp-explicit-conversions)
         wrap(T &&x) noexcept(noexcept(this->ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x)))
                              && detail::nothrow_default_initializable<ref_iface_t>)
@@ -1180,7 +1185,7 @@ public:
             // We must be able to invoke the construction function.
             w.template ctor_impl<std::reference_wrapper<T>>(std::move(ref));
         })
-    explicit(Cfg.explicit_ctor == wrap_ctor::always_explicit)
+    explicit(explicit_ctor == wrap_ctor::always_explicit)
         // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
         wrap(std::reference_wrapper<T> ref) noexcept(
             noexcept(this->ctor_impl<std::reference_wrapper<T>>(std::move(ref)))
@@ -1720,7 +1725,7 @@ struct iface_impl_helper : public detail::iface_impl_helper_base {
             if constexpr (std::is_const_v<std::remove_reference_t<std::unwrap_reference_t<T>>>) {
                 // NOLINTNEXTLINE(google-readability-casting)
                 throw std::runtime_error("Invalid access to a const reference of type '"
-                                         + detail::demangle(typeid(std::unwrap_reference_t<T>).name())
+                                         + demangle(typeid(std::unwrap_reference_t<T>).name())
                                          + "' via a non-const member function");
 
                 // LCOV_EXCL_START

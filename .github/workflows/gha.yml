@@ -11,25 +11,25 @@ jobs:
   conda_gcc_10:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build
         run: bash tools/gha_conda_gcc_10.sh
   conda_tidy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build
         run: bash tools/gha_conda_tidy.sh
   conda_asan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build
         run: bash tools/gha_conda_asan.sh
   conda_ubsan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build
         run: bash tools/gha_conda_ubsan.sh
   conda_docs:
@@ -42,16 +42,16 @@ jobs:
   osx_clang_14:
     runs-on: macos-11
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Build
         run: bash tools/gha_osx_clang_14.sh
   windows_vs2022:
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v1.1
-      - uses: conda-incubator/setup-miniconda@v2
+        uses: microsoft/setup-msbuild@v2
+      - uses: conda-incubator/setup-miniconda@v3
         with:
           auto-update-conda: true
           python-version: "3.10"
@@ -69,7 +69,7 @@ jobs:
   conda_coverage:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           # NOTE: this is needed by codecov
           # apparently:

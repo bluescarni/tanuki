@@ -7,8 +7,10 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_exception.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include "bidirectional_iterator.hpp"
+#include "sentinel.hpp"
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
@@ -18,6 +20,8 @@ concept can_make_bidirectional_iterator = requires(T it) { facade::make_bidirect
 TEST_CASE("basic")
 {
     using Catch::Matchers::Message;
+    using Catch::Matchers::MessageMatches;
+    using Catch::Matchers::StartsWith;
 
     using int_iter = facade::bidirectional_iterator<int, int &, int &&>;
 
@@ -46,7 +50,7 @@ TEST_CASE("basic")
     REQUIRE_THROWS_MATCHES(std::ranges::iter_move(def), std::runtime_error,
                            Message("Attempting to invoke iter_move() on a default-constructed iterator"));
     REQUIRE_THROWS_MATCHES(int_iter{std::vector<int>::iterator{}} != int_iter{std::list<int>::iterator{}},
-                           std::runtime_error, Message("Cannot compare iterators of different types"));
+                           std::runtime_error, MessageMatches(StartsWith("Unable to compare an iterator of type")));
 
     {
         int arr[] = {1, 2, 3};
@@ -63,6 +67,11 @@ TEST_CASE("basic")
         // returns a copy.
         auto it2 = facade::make_bidirectional_iterator(facade::make_bidirectional_iterator(std::begin(arr)));
         REQUIRE(value_isa<int *>(it2));
+
+        REQUIRE(it == facade::sentinel(arr + 0));
+        REQUIRE(it != facade::sentinel(arr + 1));
+        REQUIRE(std::sentinel_for<facade::sentinel, int_iter>);
+        REQUIRE(std::sentinel_for<int_iter, int_iter>);
     }
 
     {
@@ -75,6 +84,10 @@ TEST_CASE("basic")
         REQUIRE(*it++ == 1);
         REQUIRE(*it-- == 2);
         REQUIRE(*it == 1);
+
+        REQUIRE(it == facade::sentinel(vec.begin()));
+        REQUIRE(it != facade::sentinel(vec.begin() + 1));
+        REQUIRE(std::sentinel_for<facade::sentinel, int_iter>);
     }
 
     {

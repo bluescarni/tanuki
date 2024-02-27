@@ -62,6 +62,14 @@ TEST_CASE("inf loop")
     // due to the satisfaction of a constraint depending on itself.
     // It is not clear whether this is a compiler bug or a legitimate compilation
     // failure, as both MSVC and the EDG compiler are fine with this.
+    //
+    // UPDATE: after further investigations, it seems this may be related to the way
+    // std::tuple is implemented in libstdc++, that is, as a recursive inheritance
+    // hierarchy. The sequence of events is not 100% clear, but it seems to involve
+    // an explicit static_cast in the tuple code to a "Base&&" that ends up attempting
+    // to invoke the implicit generic constructor of the wrap class, leading
+    // to the circular dependency of the constraint onto itself. In any case, this
+    // is a manifestation of the danger of having an implicit catch-all constructor.
     v.resize(10u);
 }
 

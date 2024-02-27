@@ -19,6 +19,7 @@
 
 #include "bidirectional_iterator.hpp"
 #include "input_iterator.hpp"
+#include "sentinel.hpp"
 
 namespace facade
 {
@@ -62,7 +63,9 @@ struct random_access_iterator_iface_impl
         if (typeid(T) == other.get_type_index()) {
             return static_cast<bool>(this->value() < *static_cast<const T *>(other.get_ptr()));
         } else {
-            throw std::runtime_error("Cannot compare iterators of different types");
+            throw std::runtime_error("Unable to compare an iterator of type '" + tanuki::demangle(typeid(T).name())
+                                     + "' to an iterator of type '" + tanuki::demangle(other.get_type_index().name())
+                                     + "'");
         }
     }
     void increment_by(std::ptrdiff_t n) final
@@ -84,8 +87,26 @@ struct random_access_iterator_iface_impl
                 return this->value().distance_from(other_val);
             }
         } else {
-            throw std::runtime_error("Cannot compute the distance between two iterators of different types");
+            throw std::runtime_error("Unable to compute the distance of an iterator of type '"
+                                     + tanuki::demangle(typeid(T).name()) + "' from an iterator of type '"
+                                     + tanuki::demangle(other.get_type_index().name()) + "'");
         }
+    }
+    [[nodiscard]] std::ptrdiff_t distance_from_sentinel(const sentinel &s) const final
+    {
+        if (const auto *ptr = value_ptr<T>(s)) {
+            const auto &other_val = *ptr;
+
+            if constexpr (with_ptrdiff_t_difference<T>) {
+                return static_cast<std::ptrdiff_t>(this->value() - other_val);
+            } else {
+                return this->value().distance_from(other_val);
+            }
+        }
+
+        throw std::runtime_error("Unable to compute the distance of an iterator of type '"
+                                 + tanuki::demangle(typeid(T).name()) + "' from a sentinel containing a value of type '"
+                                 + tanuki::demangle(value_type_index(s).name()) + "'");
     }
 };
 
@@ -95,6 +116,7 @@ struct random_access_iterator_iface : bidirectional_iterator_iface<V, R, RR> {
     virtual void increment_by(std::ptrdiff_t) = 0;
     virtual void decrement_by(std::ptrdiff_t) = 0;
     virtual std::ptrdiff_t distance_from(const random_access_iterator_iface &) const = 0;
+    [[nodiscard]] virtual std::ptrdiff_t distance_from_sentinel(const sentinel &) const = 0;
 
     template <typename Base, typename Holder, typename T>
     using impl = random_access_iterator_iface_impl<Base, Holder, T, V, R, RR>;
@@ -152,6 +174,14 @@ struct random_access_iterator_ref_iface {
         {
             return iface_ptr(static_cast<const Wrap &>(a))->distance_from(*iface_ptr(static_cast<const Wrap &>(b)));
         }
+        friend std::ptrdiff_t operator-(const impl &a, const sentinel &s)
+        {
+            return iface_ptr(static_cast<const Wrap &>(a))->distance_from_sentinel(s);
+        }
+        friend std::ptrdiff_t operator-(const sentinel &s, const impl &a)
+        {
+            return -(a - s);
+        }
 
         R operator[](std::ptrdiff_t n) const
         {
@@ -202,9 +232,12 @@ using random_access_iterator
     = tanuki::wrap<detail::random_access_iterator_iface<V, R, RR>, detail::random_access_iterator_config<V, R, RR>>;
 
 template <typename T>
-auto make_random_access_iterator(T it)
-    -> decltype(random_access_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>,
-                                       std::iter_rvalue_reference_t<T>>(std::move(it)))
+concept ud_random_access_iterator = detail::generic_ud_input_iterator<T, random_access_iterator>;
+
+template <typename T>
+    requires ud_random_access_iterator<T>
+random_access_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>, std::iter_rvalue_reference_t<T>>
+make_random_access_iterator(T it)
 {
     return random_access_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>,
                                   std::iter_rvalue_reference_t<T>>(std::move(it));

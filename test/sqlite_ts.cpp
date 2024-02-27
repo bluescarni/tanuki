@@ -220,6 +220,7 @@ TEST_CASE("basic")
     ++it;
     REQUIRE((*it).first == 0.42);
     ++it;
+    REQUIRE(it == ts.end());
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

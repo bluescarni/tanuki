@@ -6,10 +6,9 @@ set -x
 # Exit on error.
 set -e
 
-cd ${GITHUB_WORKSPACE}
 mkdir build
 cd build
-cmake -DCMAKE_BUILD_TYPE=Debug \
+cmake ../ -DCMAKE_BUILD_TYPE=Debug \
     -DTANUKI_BUILD_TESTS=yes \
     -DTANUKI_BUILD_TUTORIALS=yes \
     -DTANUKI_WITH_BOOST_S11N=yes

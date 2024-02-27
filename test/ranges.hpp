@@ -20,6 +20,7 @@
 #include "forward_iterator.hpp"
 #include "input_iterator.hpp"
 #include "random_access_iterator.hpp"
+#include "sentinel.hpp"
 
 namespace facade
 {
@@ -41,9 +42,9 @@ struct generic_range_iface {
     virtual ~generic_range_iface() = default;
 
     virtual It<V, R, RR> begin() = 0;
-    virtual It<V, R, RR> end() = 0;
+    virtual sentinel end() = 0;
     virtual It<V, CR, CRR> begin() const = 0;
-    virtual It<V, CR, CRR> end() const = 0;
+    [[nodiscard]] virtual sentinel end() const = 0;
 
     template <typename Base, typename Holder, typename T>
     using impl = generic_range_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, It>;
@@ -82,25 +83,20 @@ struct make_generic_iterator<random_access_iterator> {
 
 // Machinery to detect the presence of begin()/end(). Contrary
 // to std::ranges::range, we only require that begin()/end()
-// exist and that they return the same type, but not that they
-// return standard-compliant iterators.
+// exist, but not that they return standard-compliant iterators/sentinels.
 namespace begin_end_impl
 {
 
 template <typename T>
 concept has_member_begin_end = requires(T &x) {
     x.begin();
-    {
-        x.end()
-    } -> std::same_as<decltype(x.begin())>;
+    x.end();
 };
 
 template <typename T>
 concept has_adl_begin_end = requires(T &x) {
     begin(x);
-    {
-        end(x)
-    } -> std::same_as<decltype(begin(x))>;
+    end(x);
 };
 
 template <typename T>
@@ -141,15 +137,11 @@ concept is_generic_range = requires(T &x) {
     {
         make_generic_iterator<It>{}(begin_end_impl::b(x))
     } -> std::same_as<It<V, R, RR>>;
-    {
-        make_generic_iterator<It>{}(begin_end_impl::e(x))
-    } -> std::same_as<It<V, R, RR>>;
+    requires std::constructible_from<sentinel, decltype(begin_end_impl::e(x))>;
     {
         make_generic_iterator<It>{}(begin_end_impl::b(std::as_const(x)))
     } -> std::same_as<It<V, CR, CRR>>;
-    {
-        make_generic_iterator<It>{}(begin_end_impl::e(std::as_const(x)))
-    } -> std::same_as<It<V, CR, CRR>>;
+    requires std::constructible_from<sentinel, decltype(begin_end_impl::e(std::as_const(x)))>;
 };
 
 // Implementation of the interface.
@@ -163,17 +155,17 @@ struct generic_range_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, It> : public
     {
         return make_generic_iterator<It>{}(begin_end_impl::b(this->value()));
     }
-    It<V, R, RR> end() final
+    sentinel end() final
     {
-        return make_generic_iterator<It>{}(begin_end_impl::e(this->value()));
+        return sentinel(begin_end_impl::e(this->value()));
     }
     It<V, CR, CRR> begin() const final
     {
         return make_generic_iterator<It>{}(begin_end_impl::b(this->value()));
     }
-    It<V, CR, CRR> end() const final
+    [[nodiscard]] sentinel end() const final
     {
-        return make_generic_iterator<It>{}(begin_end_impl::e(this->value()));
+        return sentinel(begin_end_impl::e(this->value()));
     }
 };
 
@@ -194,7 +186,7 @@ struct generic_range_ref_iface {
         {
             return iface_ptr(*static_cast<Wrap *>(this))->begin();
         }
-        It<V, R, RR> end()
+        sentinel end()
         {
             return iface_ptr(*static_cast<Wrap *>(this))->end();
         }
@@ -203,7 +195,7 @@ struct generic_range_ref_iface {
         {
             return iface_ptr(*static_cast<const Wrap *>(this))->begin();
         }
-        It<V, CR, CRR> end() const
+        [[nodiscard]] sentinel end() const
         {
             return iface_ptr(*static_cast<const Wrap *>(this))->end();
         }

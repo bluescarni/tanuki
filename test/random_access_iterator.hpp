@@ -228,9 +228,12 @@ using random_access_iterator
     = tanuki::wrap<detail::random_access_iterator_iface<V, R, RR>, detail::random_access_iterator_config<V, R, RR>>;
 
 template <typename T>
-auto make_random_access_iterator(T it)
-    -> decltype(random_access_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>,
-                                       std::iter_rvalue_reference_t<T>>(std::move(it)))
+concept ud_random_access_iterator = detail::generic_ud_input_iterator<T, random_access_iterator>;
+
+template <typename T>
+    requires ud_random_access_iterator<T>
+random_access_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>, std::iter_rvalue_reference_t<T>>
+make_random_access_iterator(T it)
 {
     return random_access_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>,
                                   std::iter_rvalue_reference_t<T>>(std::move(it));

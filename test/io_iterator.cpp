@@ -25,6 +25,7 @@ TEST_CASE("basic")
     REQUIRE(!std::default_initializable<int_iter>);
     REQUIRE(!std::constructible_from<int_iter, int>);
     REQUIRE(!can_make_io_iterator<int>);
+    REQUIRE(!std::copyable<int_iter>);
 
     REQUIRE(std::same_as<std::iter_reference_t<int_iter>, int &>);
     REQUIRE(std::same_as<std::iter_reference_t<facade::io_iterator<int>>, int>);
@@ -86,6 +87,8 @@ TEST_CASE("basic")
     }
 }
 
+// LCOV_EXCL_START
+
 struct noniter1 {
     struct sentinel_t {
     };
@@ -114,6 +117,8 @@ struct noniter2 {
         return true;
     }
 };
+
+// LCOV_EXCL_STOP
 
 TEST_CASE("noniter")
 {

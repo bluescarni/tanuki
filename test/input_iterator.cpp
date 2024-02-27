@@ -24,6 +24,7 @@ TEST_CASE("basic")
     REQUIRE(!std::default_initializable<int_iter>);
     REQUIRE(!std::constructible_from<int_iter, int>);
     REQUIRE(!can_make_input_iterator<int>);
+    REQUIRE(!std::copyable<int_iter>);
 
     REQUIRE(std::same_as<std::ptrdiff_t, std::iter_difference_t<int_iter>>);
     REQUIRE(std::same_as<int, std::iter_value_t<int_iter>>);

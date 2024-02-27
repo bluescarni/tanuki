@@ -140,8 +140,12 @@ using forward_iterator
     = tanuki::wrap<detail::forward_iterator_iface<V, R, RR>, detail::forward_iterator_config<V, R, RR>>;
 
 template <typename T>
-auto make_forward_iterator(T it) -> decltype(forward_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>,
-                                                              std::iter_rvalue_reference_t<T>>(std::move(it)))
+concept ud_forward_iterator = detail::generic_ud_input_iterator<T, forward_iterator>;
+
+template <typename T>
+    requires ud_forward_iterator<T>
+forward_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>, std::iter_rvalue_reference_t<T>>
+make_forward_iterator(T it)
 {
     return forward_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>, std::iter_rvalue_reference_t<T>>(
         std::move(it));

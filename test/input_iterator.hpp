@@ -165,16 +165,19 @@ struct deduce_iter_value<T> {
 template <typename T>
 using deduce_iter_value_t = typename detail::deduce_iter_value<T>::type;
 
-} // namespace detail
-
-template <typename T>
-concept ud_input_iterator = requires() {
-    typename detail::deduce_iter_value_t<T>;
+template <typename T, template <typename, typename, typename> typename It>
+concept generic_ud_input_iterator = requires() {
+    typename deduce_iter_value_t<T>;
     typename std::iter_reference_t<T>;
     typename std::iter_rvalue_reference_t<T>;
     requires std::constructible_from<
-        input_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>, std::iter_rvalue_reference_t<T>>, T>;
+        It<deduce_iter_value_t<T>, std::iter_reference_t<T>, std::iter_rvalue_reference_t<T>>, T>;
 };
+
+} // namespace detail
+
+template <typename T>
+concept ud_input_iterator = detail::generic_ud_input_iterator<T, input_iterator>;
 
 template <typename T>
     requires ud_input_iterator<T>

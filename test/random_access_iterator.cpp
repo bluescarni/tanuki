@@ -10,6 +10,7 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include "random_access_iterator.hpp"
+#include "sentinel.hpp"
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
@@ -108,6 +109,10 @@ TEST_CASE("basic")
     REQUIRE_THROWS_MATCHES(int_iter{std::vector<int>::iterator{}} - int_iter{static_cast<int *>(nullptr)},
                            std::runtime_error,
                            Message("Cannot compute the distance between two iterators of different types"));
+    REQUIRE_THROWS_MATCHES(int_iter{std::vector<int>::iterator{}} - facade::sentinel(3), std::runtime_error,
+                           MessageMatches(StartsWith("Unable to compute the distance of an iterator of type '")));
+    REQUIRE_THROWS_MATCHES(facade::sentinel(3) - int_iter{std::vector<int>::iterator{}}, std::runtime_error,
+                           MessageMatches(StartsWith("Unable to compute the distance of an iterator of type '")));
 
     {
         int arr[] = {1, 2, 3};
@@ -421,6 +426,10 @@ TEST_CASE("noniter")
         REQUIRE(std::random_access_iterator<iter_t>);
         REQUIRE(std::default_initializable<iter_t>);
         REQUIRE(!std::constructible_from<iter_t, int>);
+
+        REQUIRE(std::sized_sentinel_for<facade::sentinel, decltype(nit)>);
+        REQUIRE(nit - facade::sentinel(noniter1{}) == 0);
+        REQUIRE(facade::sentinel(noniter1{}) - nit == 0);
     }
 
     {

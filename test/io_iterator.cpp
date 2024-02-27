@@ -2,9 +2,12 @@
 #include <cstddef>
 #include <iterator>
 #include <list>
+#include <stdexcept>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_exception.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include "io_iterator.hpp"
 #include "sentinel.hpp"
@@ -93,7 +96,10 @@ struct noniter1 {
     }
     void operator++() {}
 
-    friend bool operator==(const noniter1 &, const sentinel_t &);
+    friend bool operator==(const noniter1 &, const sentinel_t &)
+    {
+        return false;
+    }
 };
 
 struct noniter2 {
@@ -103,11 +109,17 @@ struct noniter2 {
     }
     void operator++() {}
 
-    friend bool operator==(const noniter2 &, const noniter2 &);
+    friend bool operator==(const noniter2 &, const noniter2 &)
+    {
+        return true;
+    }
 };
 
 TEST_CASE("noniter")
 {
+    using Catch::Matchers::MessageMatches;
+    using Catch::Matchers::StartsWith;
+
     using iter_t = facade::io_iterator<double>;
 
     REQUIRE(std::same_as<iter_t, decltype(facade::make_io_iterator(noniter1{}))>);
@@ -117,6 +129,22 @@ TEST_CASE("noniter")
     REQUIRE(!std::constructible_from<iter_t, int>);
 
     REQUIRE(std::same_as<iter_t, decltype(facade::make_io_iterator(noniter2{}))>);
+
+    auto it = facade::make_io_iterator(noniter1{});
+    REQUIRE(it != facade::sentinel(noniter1::sentinel_t{}));
+    REQUIRE(facade::sentinel(noniter1::sentinel_t{}) != it);
+    REQUIRE_THROWS_MATCHES(it != facade::sentinel(int{}), std::runtime_error,
+                           MessageMatches(StartsWith("Unable to compare an iterator of type")));
+    REQUIRE_THROWS_MATCHES(facade::sentinel(int{}) != it, std::runtime_error,
+                           MessageMatches(StartsWith("Unable to compare an iterator of type")));
+
+    it = facade::make_io_iterator(noniter2{});
+    REQUIRE(!(it != facade::sentinel(noniter2{})));
+    REQUIRE(!(facade::sentinel(noniter2{}) != it));
+    REQUIRE_THROWS_MATCHES(it != facade::sentinel(int{}), std::runtime_error,
+                           MessageMatches(StartsWith("Unable to compare an iterator of type")));
+    REQUIRE_THROWS_MATCHES(facade::sentinel(int{}) != it, std::runtime_error,
+                           MessageMatches(StartsWith("Unable to compare an iterator of type")));
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

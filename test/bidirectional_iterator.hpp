@@ -107,8 +107,7 @@ concept ud_bidirectional_iterator = detail::generic_ud_input_iterator<T, bidirec
 
 template <typename T>
     requires ud_bidirectional_iterator<T>
-bidirectional_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>, std::iter_rvalue_reference_t<T>>
-make_bidirectional_iterator(T it)
+auto make_bidirectional_iterator(T it)
 {
     return bidirectional_iterator<detail::deduce_iter_value_t<T>, std::iter_reference_t<T>,
                                   std::iter_rvalue_reference_t<T>>(std::move(it));

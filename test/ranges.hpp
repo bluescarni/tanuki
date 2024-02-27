@@ -55,6 +55,15 @@ template <template <typename, typename, typename> typename>
 struct make_generic_iterator;
 
 template <>
+struct make_generic_iterator<input_iterator> {
+    template <typename T>
+    auto operator()(T it) const -> decltype(make_input_iterator(std::move(it)))
+    {
+        return make_input_iterator(std::move(it));
+    }
+};
+
+template <>
 struct make_generic_iterator<forward_iterator> {
     template <typename T>
     auto operator()(T it) const -> decltype(make_forward_iterator(std::move(it)))
@@ -211,9 +220,9 @@ struct generic_range_mock {
     void *ptr2 = nullptr;
 
     It<V, R, RR> begin();
-    It<V, R, RR> end();
+    sentinel end();
     It<V, CR, CRR> begin() const;
-    It<V, CR, CRR> end() const;
+    [[nodiscard]] sentinel end() const;
 };
 
 template <typename V, typename R, typename RR, typename CR, typename CRR,
@@ -233,7 +242,25 @@ using generic_range = tanuki::wrap<detail::generic_range_iface<V, R, RR, CR, CRR
 template <typename T>
 using unwrap_cvref2_t = tanuki::unwrap_cvref_t<std::remove_cvref_t<T>>;
 
+template <typename T, template <typename, typename, typename, typename, typename> typename R>
+concept generic_ud_input_range = requires() {
+    typename deduce_iter_value_t<iter_t<unwrap_cvref2_t<T>>>;
+    typename std::iter_reference_t<iter_t<unwrap_cvref2_t<T>>>;
+    typename std::iter_rvalue_reference_t<iter_t<unwrap_cvref2_t<T>>>;
+    typename std::iter_reference_t<iter_t<const unwrap_cvref2_t<T>>>;
+    typename std::iter_rvalue_reference_t<iter_t<const unwrap_cvref2_t<T>>>;
+    requires std::constructible_from<
+        R<deduce_iter_value_t<iter_t<unwrap_cvref2_t<T>>>, std::iter_reference_t<iter_t<unwrap_cvref2_t<T>>>,
+          std::iter_rvalue_reference_t<iter_t<unwrap_cvref2_t<T>>>,
+          typename std::iter_reference_t<iter_t<const unwrap_cvref2_t<T>>>,
+          typename std::iter_rvalue_reference_t<iter_t<const unwrap_cvref2_t<T>>>>,
+        T>;
+};
+
 } // namespace detail
+
+template <typename V, typename R, typename RR, typename CR, typename CRR>
+using input_range = detail::generic_range<V, R, RR, CR, CRR, input_iterator>;
 
 template <typename V, typename R, typename RR, typename CR, typename CRR>
 using forward_range = detail::generic_range<V, R, RR, CR, CRR, forward_iterator>;
@@ -244,16 +271,23 @@ using bidirectional_range = detail::generic_range<V, R, RR, CR, CRR, bidirection
 template <typename V, typename R, typename RR, typename CR, typename CRR>
 using random_access_range = detail::generic_range<V, R, RR, CR, CRR, random_access_iterator>;
 
+template <typename T>
+concept ud_input_range = detail::generic_ud_input_range<T, input_range>;
+
+template <typename T>
+concept ud_forward_range = detail::generic_ud_input_range<T, forward_range>;
+
+template <typename T>
+concept ud_bidirectional_range = detail::generic_ud_input_range<T, bidirectional_range>;
+
+template <typename T>
+concept ud_random_access_range = detail::generic_ud_input_range<T, random_access_range>;
+
 // Factory functions.
 #define FACADE_DEFINE_RANGE_FACTORY(tp)                                                                                \
     template <typename T>                                                                                              \
+        requires detail::generic_ud_input_range<T, tp##_range>                                                         \
     auto make_##tp##_range(T &&x)                                                                                      \
-        -> decltype(tp##_range<detail::deduce_iter_value_t<detail::iter_t<detail::unwrap_cvref2_t<T>>>,                \
-                               std::iter_reference_t<detail::iter_t<detail::unwrap_cvref2_t<T>>>,                      \
-                               std::iter_rvalue_reference_t<detail::iter_t<detail::unwrap_cvref2_t<T>>>,               \
-                               std::iter_reference_t<detail::iter_t<const detail::unwrap_cvref2_t<T>>>,                \
-                               std::iter_rvalue_reference_t<detail::iter_t<const detail::unwrap_cvref2_t<T>>>>(        \
-            std::forward<T>(x)))                                                                                       \
     {                                                                                                                  \
         return tp##_range<detail::deduce_iter_value_t<detail::iter_t<detail::unwrap_cvref2_t<T>>>,                     \
                           std::iter_reference_t<detail::iter_t<detail::unwrap_cvref2_t<T>>>,                           \
@@ -263,6 +297,7 @@ using random_access_range = detail::generic_range<V, R, RR, CR, CRR, random_acce
             std::forward<T>(x));                                                                                       \
     }
 
+FACADE_DEFINE_RANGE_FACTORY(input)
 FACADE_DEFINE_RANGE_FACTORY(forward)
 FACADE_DEFINE_RANGE_FACTORY(bidirectional)
 FACADE_DEFINE_RANGE_FACTORY(random_access)

@@ -2,6 +2,7 @@
 #include <cassert>
 #include <concepts>
 #include <cstddef>
+#include <functional>
 #include <iterator>
 #include <ranges>
 #include <tuple>
@@ -145,10 +146,10 @@ struct minimal_ra_ts {
     }
 };
 
-template <typename TS, typename Key>
+template <typename TS, typename Key, std::indirect_strict_weak_order<const Key *, const Key *> Comp = std::ranges::less>
     requires facade::any_random_access_ts<TS> && std::same_as<Key, facade::ts_key_t<TS>>
 // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
-auto lagrange_interpolation(TS &&ts, const Key &key, std::size_t order)
+auto lagrange_interpolation(TS &&ts, const Key &key, std::size_t order, Comp comp = {})
 {
     assert(order >= 2u);
     const auto order_half = static_cast<std::ranges::range_difference_t<TS>>(order / 2u);
@@ -158,7 +159,7 @@ auto lagrange_interpolation(TS &&ts, const Key &key, std::size_t order)
     const auto proj = [](const auto &p) -> const auto & { return std::get<0>(p); };
 
     // Locate the first key in ts which is greater than the input key.
-    const auto center_it = std::ranges::upper_bound(ts, key, {}, proj);
+    const auto center_it = std::ranges::upper_bound(ts, key, comp, proj);
 
     // How much can we move left and right of center_it without exiting ts?
     const auto max_distance_right = std::ranges::distance(center_it, std::ranges::end(ts));
@@ -223,19 +224,31 @@ TEST_CASE("lagrange interpolation")
         const vvec_t v{{1, {2, 0}}, {2, {4, 0}}, {3, {6, 0}}, {4, {8, 0}}};
 
         auto tmp = make_random_access_ts(v);
-        REQUIRE(lagrange_interpolation(tmp | std::ranges::views::transform([](const auto &p) { return std::make_pair(p.first, p.second[0]); }), 2.5, 2) == 5.);
-        REQUIRE(lagrange_interpolation(std::as_const(tmp) | std::ranges::views::transform([](const auto &p) { return std::make_pair(p.first, p.second[0]); }), 2.5, 2) == 5.);
+        REQUIRE(lagrange_interpolation(tmp | std::ranges::views::transform([](const auto &p) {
+                                           return std::make_pair(p.first, p.second[0]);
+                                       }),
+                                       2.5, 2)
+                == 5.);
+        REQUIRE(lagrange_interpolation(std::as_const(tmp) | std::ranges::views::transform([](const auto &p) {
+                                           return std::make_pair(p.first, p.second[0]);
+                                       }),
+                                       2.5, 2)
+                == 5.);
 
         const auto tmp2 = make_random_access_ts(std::ref(v));
-        REQUIRE(lagrange_interpolation(tmp2 | std::ranges::views::transform([](const auto &p) { return std::make_pair(p.first, p.second[0]); }), 2.5, 2) == 5.);
+        REQUIRE(lagrange_interpolation(tmp2 | std::ranges::views::transform([](const auto &p) {
+                                           return std::make_pair(p.first, p.second[0]);
+                                       }),
+                                       2.5, 2)
+                == 5.);
 
 #if __cpp_lib_ranges > 202106L
         // NOTE: post C++20 rvalue ranges can be used to construct views pipelines. See:
         // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p2415r2.html
 
         [[maybe_unused]] auto tmp_rvalue = make_random_access_ts(v) | std::ranges::views::transform([](const auto &p) {
-                                         return std::make_pair(p.first, p.second[0]);
-                                     });
+                                               return std::make_pair(p.first, p.second[0]);
+                                           });
 #endif
     }
 }

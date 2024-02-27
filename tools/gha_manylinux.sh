@@ -13,7 +13,7 @@ cmake ../ -DCMAKE_BUILD_TYPE=Debug \
     -DTANUKI_BUILD_TUTORIALS=yes \
     -DTANUKI_WITH_BOOST_S11N=yes
 make -j4
-ctest . -j4
+ctest -V -j4
 
 set +e
 set +x

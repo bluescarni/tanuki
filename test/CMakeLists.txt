@@ -25,6 +25,13 @@ function(ADD_TANUKI_TESTCASE arg1)
   add_test(${arg1} ${arg1})
 endfunction()
 
+# Setup the sqlite library.
+set(THREADS_PREFER_PTHREAD_FLAG YES)
+find_package(Threads REQUIRED)
+unset(THREADS_PREFER_PTHREAD_FLAG)
+add_library(tanuki_sqlite STATIC sqlite3.c)
+target_link_libraries(tanuki_sqlite PRIVATE ${CMAKE_DL_LIBS} Threads::Threads)
+
 ADD_TANUKI_TESTCASE(test_basics)
 ADD_TANUKI_TESTCASE(test_swap)
 ADD_TANUKI_TESTCASE(test_defctor)
@@ -78,3 +85,7 @@ if(TANUKI_WITH_BOOST_S11N)
   ADD_TANUKI_TESTCASE(test_lib_s11n)
   target_link_libraries(test_lib_s11n PRIVATE fooable)
 endif()
+
+ADD_TANUKI_TESTCASE(sqlite_ts)
+target_link_libraries(sqlite_ts PRIVATE tanuki_sqlite)
+target_compile_definitions(sqlite_ts PRIVATE "-DTANUKI_SQLITE_FILE=\"${CMAKE_CURRENT_SOURCE_DIR}/simple.db\"")

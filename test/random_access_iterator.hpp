@@ -63,7 +63,9 @@ struct random_access_iterator_iface_impl
         if (typeid(T) == other.get_type_index()) {
             return static_cast<bool>(this->value() < *static_cast<const T *>(other.get_ptr()));
         } else {
-            throw std::runtime_error("Cannot compare iterators of different types");
+            throw std::runtime_error("Unable to compare an iterator of type '" + tanuki::demangle(typeid(T).name())
+                                     + "' to an iterator of type '" + tanuki::demangle(other.get_type_index().name())
+                                     + "'");
         }
     }
     void increment_by(std::ptrdiff_t n) final
@@ -85,7 +87,9 @@ struct random_access_iterator_iface_impl
                 return this->value().distance_from(other_val);
             }
         } else {
-            throw std::runtime_error("Cannot compute the distance between two iterators of different types");
+            throw std::runtime_error("Unable to compute the distance of an iterator of type '"
+                                     + tanuki::demangle(typeid(T).name()) + "' from an iterator of type '"
+                                     + tanuki::demangle(other.get_type_index().name()) + "'");
         }
     }
     [[nodiscard]] std::ptrdiff_t distance_from_sentinel(const sentinel &s) const final

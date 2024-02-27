@@ -105,10 +105,10 @@ TEST_CASE("basic")
     REQUIRE_THROWS_MATCHES(int_iter{std::vector<int>::iterator{}} != int_iter{static_cast<int *>(nullptr)},
                            std::runtime_error, MessageMatches(StartsWith("Unable to compare an iterator of type")));
     REQUIRE_THROWS_MATCHES(int_iter{std::vector<int>::iterator{}} < int_iter{static_cast<int *>(nullptr)},
-                           std::runtime_error, Message("Cannot compare iterators of different types"));
+                           std::runtime_error, MessageMatches(StartsWith("Unable to compare an iterator of type")));
     REQUIRE_THROWS_MATCHES(int_iter{std::vector<int>::iterator{}} - int_iter{static_cast<int *>(nullptr)},
                            std::runtime_error,
-                           Message("Cannot compute the distance between two iterators of different types"));
+                           MessageMatches(StartsWith("Unable to compute the distance of an iterator of type")));
     REQUIRE_THROWS_MATCHES(int_iter{std::vector<int>::iterator{}} - facade::sentinel(3), std::runtime_error,
                            MessageMatches(StartsWith("Unable to compute the distance of an iterator of type '")));
     REQUIRE_THROWS_MATCHES(facade::sentinel(3) - int_iter{std::vector<int>::iterator{}}, std::runtime_error,

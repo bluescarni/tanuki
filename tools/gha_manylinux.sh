@@ -6,6 +6,7 @@ set -x
 # Exit on error.
 set -e
 
+cd ${GITHUB_WORKSPACE}
 mkdir build
 cd build
 cmake -DCMAKE_BUILD_TYPE=Debug \

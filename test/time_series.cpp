@@ -79,9 +79,14 @@ TEST_CASE("forward_time_series")
 
         REQUIRE(std::same_as<decltype(f1), decltype(f2)>);
         REQUIRE(std::ranges::equal(f1, f2));
+        REQUIRE(std::ranges::equal(std::as_const(f1), f2));
+        REQUIRE(std::ranges::equal(f1, std::as_const(f2)));
+        REQUIRE(std::ranges::equal(std::as_const(f1), std::as_const(f2)));
         REQUIRE(facade::any_forward_ts<decltype(f1)>);
     }
 }
+
+// LCOV_EXCL_START
 
 struct minimal_ra_ts {
     std::vector<std::pair<double, double>> m_container;
@@ -145,6 +150,8 @@ struct minimal_ra_ts {
         return const_iterator{m_container.data() + m_container.size()};
     }
 };
+
+// LCOV_EXCL_STOP
 
 template <typename TS, typename Key, std::indirect_strict_weak_order<const Key *, const Key *> Comp = std::ranges::less>
     requires facade::any_random_access_ts<TS> && std::same_as<Key, facade::ts_key_t<TS>>

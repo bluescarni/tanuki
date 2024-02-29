@@ -29,6 +29,7 @@ option(TANUKI_CLANG_TIDY "Enable clang-tidy when building the unit tests." OFF)
 mark_as_advanced(TANUKI_CLANG_TIDY)
 set(TANUKI_CLANG_TIDY_PATH "clang-tidy" CACHE STRING "Path to clang-tidy.")
 mark_as_advanced(TANUKI_CLANG_TIDY_PATH)
+option(TANUKI_TEST_PYBIND11 "Enable tests for Python interoperability via pybind11." OFF)
 
 # NOTE: on Unix systems, the correct library installation path
 # could be something other than just "lib", such as "lib64",

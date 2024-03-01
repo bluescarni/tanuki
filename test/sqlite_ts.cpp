@@ -9,8 +9,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include "ranges.hpp"
 #include "sqlite3.h"
-#include "time_series.hpp"
 
 using sqlite_val_t = std::variant<std::int64_t, double, std::string, std::vector<std::byte>, std::nullptr_t>;
 
@@ -209,7 +209,7 @@ struct sqlite_ts {
 
 TEST_CASE("basic")
 {
-    auto ts = facade::make_input_ts(sqlite_ts{TANUKI_SQLITE_FILE, "my_table"});
+    auto ts = facade::make_input_range(sqlite_ts{TANUKI_SQLITE_FILE, "my_table"});
 
     auto it = ts.begin();
     REQUIRE((*it).first == 0.12);

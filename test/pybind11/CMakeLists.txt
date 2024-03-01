@@ -10,7 +10,6 @@ function(ADD_TANUKI_PYBIND11_TESTCASE arg1)
     target_link_libraries(${arg1} PRIVATE "${pybind11_LIBRARIES}")
     target_include_directories(${arg1} SYSTEM PRIVATE "${pybind11_INCLUDE_DIR}" "${Python3_INCLUDE_DIRS}")
     target_compile_definitions(${arg1} PRIVATE "${pybind11_DEFINITIONS}")
-
     set_target_properties(${arg1} PROPERTIES CXX_VISIBILITY_PRESET hidden)
     set_target_properties(${arg1} PROPERTIES VISIBILITY_INLINES_HIDDEN TRUE)
 
@@ -31,7 +30,7 @@ function(ADD_TANUKI_PYBIND11_TESTCASE arg1)
     # We can fetch the correct directory by reading the TARGET_FILE_DIR property of the python module.
     file(GENERATE OUTPUT "$<TARGET_FILE_DIR:${arg1}>/run_${arg1}.py" INPUT "${CMAKE_CURRENT_SOURCE_DIR}/run_${arg1}.py")
     # Add the actual test.
-    add_test(NAME ${arg1} COMMAND "${PYTHON_EXECUTABLE}" run_${arg1}.py WORKING_DIRECTORY "$<TARGET_FILE_DIR:${arg1}>")
+    add_test(NAME ${arg1} COMMAND "${Python3_EXECUTABLE}" run_${arg1}.py WORKING_DIRECTORY "$<TARGET_FILE_DIR:${arg1}>")
 endfunction()
 
 ADD_TANUKI_PYBIND11_TESTCASE(basic)

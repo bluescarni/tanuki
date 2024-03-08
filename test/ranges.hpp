@@ -110,14 +110,14 @@ concept has_adl_begin_end = requires(T &x) {
 
 template <typename T>
     requires has_member_begin_end<T>
-auto b(T &x) -> decltype(x.begin())
+auto b(T &x)
 {
     return x.begin();
 }
 
 template <typename T>
     requires has_member_begin_end<T>
-auto e(T &x) -> decltype(x.end())
+auto e(T &x)
 {
     return x.end();
 }
@@ -126,14 +126,14 @@ auto e(T &x) -> decltype(x.end())
 // to member functions if the ADL versions are also available.
 template <typename T>
     requires has_adl_begin_end<T> && (!has_member_begin_end<T>)
-auto b(T &x) -> decltype(begin(x))
+auto b(T &x)
 {
     return begin(x);
 }
 
 template <typename T>
     requires has_adl_begin_end<T> && (!has_member_begin_end<T>)
-auto e(T &x) -> decltype(end(x))
+auto e(T &x)
 {
     return end(x);
 }

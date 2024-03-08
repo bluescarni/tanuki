@@ -82,6 +82,7 @@ if(NOT _YACMACompilerLinkerSettingsRun)
     # Configuration bits specific for GCC.
     if(YACMA_COMPILER_IS_GNUCXX)
         _YACMA_CHECK_ENABLE_CXX_FLAG(-fdiagnostics-color=auto)
+        _YACMA_CHECK_ENABLE_CXX_FLAG(-Woverloaded-virtual)
         # New in GCC 9.
         _YACMA_CHECK_ENABLE_DEBUG_CXX_FLAG(-Waddress-of-packed-member)
     endif()

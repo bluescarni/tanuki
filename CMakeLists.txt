@@ -161,6 +161,6 @@ if(TANUKI_BUILD_TESTS)
   add_subdirectory(test)
 endif()
 
-if(TANUKI_BUILD_TESTS)
+if(TANUKI_BUILD_TUTORIALS)
   add_subdirectory(tutorial)
 endif()

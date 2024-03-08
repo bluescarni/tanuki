@@ -80,7 +80,7 @@ struct io_iterator_iface_impl : public Base, tanuki::iface_impl_helper<Base, Hol
     {
         static_cast<void>(++this->value());
     }
-    R operator*() final
+    R deref() final
     {
         return *(this->value());
     }
@@ -110,7 +110,7 @@ template <typename R>
 struct io_iterator_iface {
     virtual ~io_iterator_iface() = default;
     virtual void operator++() = 0;
-    virtual R operator*() = 0;
+    virtual R deref() = 0;
     [[nodiscard]] virtual bool equal_to_sentinel(const sentinel &) const = 0;
 
     template <typename Base, typename Holder, typename T>
@@ -136,7 +136,7 @@ struct io_iterator_ref_iface {
         }
         R operator*()
         {
-            return iface_ptr(*static_cast<Wrap *>(this))->operator*();
+            return iface_ptr(*static_cast<Wrap *>(this))->deref();
         }
         friend bool operator==(const impl &a, const sentinel &s)
         {

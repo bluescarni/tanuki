@@ -55,11 +55,7 @@ template <typename Base, typename Holder, typename T, typename V, typename R, ty
     requires minimal_input_iterator<T, V, R, RR>
 struct input_iterator_iface_impl : io_iterator_iface_impl<Base, Holder, T, R>,
                                    tanuki::iface_impl_helper<io_iterator_iface_impl<Base, Holder, T, R>, Holder> {
-    // NOTE: bring in the non-const version of the dereference
-    // operator from io_iterator_iface_impl.
-    using io_iterator_iface_impl<Base, Holder, T, R>::operator*;
-
-    R operator*() const final
+    R const_deref() const final
     {
         return *(this->value());
     }
@@ -71,11 +67,7 @@ struct input_iterator_iface_impl : io_iterator_iface_impl<Base, Holder, T, R>,
 
 template <typename V, typename R, typename RR>
 struct input_iterator_iface : io_iterator_iface<R> {
-    // NOTE: bring in the non-const version of the dereference
-    // operator from io_iterator_iface.
-    using io_iterator_iface<R>::operator*;
-
-    virtual R operator*() const = 0;
+    virtual R const_deref() const = 0;
     virtual RR iter_move() const = 0;
 
     template <typename Base, typename Holder, typename T>
@@ -104,7 +96,7 @@ struct input_iterator_ref_iface {
 
         R operator*() const
         {
-            return iface_ptr(*static_cast<const Wrap *>(this))->operator*();
+            return iface_ptr(*static_cast<const Wrap *>(this))->const_deref();
         }
         // Implementation of the iter_move customisation point
         // for input iterators.

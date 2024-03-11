@@ -2,6 +2,7 @@
 #include <concepts>
 #include <cstddef>
 #include <functional>
+#include <iterator>
 #include <ranges>
 #include <type_traits>
 #include <utility>
@@ -193,6 +194,18 @@ TEST_CASE("nested type erasure")
     auto tmp = facade::make_random_access_range(vec);
     auto r1 = facade::make_random_access_range(tmp | std::views::transform(std::identity{}));
     REQUIRE(*std::ranges::lower_bound(r1, 1) == 1);
+}
+
+// An example in which a common range gets transformed into a non-common range, and, in order
+// for it to be type-erased, we turn it back into a common range with std::views::common.
+TEST_CASE("counted iterator")
+{
+    const std::vector vec = {1, 2, 3};
+
+    auto sr = std::ranges::subrange(std::counted_iterator{std::cbegin(vec), 3}, std::default_sentinel);
+    auto tmp = facade::make_random_access_range(sr | std::views::common);
+
+    REQUIRE(*std::ranges::lower_bound(tmp, 1) == 1);
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

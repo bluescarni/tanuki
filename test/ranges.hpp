@@ -394,7 +394,7 @@ concept ud_random_access_range = detail::generic_ud_input_range<T, random_access
 // Factory functions.
 #define FACADE_DEFINE_RANGE_FACTORY(tp)                                                                                \
     template <typename T>                                                                                              \
-        requires detail::generic_ud_input_range<T, tp##_range>                                                         \
+        requires(ud_##tp##_range<T>)                                                                                   \
     auto make_##tp##_range(T &&x)                                                                                      \
     {                                                                                                                  \
         return tp##_range<detail::deduce_iter_value_t<detail::iter_t<detail::unwrap_cvref2_t<T>>>,                     \

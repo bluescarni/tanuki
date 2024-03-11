@@ -57,6 +57,8 @@ concept minimal_eq_comparable = requires(const T &a, const U &b) { static_cast<b
 
 // Check if T defines a sentinel type via a sentinel_t typedef, which must be a
 // cv-unqualified copyable object to which T can be compared for equality.
+// NOTE: we could have also a non-intrusive version of this which uses
+// template specialisation in order to define the sentinel type.
 template <typename T>
 concept with_sentinel = requires() {
     typename T::sentinel_t;
@@ -68,6 +70,17 @@ concept with_sentinel = requires() {
 
 // Gather the minimal requirements for a type T
 // to satisfy the io_iterator concept.
+// NOTE: in C++20, the input_output_iterator and input_iterator concepts do not
+// require comparability with anything (whereas, starting from forward_iterator onwards,
+// iterators must be self-comparable). However, *any* type of range requires the begin()
+// iterator to be comparable with whatever is returned by end() (that is, the sentinel type).
+// We do not want the sentinel type to show up in the definition of the type-erased
+// iterator, thus here we require that either:
+// - the iterator type provides (via the sentinel_t typedef) a sentinel type which it can
+//   be compared to, or
+// - the iterator is self comparable.
+// This allows both to implement user-defined input iterators with a custom sentinel type,
+// and to create type-erased input/input_output iterators from >= forward iterators.
 template <typename T, typename R>
 concept minimal_io_iterator = std::movable<T> && dereferenceable<T, R> && pre_incrementable<T>
                               && (minimal_eq_comparable<T> || with_sentinel<T>);

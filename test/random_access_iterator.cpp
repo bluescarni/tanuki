@@ -10,7 +10,6 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include "random_access_iterator.hpp"
-#include "sentinel.hpp"
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
@@ -109,10 +108,6 @@ TEST_CASE("basic")
     REQUIRE_THROWS_MATCHES(int_iter{std::vector<int>::iterator{}} - int_iter{static_cast<int *>(nullptr)},
                            std::runtime_error,
                            MessageMatches(StartsWith("Unable to compute the distance of an iterator of type")));
-    REQUIRE_THROWS_MATCHES(int_iter{std::vector<int>::iterator{}} - facade::sentinel(3), std::runtime_error,
-                           MessageMatches(StartsWith("Unable to compute the distance of an iterator of type '")));
-    REQUIRE_THROWS_MATCHES(facade::sentinel(3) - int_iter{std::vector<int>::iterator{}}, std::runtime_error,
-                           MessageMatches(StartsWith("Unable to compute the distance of an iterator of type '")));
 
     {
         int arr[] = {1, 2, 3};
@@ -133,8 +128,6 @@ TEST_CASE("basic")
         it += 3;
         REQUIRE(*(it - 1) == 3);
         REQUIRE(it - int_iter(std::begin(arr)) == 3);
-        REQUIRE(it - facade::sentinel(std::begin(arr)) == 3);
-        REQUIRE(facade::sentinel(std::begin(arr)) - it == -3);
         it -= 3;
         REQUIRE(it[2] == 3);
 
@@ -159,11 +152,7 @@ TEST_CASE("basic")
         auto it2 = facade::make_random_access_iterator(facade::make_random_access_iterator(std::begin(arr)));
         REQUIRE(value_isa<int *>(it2));
 
-        REQUIRE(it == facade::sentinel(arr + 0));
-        REQUIRE(it != facade::sentinel(arr + 1));
-        REQUIRE(std::sentinel_for<facade::sentinel, int_iter>);
         REQUIRE(std::sentinel_for<int_iter, int_iter>);
-        REQUIRE(std::sized_sentinel_for<facade::sentinel, int_iter>);
         REQUIRE(std::sized_sentinel_for<int_iter, int_iter>);
     }
 
@@ -426,10 +415,6 @@ TEST_CASE("noniter")
         REQUIRE(std::random_access_iterator<iter_t>);
         REQUIRE(std::default_initializable<iter_t>);
         REQUIRE(!std::constructible_from<iter_t, int>);
-
-        REQUIRE(std::sized_sentinel_for<facade::sentinel, decltype(nit)>);
-        REQUIRE(nit - facade::sentinel(noniter1{}) == 0);
-        REQUIRE(facade::sentinel(noniter1{}) - nit == 0);
     }
 
     {

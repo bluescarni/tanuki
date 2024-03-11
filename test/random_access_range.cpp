@@ -122,6 +122,37 @@ TEST_CASE("basic random_access")
     }
 
     {
+        int vec[] = {1, 2, 3};
+
+        auto r1 = facade::make_random_access_range(std::ref(vec));
+        REQUIRE(std::ranges::random_access_range<decltype(r1)>);
+        REQUIRE(std::same_as<decltype(r1), facade::random_access_range<int, int &, int &&, const int &, const int &&>>);
+
+        const auto r2 = facade::make_random_access_range(std::cref(vec));
+        REQUIRE(std::ranges::random_access_range<decltype(r2)>);
+        REQUIRE(std::same_as<decltype(r2),
+                             const facade::random_access_range<int, int &, int &&, const int &, const int &&>>);
+
+        REQUIRE(std::ranges::equal(r1, r2));
+    }
+
+    {
+        const int vec[] = {1, 2, 3};
+
+        const auto r1 = facade::make_random_access_range(std::ref(vec));
+        REQUIRE(std::ranges::random_access_range<decltype(r1)>);
+        REQUIRE(std::same_as<decltype(r1),
+                             const facade::random_access_range<int, int &, int &&, const int &, const int &&>>);
+
+        const auto r2 = facade::make_random_access_range(std::cref(vec));
+        REQUIRE(std::ranges::random_access_range<decltype(r2)>);
+        REQUIRE(std::same_as<decltype(r2),
+                             const facade::random_access_range<int, int &, int &&, const int &, const int &&>>);
+
+        REQUIRE(std::ranges::equal(r1, r2));
+    }
+
+    {
         // NOLINTNEXTLINE(misc-const-correctness)
         min_ra_range vec{{3, 1, 2}};
 

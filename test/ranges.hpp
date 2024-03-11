@@ -57,7 +57,8 @@ struct make_generic_iterator;
 template <>
 struct make_generic_iterator<input_iterator> {
     template <typename T>
-    auto operator()(T it) const -> decltype(make_input_iterator(std::move(it)))
+        requires ud_input_iterator<T>
+    auto operator()(T it) const
     {
         return make_input_iterator(std::move(it));
     }
@@ -66,7 +67,8 @@ struct make_generic_iterator<input_iterator> {
 template <>
 struct make_generic_iterator<forward_iterator> {
     template <typename T>
-    auto operator()(T it) const -> decltype(make_forward_iterator(std::move(it)))
+        requires ud_forward_iterator<T>
+    auto operator()(T it) const
     {
         return make_forward_iterator(std::move(it));
     }
@@ -75,7 +77,8 @@ struct make_generic_iterator<forward_iterator> {
 template <>
 struct make_generic_iterator<bidirectional_iterator> {
     template <typename T>
-    auto operator()(T it) const -> decltype(make_bidirectional_iterator(std::move(it)))
+        requires ud_bidirectional_iterator<T>
+    auto operator()(T it) const
     {
         return make_bidirectional_iterator(std::move(it));
     }
@@ -84,7 +87,8 @@ struct make_generic_iterator<bidirectional_iterator> {
 template <>
 struct make_generic_iterator<random_access_iterator> {
     template <typename T>
-    auto operator()(T it) const -> decltype(make_random_access_iterator(std::move(it)))
+        requires ud_random_access_iterator<T>
+    auto operator()(T it) const
     {
         return make_random_access_iterator(std::move(it));
     }

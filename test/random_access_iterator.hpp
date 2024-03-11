@@ -84,7 +84,7 @@ struct random_access_iterator_iface_impl
             if constexpr (with_ptrdiff_t_difference<T>) {
                 return static_cast<std::ptrdiff_t>(this->value() - other_val);
             } else {
-                return this->value().distance_from(other_val);
+                return static_cast<std::ptrdiff_t>(this->value().distance_from(other_val));
             }
         } else {
             throw std::runtime_error("Unable to compute the distance of an iterator of type '"

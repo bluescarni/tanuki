@@ -106,8 +106,11 @@ concept has_member_begin_end = requires(T &x) {
     x.end();
 };
 
+// NOTE: we need to special-case if T is an array type, because
+// in that case we cannot use ADL-based begin()/end() and we need to resort
+// instead to std::ranges::begin()/end().
 template <typename T>
-concept has_adl_begin_end = requires(T &x) {
+concept has_adl_begin_end = std::is_array_v<T> || requires(T &x) {
     begin(x);
     end(x);
 };
@@ -132,14 +135,22 @@ template <typename T>
     requires has_adl_begin_end<T> && (!has_member_begin_end<T>)
 auto b(T &x)
 {
-    return begin(x);
+    if constexpr (std::is_array_v<T>) {
+        return std::ranges::begin(x);
+    } else {
+        return begin(x);
+    }
 }
 
 template <typename T>
     requires has_adl_begin_end<T> && (!has_member_begin_end<T>)
 auto e(T &x)
 {
-    return end(x);
+    if constexpr (std::is_array_v<T>) {
+        return std::ranges::end(x);
+    } else {
+        return end(x);
+    }
 }
 
 } // namespace begin_end_impl

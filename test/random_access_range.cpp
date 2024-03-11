@@ -188,10 +188,10 @@ TEST_CASE("basic random_access")
 // the iterator type.
 TEST_CASE("nested type erasure")
 {
-    std::vector vec = {1, 2, 3};
+    const std::vector vec = {1, 2, 3};
 
-    auto r1 = facade::make_random_access_range(facade::make_random_access_range(vec)
-                                               | std::views::transform(std::identity{}));
+    auto tmp = facade::make_random_access_range(vec);
+    auto r1 = facade::make_random_access_range(tmp | std::views::transform(std::identity{}));
     REQUIRE(*std::ranges::lower_bound(r1, 1) == 1);
 }
 

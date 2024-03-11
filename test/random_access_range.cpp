@@ -181,4 +181,18 @@ TEST_CASE("basic random_access")
     }
 }
 
+// NOTE: this would fail on earlier versions of the library due to the forced use of sentinels
+// in ranges other than input ranges: we would end up with a transform view with a sentinel type
+// different from the iterator type, which would result in a runtime error because the sentinel
+// comparator in the type-erased random-access iterator worked only on sentinels containing
+// the iterator type.
+TEST_CASE("nested type erasure")
+{
+    std::vector vec = {1, 2, 3};
+
+    auto r1 = facade::make_random_access_range(facade::make_random_access_range(vec)
+                                               | std::views::transform(std::identity{}));
+    REQUIRE(*std::ranges::lower_bound(r1, 1) == 1);
+}
+
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

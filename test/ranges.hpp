@@ -42,12 +42,27 @@ struct generic_range_iface {
     virtual ~generic_range_iface() = default;
 
     virtual It<V, R, RR> begin() = 0;
-    virtual sentinel end() = 0;
+    virtual It<V, R, RR> end() = 0;
     virtual It<V, CR, CRR> begin() const = 0;
-    [[nodiscard]] virtual sentinel end() const = 0;
+    virtual It<V, CR, CRR> end() const = 0;
 
     template <typename Base, typename Holder, typename T>
     using impl = generic_range_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, It>;
+};
+
+// Specialisation of the interface for input ranges.
+template <typename V, typename R, typename RR, typename CR, typename CRR>
+// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions,hicpp-special-member-functions)
+struct generic_range_iface<V, R, RR, CR, CRR, input_iterator> {
+    virtual ~generic_range_iface() = default;
+
+    virtual input_iterator<V, R, RR> begin() = 0;
+    virtual sentinel end() = 0;
+    virtual input_iterator<V, CR, CRR> begin() const = 0;
+    [[nodiscard]] virtual sentinel end() const = 0;
+
+    template <typename Base, typename Holder, typename T>
+    using impl = generic_range_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, input_iterator>;
 };
 
 // Helper to invoke make_*_iterator().
@@ -161,10 +176,26 @@ concept is_generic_range = requires(T &x) {
     {
         make_generic_iterator<It>{}(begin_end_impl::b(x))
     } -> std::same_as<It<V, R, RR>>;
-    requires std::constructible_from<sentinel, decltype(begin_end_impl::e(x))>;
+    {
+        make_generic_iterator<It>{}(begin_end_impl::e(x))
+    } -> std::same_as<It<V, R, RR>>;
     {
         make_generic_iterator<It>{}(begin_end_impl::b(std::as_const(x)))
     } -> std::same_as<It<V, CR, CRR>>;
+    {
+        make_generic_iterator<It>{}(begin_end_impl::e(std::as_const(x)))
+    } -> std::same_as<It<V, CR, CRR>>;
+};
+
+template <typename T, typename V, typename R, typename RR, typename CR, typename CRR>
+concept is_generic_input_range = requires(T &x) {
+    {
+        make_generic_iterator<input_iterator>{}(begin_end_impl::b(x))
+    } -> std::same_as<input_iterator<V, R, RR>>;
+    requires std::constructible_from<sentinel, decltype(begin_end_impl::e(x))>;
+    {
+        make_generic_iterator<input_iterator>{}(begin_end_impl::b(std::as_const(x)))
+    } -> std::same_as<input_iterator<V, CR, CRR>>;
     requires std::constructible_from<sentinel, decltype(begin_end_impl::e(std::as_const(x)))>;
 };
 
@@ -179,13 +210,37 @@ struct generic_range_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, It> : public
     {
         return make_generic_iterator<It>{}(begin_end_impl::b(this->value()));
     }
-    sentinel end() final
+    It<V, R, RR> end() final
     {
-        return sentinel(begin_end_impl::e(this->value()));
+        return make_generic_iterator<It>{}(begin_end_impl::e(this->value()));
     }
     It<V, CR, CRR> begin() const final
     {
         return make_generic_iterator<It>{}(begin_end_impl::b(this->value()));
+    }
+    It<V, CR, CRR> end() const final
+    {
+        return make_generic_iterator<It>{}(begin_end_impl::e(this->value()));
+    }
+};
+
+// Specialisation of the implementation of the interface for input iterators.
+template <typename Base, typename Holder, typename T, typename V, typename R, typename RR, typename CR, typename CRR>
+    requires std::derived_from<Base, generic_range_iface<V, R, RR, CR, CRR, input_iterator>>
+                 && is_generic_input_range<tanuki::unwrap_cvref_t<T>, V, R, RR, CR, CRR>
+struct generic_range_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, input_iterator>
+    : public Base, tanuki::iface_impl_helper<Base, Holder> {
+    input_iterator<V, R, RR> begin() final
+    {
+        return make_generic_iterator<input_iterator>{}(begin_end_impl::b(this->value()));
+    }
+    sentinel end() final
+    {
+        return sentinel(begin_end_impl::e(this->value()));
+    }
+    input_iterator<V, CR, CRR> begin() const final
+    {
+        return make_generic_iterator<input_iterator>{}(begin_end_impl::b(this->value()));
     }
     [[nodiscard]] sentinel end() const final
     {
@@ -210,12 +265,37 @@ struct generic_range_ref_iface {
         {
             return iface_ptr(*static_cast<Wrap *>(this))->begin();
         }
-        sentinel end()
+        It<V, R, RR> end()
         {
             return iface_ptr(*static_cast<Wrap *>(this))->end();
         }
 
         It<V, CR, CRR> begin() const
+        {
+            return iface_ptr(*static_cast<const Wrap *>(this))->begin();
+        }
+        It<V, CR, CRR> end() const
+        {
+            return iface_ptr(*static_cast<const Wrap *>(this))->end();
+        }
+    };
+};
+
+// Specialisation of the reference interface for input_iterator.
+template <typename V, typename R, typename RR, typename CR, typename CRR>
+struct generic_range_ref_iface<V, R, RR, CR, CRR, input_iterator> {
+    template <typename Wrap>
+    struct impl {
+        input_iterator<V, R, RR> begin()
+        {
+            return iface_ptr(*static_cast<Wrap *>(this))->begin();
+        }
+        sentinel end()
+        {
+            return iface_ptr(*static_cast<Wrap *>(this))->end();
+        }
+
+        input_iterator<V, CR, CRR> begin() const
         {
             return iface_ptr(*static_cast<const Wrap *>(this))->begin();
         }
@@ -226,6 +306,7 @@ struct generic_range_ref_iface {
     };
 };
 
+// Mock range
 template <typename V, typename R, typename RR, typename CR, typename CRR,
           template <typename, typename, typename> typename It>
 struct generic_range_mock {
@@ -235,8 +316,20 @@ struct generic_range_mock {
     void *ptr2 = nullptr;
 
     It<V, R, RR> begin();
-    sentinel end();
+    It<V, R, RR> end();
     It<V, CR, CRR> begin() const;
+    It<V, CR, CRR> end() const;
+};
+
+// Specialisation of the mock range for input_iterator.
+template <typename V, typename R, typename RR, typename CR, typename CRR>
+struct generic_range_mock<V, R, RR, CR, CRR, input_iterator> {
+    void *ptr1 = nullptr;
+    void *ptr2 = nullptr;
+
+    input_iterator<V, R, RR> begin();
+    sentinel end();
+    input_iterator<V, CR, CRR> begin() const;
     [[nodiscard]] sentinel end() const;
 };
 

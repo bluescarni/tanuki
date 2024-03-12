@@ -11,9 +11,8 @@
 
 #include <concepts>
 #include <cstddef>
+#include <functional>
 #include <iterator>
-#include <stdexcept>
-#include <type_traits>
 #include <utility>
 
 #include <tanuki/tanuki.hpp>
@@ -51,26 +50,10 @@ concept dereferenceable = requires(T &x) {
 template <typename T>
 concept pre_incrementable = requires(T &x) { static_cast<void>(++x); };
 
-// Minimal equality-comparability.
-template <typename T, typename U = T>
-concept minimal_eq_comparable = requires(const T &a, const U &b) { static_cast<bool>(a == b); };
-
-// Check if T defines a sentinel type via a sentinel_t typedef, which must be a
-// cv-unqualified copyable object to which T can be compared for equality.
-template <typename T>
-concept with_sentinel = requires() {
-    typename T::sentinel_t;
-    requires std::is_object_v<typename T::sentinel_t>;
-    requires std::same_as<typename T::sentinel_t, std::remove_cv_t<typename T::sentinel_t>>;
-    requires std::copyable<typename T::sentinel_t>;
-    requires minimal_eq_comparable<T, typename T::sentinel_t>;
-};
-
 // Gather the minimal requirements for a type T
 // to satisfy the io_iterator concept.
 template <typename T, typename R>
-concept minimal_io_iterator = std::movable<T> && dereferenceable<T, R> && pre_incrementable<T>
-                              && (minimal_eq_comparable<T> || with_sentinel<T>);
+concept minimal_io_iterator = std::movable<T> && dereferenceable<T, R> && pre_incrementable<T>;
 
 // Definition of the interface implementation.
 template <typename Base, typename Holder, typename T, typename R>
@@ -86,21 +69,7 @@ struct io_iterator_iface_impl : public Base, tanuki::iface_impl_helper<Base, Hol
     }
     [[nodiscard]] bool equal_to_sentinel(const sentinel &s) const final
     {
-        if constexpr (minimal_eq_comparable<T>) {
-            if (const auto *ptr = value_ptr<T>(s)) {
-                return static_cast<bool>(this->value() == *ptr);
-            }
-        } else {
-            static_assert(with_sentinel<T>);
-
-            if (const auto *ptr = value_ptr<typename T::sentinel_t>(s)) {
-                return static_cast<bool>(this->value() == *ptr);
-            }
-        }
-
-        throw std::runtime_error("Unable to compare an iterator of type '" + tanuki::demangle(typeid(T).name())
-                                 + "' to a sentinel containing a value of type '"
-                                 + tanuki::demangle(value_type_index(s).name()) + "'");
+        return s->at_end(any_ref(std::ref(this->value())));
     }
 };
 
@@ -159,14 +128,10 @@ struct io_iterator_ref_iface {
 
 template <typename R>
 struct io_iterator_mock {
-    struct sentinel_t {
-    };
-
     void *ptr = nullptr;
 
     void operator++();
     R operator*() const;
-    bool operator==(const sentinel_t &) const;
 };
 
 template <typename R>

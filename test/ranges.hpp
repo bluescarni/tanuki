@@ -57,7 +57,8 @@ struct make_generic_iterator;
 template <>
 struct make_generic_iterator<input_iterator> {
     template <typename T>
-    auto operator()(T it) const -> decltype(make_input_iterator(std::move(it)))
+        requires ud_input_iterator<T>
+    auto operator()(T it) const
     {
         return make_input_iterator(std::move(it));
     }
@@ -66,7 +67,8 @@ struct make_generic_iterator<input_iterator> {
 template <>
 struct make_generic_iterator<forward_iterator> {
     template <typename T>
-    auto operator()(T it) const -> decltype(make_forward_iterator(std::move(it)))
+        requires ud_forward_iterator<T>
+    auto operator()(T it) const
     {
         return make_forward_iterator(std::move(it));
     }
@@ -75,7 +77,8 @@ struct make_generic_iterator<forward_iterator> {
 template <>
 struct make_generic_iterator<bidirectional_iterator> {
     template <typename T>
-    auto operator()(T it) const -> decltype(make_bidirectional_iterator(std::move(it)))
+        requires ud_bidirectional_iterator<T>
+    auto operator()(T it) const
     {
         return make_bidirectional_iterator(std::move(it));
     }
@@ -84,7 +87,8 @@ struct make_generic_iterator<bidirectional_iterator> {
 template <>
 struct make_generic_iterator<random_access_iterator> {
     template <typename T>
-    auto operator()(T it) const -> decltype(make_random_access_iterator(std::move(it)))
+        requires ud_random_access_iterator<T>
+    auto operator()(T it) const
     {
         return make_random_access_iterator(std::move(it));
     }
@@ -102,8 +106,11 @@ concept has_member_begin_end = requires(T &x) {
     x.end();
 };
 
+// NOTE: we need to special-case if T is an array type, because
+// in that case we cannot use ADL-based begin()/end() and we need to resort
+// instead to std::ranges::begin()/end().
 template <typename T>
-concept has_adl_begin_end = requires(T &x) {
+concept has_adl_begin_end = std::is_array_v<T> || requires(T &x) {
     begin(x);
     end(x);
 };
@@ -128,14 +135,22 @@ template <typename T>
     requires has_adl_begin_end<T> && (!has_member_begin_end<T>)
 auto b(T &x)
 {
-    return begin(x);
+    if constexpr (std::is_array_v<T>) {
+        return std::ranges::begin(x);
+    } else {
+        return begin(x);
+    }
 }
 
 template <typename T>
     requires has_adl_begin_end<T> && (!has_member_begin_end<T>)
 auto e(T &x)
 {
-    return end(x);
+    if constexpr (std::is_array_v<T>) {
+        return std::ranges::end(x);
+    } else {
+        return end(x);
+    }
 }
 
 } // namespace begin_end_impl
@@ -146,11 +161,25 @@ concept is_generic_range = requires(T &x) {
     {
         make_generic_iterator<It>{}(begin_end_impl::b(x))
     } -> std::same_as<It<V, R, RR>>;
-    requires std::constructible_from<sentinel, decltype(begin_end_impl::e(x))>;
+    // NOTE: these two are the minimal requirements for the sentinel type,
+    // and the conceptual requirements for the S and It types of sentinel_box.
+    requires std::copyable<decltype(begin_end_impl::e(x))>;
+    requires minimal_eq_comparable<decltype(begin_end_impl::b(x)), decltype(begin_end_impl::e(x))>;
+    // If we are building a random access range, then we also need to be able to compute the distance
+    // between the iterator and the sentinel.
+    requires(!std::random_access_iterator<It<V, R, RR>>)
+                || with_ptrdiff_t_difference<decltype(begin_end_impl::b(x)), decltype(begin_end_impl::e(x))>;
+
+    // Const counterparts.
     {
         make_generic_iterator<It>{}(begin_end_impl::b(std::as_const(x)))
     } -> std::same_as<It<V, CR, CRR>>;
-    requires std::constructible_from<sentinel, decltype(begin_end_impl::e(std::as_const(x)))>;
+    requires std::copyable<decltype(begin_end_impl::e(std::as_const(x)))>;
+    requires minimal_eq_comparable<decltype(begin_end_impl::b(std::as_const(x))),
+                                   decltype(begin_end_impl::e(std::as_const(x)))>;
+    requires(!std::random_access_iterator<It<V, CR, CRR>>)
+                || with_ptrdiff_t_difference<decltype(begin_end_impl::b(std::as_const(x))),
+                                             decltype(begin_end_impl::e(std::as_const(x)))>;
 };
 
 // Implementation of the interface.
@@ -166,7 +195,10 @@ struct generic_range_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, It> : public
     }
     sentinel end() final
     {
-        return sentinel(begin_end_impl::e(this->value()));
+        using iter_t = decltype(begin_end_impl::b(this->value()));
+        using sentinel_t = decltype(begin_end_impl::e(this->value()));
+
+        return sentinel(sentinel_box<sentinel_t, iter_t>{begin_end_impl::e(this->value())});
     }
     It<V, CR, CRR> begin() const final
     {
@@ -174,7 +206,10 @@ struct generic_range_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, It> : public
     }
     [[nodiscard]] sentinel end() const final
     {
-        return sentinel(begin_end_impl::e(this->value()));
+        using iter_t = decltype(begin_end_impl::b(this->value()));
+        using sentinel_t = decltype(begin_end_impl::e(this->value()));
+
+        return sentinel(sentinel_box<sentinel_t, iter_t>{begin_end_impl::e(this->value())});
     }
 };
 
@@ -286,7 +321,7 @@ concept ud_random_access_range = detail::generic_ud_input_range<T, random_access
 // Factory functions.
 #define FACADE_DEFINE_RANGE_FACTORY(tp)                                                                                \
     template <typename T>                                                                                              \
-        requires detail::generic_ud_input_range<T, tp##_range>                                                         \
+        requires(ud_##tp##_range<T>)                                                                                   \
     auto make_##tp##_range(T &&x)                                                                                      \
     {                                                                                                                  \
         return tp##_range<detail::deduce_iter_value_t<detail::iter_t<detail::unwrap_cvref2_t<T>>>,                     \

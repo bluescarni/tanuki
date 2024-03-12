@@ -17,13 +17,13 @@ using sqlite_val_t = std::variant<std::int64_t, double, std::string, std::vector
 // LCOV_EXCL_START
 
 struct sqlite_ts {
+    struct sentinel_t {
+    };
+
     ::sqlite3 *db = nullptr;
     std::string tb;
 
     struct const_iterator {
-        struct sentinel_t {
-        };
-
         struct stmt_deleter {
             void operator()(::sqlite3_stmt *s) const noexcept
             {
@@ -197,7 +197,7 @@ struct sqlite_ts {
         return const_iterator(db, "SELECT * FROM " + tb + " ORDER BY 1");
     }
     // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-    [[nodiscard]] const_iterator::sentinel_t end() const
+    [[nodiscard]] sentinel_t end() const
     {
         return {};
     }

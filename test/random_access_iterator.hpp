@@ -36,12 +36,6 @@ concept incrementable_by_ptrdiff_t = requires(T &a, std::ptrdiff_t n) { static_c
 template <typename T>
 concept decrementable_by_ptrdiff_t = requires(T &a, std::ptrdiff_t n) { static_cast<void>(a -= n); };
 
-template <typename T>
-concept with_ptrdiff_t_difference = requires(const T &a, const T &b) { static_cast<std::ptrdiff_t>(a - b); };
-
-template <typename T>
-concept with_distance_from = requires(const T &a, const T &b) { static_cast<std::ptrdiff_t>(a.distance_from(b)); };
-
 // Fwd declaration of the interface.
 template <typename, typename, typename>
 struct random_access_iterator_iface;
@@ -51,7 +45,7 @@ struct random_access_iterator_iface;
 template <typename T, typename V, typename R, typename RR>
 concept minimal_random_access_iterator
     = minimal_bidirectional_iterator<T, V, R, RR> && minimal_less_than_comparable<T> && incrementable_by_ptrdiff_t<T>
-      && decrementable_by_ptrdiff_t<T> && (with_ptrdiff_t_difference<T> || with_distance_from<T>);
+      && decrementable_by_ptrdiff_t<T> && with_ptrdiff_t_difference<T>;
 
 template <typename Base, typename Holder, typename T, typename V, typename R, typename RR>
     requires minimal_random_access_iterator<T, V, R, RR>
@@ -81,11 +75,7 @@ struct random_access_iterator_iface_impl
         if (typeid(T) == other.get_type_index()) {
             const auto &other_val = *static_cast<const T *>(other.get_ptr());
 
-            if constexpr (with_ptrdiff_t_difference<T>) {
-                return static_cast<std::ptrdiff_t>(this->value() - other_val);
-            } else {
-                return this->value().distance_from(other_val);
-            }
+            return static_cast<std::ptrdiff_t>(this->value() - other_val);
         } else {
             throw std::runtime_error("Unable to compute the distance of an iterator of type '"
                                      + tanuki::demangle(typeid(T).name()) + "' from an iterator of type '"
@@ -94,19 +84,7 @@ struct random_access_iterator_iface_impl
     }
     [[nodiscard]] std::ptrdiff_t distance_from_sentinel(const sentinel &s) const final
     {
-        if (const auto *ptr = value_ptr<T>(s)) {
-            const auto &other_val = *ptr;
-
-            if constexpr (with_ptrdiff_t_difference<T>) {
-                return static_cast<std::ptrdiff_t>(this->value() - other_val);
-            } else {
-                return this->value().distance_from(other_val);
-            }
-        }
-
-        throw std::runtime_error("Unable to compute the distance of an iterator of type '"
-                                 + tanuki::demangle(typeid(T).name()) + "' from a sentinel containing a value of type '"
-                                 + tanuki::demangle(value_type_index(s).name()) + "'");
+        return s->distance_to_iter(any_ref(std::ref(this->value())));
     }
 };
 
@@ -210,7 +188,8 @@ struct random_access_iterator_mock : bidirectional_iterator_mock<V, R, RR> {
     {
         throw std::runtime_error("Attempting to decrement a default-constructed iterator");
     }
-    [[nodiscard]] std::ptrdiff_t distance_from(const random_access_iterator_mock &) const noexcept
+    [[nodiscard]] friend std::ptrdiff_t operator-(const random_access_iterator_mock &,
+                                                  const random_access_iterator_mock &) noexcept
     {
         return 0;
     }

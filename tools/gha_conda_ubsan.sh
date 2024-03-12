@@ -24,6 +24,7 @@ cd build
 # GCC build.
 cmake -G Ninja ../ -DCMAKE_PREFIX_PATH=$deps_dir \
     -DCMAKE_CXX_FLAGS="-fsanitize=undefined" \
+    -DCMAKE_C_FLAGS="-fsanitize=undefined" \
     -DCMAKE_CXX_COMPILER=g++ \
     -DCMAKE_BUILD_TYPE=Debug \
     -DTANUKI_BUILD_TESTS=yes \

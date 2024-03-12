@@ -52,9 +52,9 @@ struct min_iter_wrapper {
     {
         it -= n;
     }
-    [[nodiscard]] std::ptrdiff_t distance_from(const min_iter_wrapper &other) const
+    [[nodiscard]] friend std::ptrdiff_t operator-(const min_iter_wrapper &a, const min_iter_wrapper &b)
     {
-        return it - other.it;
+        return a.it - b.it;
     }
 };
 
@@ -109,10 +109,6 @@ TEST_CASE("basic")
     REQUIRE_THROWS_MATCHES(int_iter{std::vector<int>::iterator{}} - int_iter{static_cast<int *>(nullptr)},
                            std::runtime_error,
                            MessageMatches(StartsWith("Unable to compute the distance of an iterator of type")));
-    REQUIRE_THROWS_MATCHES(int_iter{std::vector<int>::iterator{}} - facade::sentinel(3), std::runtime_error,
-                           MessageMatches(StartsWith("Unable to compute the distance of an iterator of type '")));
-    REQUIRE_THROWS_MATCHES(facade::sentinel(3) - int_iter{std::vector<int>::iterator{}}, std::runtime_error,
-                           MessageMatches(StartsWith("Unable to compute the distance of an iterator of type '")));
 
     {
         int arr[] = {1, 2, 3};
@@ -133,8 +129,6 @@ TEST_CASE("basic")
         it += 3;
         REQUIRE(*(it - 1) == 3);
         REQUIRE(it - int_iter(std::begin(arr)) == 3);
-        REQUIRE(it - facade::sentinel(std::begin(arr)) == 3);
-        REQUIRE(facade::sentinel(std::begin(arr)) - it == -3);
         it -= 3;
         REQUIRE(it[2] == 3);
 
@@ -159,8 +153,6 @@ TEST_CASE("basic")
         auto it2 = facade::make_random_access_iterator(facade::make_random_access_iterator(std::begin(arr)));
         REQUIRE(value_isa<int *>(it2));
 
-        REQUIRE(it == facade::sentinel(arr + 0));
-        REQUIRE(it != facade::sentinel(arr + 1));
         REQUIRE(std::sentinel_for<facade::sentinel, int_iter>);
         REQUIRE(std::sentinel_for<int_iter, int_iter>);
         REQUIRE(std::sized_sentinel_for<facade::sentinel, int_iter>);
@@ -307,7 +299,7 @@ struct noniter1 {
     void operator+=(std::ptrdiff_t) {}
     void operator-=(std::ptrdiff_t) {}
     // NOLINTNEXTLINE
-    [[nodiscard]] std::ptrdiff_t distance_from(const noniter1 &) const
+    [[nodiscard]] friend std::ptrdiff_t operator-(const noniter1 &, const noniter1 &)
     {
         return 0;
     }
@@ -332,7 +324,7 @@ struct noniter2 {
     void operator+=(std::ptrdiff_t) {}
     void operator-=(std::ptrdiff_t) {}
     // NOLINTNEXTLINE
-    [[nodiscard]] std::ptrdiff_t distance_from(const noniter2 &) const
+    [[nodiscard]] friend std::ptrdiff_t operator-(const noniter2 &, const noniter2 &)
     {
         return 0;
     }
@@ -357,7 +349,7 @@ struct noniter3 {
     void operator+=(std::ptrdiff_t) {}
     void operator-=(std::ptrdiff_t) {}
     // NOLINTNEXTLINE
-    [[nodiscard]] std::ptrdiff_t distance_from(const noniter3 &) const
+    [[nodiscard]] friend std::ptrdiff_t operator-(const noniter3 &, const noniter3 &)
     {
         return 0;
     }
@@ -382,7 +374,7 @@ struct noniter4 {
     void operator+=(std::ptrdiff_t) {}
     void operator-=(std::ptrdiff_t) {}
     // NOLINTNEXTLINE
-    [[nodiscard]] std::ptrdiff_t distance_from(const noniter4 &) const
+    [[nodiscard]] friend std::ptrdiff_t operator-(const noniter4 &, const noniter4 &)
     {
         return 0;
     }
@@ -407,7 +399,7 @@ struct noniter5 {
     void operator+=(std::ptrdiff_t) {}
     void operator-=(std::ptrdiff_t) {}
     // NOLINTNEXTLINE
-    [[nodiscard]] std::ptrdiff_t distance_from(const noniter5 &) const
+    [[nodiscard]] friend std::ptrdiff_t operator-(const noniter5 &, const noniter5 &)
     {
         return 0;
     }
@@ -428,8 +420,6 @@ TEST_CASE("noniter")
         REQUIRE(!std::constructible_from<iter_t, int>);
 
         REQUIRE(std::sized_sentinel_for<facade::sentinel, decltype(nit)>);
-        REQUIRE(nit - facade::sentinel(noniter1{}) == 0);
-        REQUIRE(facade::sentinel(noniter1{}) - nit == 0);
     }
 
     {
@@ -500,7 +490,7 @@ struct iter_move1 {
     void operator+=(std::ptrdiff_t) {}
     void operator-=(std::ptrdiff_t) {}
     // NOLINTNEXTLINE
-    [[nodiscard]] std::ptrdiff_t distance_from(const iter_move1 &) const
+    [[nodiscard]] friend std::ptrdiff_t operator-(const iter_move1 &, const iter_move1 &)
     {
         return 0;
     }
@@ -554,7 +544,7 @@ struct iter_move2 {
     void operator+=(std::ptrdiff_t) {}
     void operator-=(std::ptrdiff_t) {}
     // NOLINTNEXTLINE
-    [[nodiscard]] std::ptrdiff_t distance_from(const iter_move2 &) const
+    [[nodiscard]] friend std::ptrdiff_t operator-(const iter_move2 &, const iter_move2 &)
     {
         return 0;
     }

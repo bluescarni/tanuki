@@ -8,7 +8,6 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "input_iterator.hpp"
-#include "sentinel.hpp"
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
@@ -45,9 +44,6 @@ TEST_CASE("basic")
         // returns a copy.
         auto it2 = facade::make_input_iterator(facade::make_input_iterator(std::begin(arr)));
         REQUIRE(value_isa<int *>(it2));
-
-        REQUIRE(it == facade::sentinel(arr + 2));
-        REQUIRE(it != facade::sentinel(arr + 1));
         REQUIRE(std::sentinel_for<facade::sentinel, int_iter>);
     }
 
@@ -59,9 +55,6 @@ TEST_CASE("basic")
         REQUIRE(*++it == 2);
         it++;
         REQUIRE(*std::as_const(it) == 3);
-
-        REQUIRE(it == facade::sentinel(vec.begin() + 2));
-        REQUIRE(it != facade::sentinel(vec.begin() + 1));
         REQUIRE(std::sentinel_for<facade::sentinel, int_iter>);
     }
 
@@ -90,82 +83,47 @@ TEST_CASE("basic")
 // LCOV_EXCL_START
 
 struct noniter1 {
-    struct sentinel_t {
-    };
-
     double operator*() const
     {
         return {};
     }
     void operator++() {}
-    bool operator==(const sentinel_t &) const
-    {
-        return false;
-    };
 };
 
 struct noniter2 {
-    struct sentinel_t {
-    };
-
     double &operator*() const
     {
         static double x = 56;
         return x;
     }
     void operator++() {}
-    bool operator==(const sentinel_t &) const
-    {
-        return false;
-    };
 };
 
 struct noniter3 {
-    struct sentinel_t {
-    };
-
     const double &operator*() const
     {
         static const double x = 56;
         return x;
     }
     void operator++() {}
-    bool operator==(const sentinel_t &) const
-    {
-        return false;
-    };
 };
 
 struct noniter4 {
-    struct sentinel_t {
-    };
-
     double &&operator*() const
     {
         static double x = 56;
         return static_cast<double &&>(x);
     }
     void operator++() {}
-    bool operator==(const sentinel_t &) const
-    {
-        return false;
-    };
 };
 
 struct noniter5 {
-    struct sentinel_t {
-    };
-
     const double &&operator*() const
     {
         static const double x = 56;
         return static_cast<const double &&>(x);
     }
     void operator++() {}
-    bool operator==(const sentinel_t &) const
-    {
-        return false;
-    };
 };
 
 // LCOV_EXCL_STOP
@@ -234,18 +192,11 @@ namespace ns
 // LCOV_EXCL_START
 
 struct iter_move1 {
-    struct sentinel_t {
-    };
-
     double operator*() const
     {
         return {};
     }
     void operator++() {}
-    bool operator==(const sentinel_t &) const
-    {
-        return false;
-    };
 };
 
 // LCOV_EXCL_STOP

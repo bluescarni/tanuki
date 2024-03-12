@@ -1,16 +1,21 @@
 #include <algorithm>
 #include <concepts>
 #include <functional>
+#include <list>
 #include <ranges>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_exception.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <tanuki/tanuki.hpp>
 
 #include "ranges.hpp"
+#include "sentinel.hpp"
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
@@ -20,10 +25,6 @@
 template <bool Const>
 struct min_input_it {
     using iter_t = std::conditional_t<Const, std::vector<int>::const_iterator, std::vector<int>::iterator>;
-
-    struct sentinel_t {
-        iter_t it{};
-    };
 
     iter_t it{};
 
@@ -36,9 +37,9 @@ struct min_input_it {
         ++it;
     }
 
-    bool operator==(const sentinel_t &s) const
+    bool operator==(const min_input_it &other) const
     {
-        return it == s.it;
+        return it == other.it;
     }
 };
 
@@ -53,7 +54,7 @@ struct min_input_range {
     // NOLINTNEXTLINE
     auto end()
     {
-        return min_input_it<false>::sentinel_t{vec.end()};
+        return min_input_it<false>{vec.end()};
     }
 
     [[nodiscard]] auto begin() const
@@ -63,7 +64,7 @@ struct min_input_range {
     // NOLINTNEXTLINE
     [[nodiscard]] auto end() const
     {
-        return min_input_it<true>::sentinel_t{vec.end()};
+        return min_input_it<true>{vec.end()};
     }
 };
 
@@ -130,6 +131,31 @@ TEST_CASE("basic input")
         REQUIRE(std::ranges::equal(vec.vec, r1));
         REQUIRE(std::ranges::equal(vec.vec, std::as_const(r1)));
     }
+}
+
+TEST_CASE("sentinel")
+{
+    using Catch::Matchers::ContainsSubstring;
+    using Catch::Matchers::MessageMatches;
+    using Catch::Matchers::StartsWith;
+
+    auto r1 = facade::make_input_range(std::vector{1, 2, 3});
+    auto r2 = facade::make_input_range(std::list{1, 2, 3});
+
+    REQUIRE_THROWS_MATCHES(r1.begin() == r2.end(), std::runtime_error,
+                           MessageMatches(StartsWith("Unable to compare an iterator of type '")));
+    REQUIRE_THROWS_MATCHES(r1.begin() == r2.end(), std::runtime_error,
+                           MessageMatches(ContainsSubstring("' to a sentinel of type '")));
+
+    std::list l{1, 2, 3};
+    auto s
+        = facade::sentinel(facade::detail::sentinel_box<std::list<int>::iterator, std::list<int>::iterator>{l.begin()});
+
+    auto it = l.begin();
+    REQUIRE_THROWS_MATCHES(s->distance_to_iter(facade::detail::any_ref{std::cref(it)}), std::runtime_error,
+                           MessageMatches(StartsWith("The sentinel type '")));
+    REQUIRE_THROWS_MATCHES(s->distance_to_iter(facade::detail::any_ref{std::cref(it)}), std::runtime_error,
+                           MessageMatches(ContainsSubstring("' is not a sized sentinel")));
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

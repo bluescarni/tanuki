@@ -158,6 +158,10 @@ auto e(T &x)
 
 } // namespace begin_end_impl
 
+// This struct stores internally a sentinel of type S
+// and enables comparison and distance computation with
+// respect to an iterator of type It (which is always passed
+// wrapped into an any_ref).
 template <typename S, typename It>
 struct sentinel_box {
     S m_sentinel;
@@ -190,11 +194,15 @@ concept is_generic_range = requires(T &x) {
     {
         make_generic_iterator<It>{}(begin_end_impl::b(x))
     } -> std::same_as<It<V, R, RR>>;
+    // NOTE: these two are the minimal requirements for the sentinel type.
     requires std::copyable<decltype(begin_end_impl::e(x))>;
     requires minimal_eq_comparable<decltype(begin_end_impl::b(x)), decltype(begin_end_impl::e(x))>;
+    // If we are building a random access range, then we also need to be able to compute the distance
+    // between the iterator and the sentinel.
     requires(!std::random_access_iterator<It<V, R, RR>>)
                 || with_ptrdiff_t_difference<decltype(begin_end_impl::b(x)), decltype(begin_end_impl::e(x))>;
 
+    // Const counterparts.
     {
         make_generic_iterator<It>{}(begin_end_impl::b(std::as_const(x)))
     } -> std::same_as<It<V, CR, CRR>>;

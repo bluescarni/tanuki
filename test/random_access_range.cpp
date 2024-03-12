@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <array>
 #include <concepts>
 #include <cstddef>
 #include <functional>
@@ -8,6 +9,8 @@
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_exception.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <tanuki/tanuki.hpp>
 
@@ -229,6 +232,21 @@ TEST_CASE("counted iterator")
     auto tmp = facade::make_random_access_range(sr);
 
     REQUIRE(*std::ranges::lower_bound(tmp, 1) == 1);
+}
+
+TEST_CASE("sentinel")
+{
+    using Catch::Matchers::ContainsSubstring;
+    using Catch::Matchers::MessageMatches;
+    using Catch::Matchers::StartsWith;
+
+    auto r1 = facade::make_random_access_range(std::vector{1, 2, 3});
+    auto r2 = facade::make_random_access_range(std::array{1, 2, 3});
+
+    REQUIRE_THROWS_MATCHES(r1.begin() - r2.end(), std::runtime_error,
+                           MessageMatches(StartsWith("Unable to compute the distance between an iterator of type '")));
+    REQUIRE_THROWS_MATCHES(r1.begin() - r2.end(), std::runtime_error,
+                           MessageMatches(ContainsSubstring("' and a sentinel of type '")));
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

@@ -53,8 +53,8 @@
 
 // NOTE: indirection to allow token pasting/stringification:
 // https://stackoverflow.com/questions/24991208/expand-a-macro-in-a-macro
-#define TANUKI_VERSION_STRING__(maj, min, pat) #maj "." #min "." #pat
-#define TANUKI_VERSION_STRING_(maj, min, pat) TANUKI_VERSION_STRING__(maj, min, pat)
+#define TANUKI_VERSION_STRING_U(maj, min, pat) #maj "." #min "." #pat
+#define TANUKI_VERSION_STRING_(maj, min, pat) TANUKI_VERSION_STRING_U(maj, min, pat)
 #define TANUKI_VERSION_STRING TANUKI_VERSION_STRING_(TANUKI_VERSION_MAJOR, TANUKI_VERSION_MINOR, TANUKI_VERSION_PATCH)
 
 // No unique address setup.
@@ -79,13 +79,13 @@
 
 #endif
 
-#define TANUKI_BEGIN_NAMESPACE__(abiver)                                                                               \
+#define TANUKI_BEGIN_NAMESPACE_U(abiver)                                                                               \
     namespace tanuki                                                                                                   \
     {                                                                                                                  \
     inline namespace v##abiver TANUKI_ABI_TAG_ATTR                                                                     \
     {
 
-#define TANUKI_BEGIN_NAMESPACE_(abiver) TANUKI_BEGIN_NAMESPACE__(abiver)
+#define TANUKI_BEGIN_NAMESPACE_(abiver) TANUKI_BEGIN_NAMESPACE_U(abiver)
 
 #define TANUKI_BEGIN_NAMESPACE TANUKI_BEGIN_NAMESPACE_(TANUKI_ABI_VERSION)
 

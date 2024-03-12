@@ -21,6 +21,9 @@ source activate $deps_dir
 mkdir build
 cd build
 
+unset CXXFLAGS
+unset CFLAGS
+
 # GCC build.
 cmake -G Ninja ../ -DCMAKE_PREFIX_PATH=$deps_dir \
     -DCMAKE_BUILD_TYPE=Debug \
@@ -29,8 +32,8 @@ cmake -G Ninja ../ -DCMAKE_PREFIX_PATH=$deps_dir \
     -DTANUKI_WITH_BOOST_S11N=yes \
     -DCMAKE_CXX_FLAGS="-fsanitize=address" \
     -DCMAKE_C_FLAGS="-fsanitize=address"
-ninja
-ctest -V -j4
+ninja -v
+ctest -V -j1
 
 set +e
 set +x

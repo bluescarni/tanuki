@@ -16,7 +16,6 @@
 #include <tanuki/tanuki.hpp>
 
 #include "forward_iterator.hpp"
-#include "input_iterator.hpp"
 
 namespace facade
 {

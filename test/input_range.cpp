@@ -21,10 +21,6 @@ template <bool Const>
 struct min_input_it {
     using iter_t = std::conditional_t<Const, std::vector<int>::const_iterator, std::vector<int>::iterator>;
 
-    struct sentinel_t {
-        iter_t it{};
-    };
-
     iter_t it{};
 
     auto &operator*() const
@@ -36,9 +32,9 @@ struct min_input_it {
         ++it;
     }
 
-    bool operator==(const sentinel_t &s) const
+    bool operator==(const min_input_it &other) const
     {
-        return it == s.it;
+        return it == other.it;
     }
 };
 
@@ -53,7 +49,7 @@ struct min_input_range {
     // NOLINTNEXTLINE
     auto end()
     {
-        return min_input_it<false>::sentinel_t{vec.end()};
+        return min_input_it<false>{vec.end()};
     }
 
     [[nodiscard]] auto begin() const
@@ -63,7 +59,7 @@ struct min_input_range {
     // NOLINTNEXTLINE
     [[nodiscard]] auto end() const
     {
-        return min_input_it<true>::sentinel_t{vec.end()};
+        return min_input_it<true>{vec.end()};
     }
 };
 

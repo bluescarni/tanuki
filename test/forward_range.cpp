@@ -123,4 +123,14 @@ TEST_CASE("basic forward")
     }
 }
 
+TEST_CASE("nested type erasure")
+{
+    const std::vector vec = {1, 2, 3};
+
+    auto tmp = facade::make_forward_range(vec);
+    auto r1 = facade::make_forward_range(tmp | std::views::transform(std::identity{}));
+    REQUIRE(std::ranges::begin(r1) == std::ranges::begin(r1));
+    REQUIRE(std::ranges::begin(r1) != std::ranges::end(r1));
+}
+
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

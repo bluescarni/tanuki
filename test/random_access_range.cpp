@@ -42,9 +42,9 @@ struct min_ra_it {
     {
         it -= n;
     }
-    [[nodiscard]] std::ptrdiff_t distance_from(const min_ra_it &other) const
+    [[nodiscard]] friend std::ptrdiff_t operator-(const min_ra_it &a, const min_ra_it &b)
     {
-        return it - other.it;
+        return a.it - b.it;
     }
     friend bool operator==(const min_ra_it &a, const min_ra_it &b)
     {
@@ -179,6 +179,56 @@ TEST_CASE("basic random_access")
         REQUIRE(std::ranges::equal(vec.vec, std::as_const(r1)));
         REQUIRE(std::ranges::distance(std::ranges::begin(r1), std::ranges::end(r1)) == 3);
     }
+
+    {
+        int vec[] = {1, 2, 3};
+
+        auto r1 = facade::make_random_access_range(std::ref(vec));
+        REQUIRE(std::ranges::random_access_range<decltype(r1)>);
+        REQUIRE(std::same_as<decltype(r1), facade::random_access_range<int, int &, int &&, const int &, const int &&>>);
+
+        const auto r2 = facade::make_random_access_range(std::cref(vec));
+        REQUIRE(std::ranges::random_access_range<decltype(r2)>);
+        REQUIRE(std::same_as<decltype(r2),
+                             const facade::random_access_range<int, int &, int &&, const int &, const int &&>>);
+
+        REQUIRE(std::ranges::equal(r1, r2));
+    }
+
+    {
+        const int vec[] = {1, 2, 3};
+
+        const auto r1 = facade::make_random_access_range(std::ref(vec));
+        REQUIRE(std::ranges::random_access_range<decltype(r1)>);
+        REQUIRE(std::same_as<decltype(r1),
+                             const facade::random_access_range<int, int &, int &&, const int &, const int &&>>);
+
+        const auto r2 = facade::make_random_access_range(std::cref(vec));
+        REQUIRE(std::ranges::random_access_range<decltype(r2)>);
+        REQUIRE(std::same_as<decltype(r2),
+                             const facade::random_access_range<int, int &, int &&, const int &, const int &&>>);
+
+        REQUIRE(std::ranges::equal(r1, r2));
+    }
+}
+
+TEST_CASE("nested type erasure")
+{
+    const std::vector vec = {1, 2, 3};
+
+    auto tmp = facade::make_random_access_range(vec);
+    auto r1 = facade::make_random_access_range(tmp | std::views::transform(std::identity{}));
+    REQUIRE(*std::ranges::lower_bound(r1, 1) == 1);
+}
+
+TEST_CASE("counted iterator")
+{
+    const std::vector vec = {1, 2, 3};
+
+    auto sr = std::ranges::subrange(std::counted_iterator{std::cbegin(vec), 3}, std::default_sentinel);
+    auto tmp = facade::make_random_access_range(sr);
+
+    REQUIRE(*std::ranges::lower_bound(tmp, 1) == 1);
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

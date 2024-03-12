@@ -115,9 +115,9 @@ struct minimal_ra_ts {
         {
             m_ptr -= n;
         }
-        [[nodiscard]] std::ptrdiff_t distance_from(const iterator_impl &other) const
+        [[nodiscard]] friend std::ptrdiff_t operator-(const iterator_impl &a, const iterator_impl &b)
         {
-            return m_ptr - other.m_ptr;
+            return a.m_ptr - b.m_ptr;
         }
         friend bool operator==(const iterator_impl &a, const iterator_impl &b)
         {

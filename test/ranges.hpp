@@ -10,8 +10,11 @@
 #define FACADE_RANGES_HPP
 
 #include <concepts>
+#include <cstddef>
+#include <functional>
 #include <iterator>
 #include <type_traits>
+#include <typeinfo>
 #include <utility>
 
 #include <tanuki/tanuki.hpp>
@@ -155,17 +158,52 @@ auto e(T &x)
 
 } // namespace begin_end_impl
 
+template <typename S, typename It>
+struct sentinel_box {
+    S m_sentinel;
+
+    [[nodiscard]] bool at_end(const any_ref &r_it) const
+    {
+        if (const auto *ptr = value_ptr<std::reference_wrapper<const It>>(r_it)) {
+            return static_cast<bool>(ptr->get() == m_sentinel);
+        }
+
+        throw std::runtime_error("Unable to compare an iterator of type '" + tanuki::demangle(typeid(It).name())
+                                 + "' to a sentinel of type '" + tanuki::demangle(typeid(S).name()) + "'");
+    }
+    [[nodiscard]] std::ptrdiff_t distance_to_iter(const any_ref &r_it) const
+        requires with_ptrdiff_t_difference<It, S>
+    {
+        if (const auto *ptr = value_ptr<std::reference_wrapper<const It>>(r_it)) {
+            return static_cast<std::ptrdiff_t>(ptr->get() - m_sentinel);
+        }
+
+        throw std::runtime_error("Unable to compute the distance between an iterator of type '"
+                                 + tanuki::demangle(typeid(It).name()) + "' and a sentinel of type '"
+                                 + tanuki::demangle(typeid(S).name()) + "'");
+    }
+};
+
 template <typename T, typename V, typename R, typename RR, typename CR, typename CRR,
           template <typename, typename, typename> typename It>
 concept is_generic_range = requires(T &x) {
     {
         make_generic_iterator<It>{}(begin_end_impl::b(x))
     } -> std::same_as<It<V, R, RR>>;
-    requires std::constructible_from<sentinel, decltype(begin_end_impl::e(x))>;
+    requires std::copyable<decltype(begin_end_impl::e(x))>;
+    requires minimal_eq_comparable<decltype(begin_end_impl::b(x)), decltype(begin_end_impl::e(x))>;
+    requires(!std::random_access_iterator<It<V, R, RR>>)
+                || with_ptrdiff_t_difference<decltype(begin_end_impl::b(x)), decltype(begin_end_impl::e(x))>;
+
     {
         make_generic_iterator<It>{}(begin_end_impl::b(std::as_const(x)))
     } -> std::same_as<It<V, CR, CRR>>;
-    requires std::constructible_from<sentinel, decltype(begin_end_impl::e(std::as_const(x)))>;
+    requires std::copyable<decltype(begin_end_impl::e(std::as_const(x)))>;
+    requires minimal_eq_comparable<decltype(begin_end_impl::b(std::as_const(x))),
+                                   decltype(begin_end_impl::e(std::as_const(x)))>;
+    requires(!std::random_access_iterator<It<V, CR, CRR>>)
+                || with_ptrdiff_t_difference<decltype(begin_end_impl::b(std::as_const(x))),
+                                             decltype(begin_end_impl::e(std::as_const(x)))>;
 };
 
 // Implementation of the interface.
@@ -181,7 +219,10 @@ struct generic_range_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, It> : public
     }
     sentinel end() final
     {
-        return sentinel(begin_end_impl::e(this->value()));
+        using iter_t = decltype(begin_end_impl::b(this->value()));
+        using sentinel_t = decltype(begin_end_impl::e(this->value()));
+
+        return sentinel(sentinel_box<sentinel_t, iter_t>{begin_end_impl::e(this->value())});
     }
     It<V, CR, CRR> begin() const final
     {
@@ -189,7 +230,10 @@ struct generic_range_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, It> : public
     }
     [[nodiscard]] sentinel end() const final
     {
-        return sentinel(begin_end_impl::e(this->value()));
+        using iter_t = decltype(begin_end_impl::b(this->value()));
+        using sentinel_t = decltype(begin_end_impl::e(this->value()));
+
+        return sentinel(sentinel_box<sentinel_t, iter_t>{begin_end_impl::e(this->value())});
     }
 };
 
@@ -301,7 +345,7 @@ concept ud_random_access_range = detail::generic_ud_input_range<T, random_access
 // Factory functions.
 #define FACADE_DEFINE_RANGE_FACTORY(tp)                                                                                \
     template <typename T>                                                                                              \
-        requires detail::generic_ud_input_range<T, tp##_range>                                                         \
+        requires(ud_##tp##_range<T>)                                                                                   \
     auto make_##tp##_range(T &&x)                                                                                      \
     {                                                                                                                  \
         return tp##_range<detail::deduce_iter_value_t<detail::iter_t<detail::unwrap_cvref2_t<T>>>,                     \

@@ -11,7 +11,6 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include "forward_iterator.hpp"
-#include "sentinel.hpp"
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
@@ -65,8 +64,6 @@ TEST_CASE("basic")
         auto it2 = facade::make_forward_iterator(facade::make_forward_iterator(std::begin(arr)));
         REQUIRE(value_isa<int *>(it2));
 
-        REQUIRE(it == facade::sentinel(arr + 2));
-        REQUIRE(it != facade::sentinel(arr + 1));
         REQUIRE(std::sentinel_for<facade::sentinel, int_iter>);
         REQUIRE(std::sentinel_for<int_iter, int_iter>);
     }
@@ -80,8 +77,6 @@ TEST_CASE("basic")
         REQUIRE(*it++ == 2);
         REQUIRE(*std::as_const(it) == 3);
 
-        REQUIRE(it == facade::sentinel(vec.begin() + 2));
-        REQUIRE(it != facade::sentinel(vec.begin() + 1));
         REQUIRE(std::sentinel_for<facade::sentinel, int_iter>);
     }
 

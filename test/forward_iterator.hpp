@@ -26,6 +26,10 @@ namespace facade
 namespace detail
 {
 
+// Minimal equality-comparability.
+template <typename T, typename U = T>
+concept minimal_eq_comparable = requires(const T &a, const U &b) { static_cast<bool>(a == b); };
+
 // Gather the minimal requirements for a type T
 // to satisfy the forward_iterator concept.
 template <typename T, typename V, typename R, typename RR>

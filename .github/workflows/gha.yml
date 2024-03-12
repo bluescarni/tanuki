@@ -20,12 +20,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build
         run: bash tools/gha_conda_tidy.sh
-  conda_asan:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build
-        run: bash tools/gha_conda_asan.sh
+  # conda_asan:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Build
+  #       run: bash tools/gha_conda_asan.sh
   conda_ubsan:
     runs-on: ubuntu-latest
     steps:

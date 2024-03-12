@@ -32,7 +32,7 @@ cmake -G Ninja ../ -DCMAKE_PREFIX_PATH=$deps_dir \
     -DTANUKI_WITH_BOOST_S11N=yes \
     -DCMAKE_CXX_FLAGS="-fsanitize=address" \
     -DCMAKE_C_FLAGS="-fsanitize=address"
-ninja
+ninja -v
 ctest -V -j4
 
 set +e

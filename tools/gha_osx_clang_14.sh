@@ -24,7 +24,9 @@ cmake -G Ninja ../ -DCMAKE_PREFIX_PATH=$deps_dir \
     -DCMAKE_BUILD_TYPE=Debug \
     -DTANUKI_BUILD_TESTS=yes \
     -DTANUKI_BUILD_TUTORIALS=yes \
-    -DTANUKI_WITH_BOOST_S11N=yes
+    -DTANUKI_WITH_BOOST_S11N=yes \
+    -DCMAKE_CXX_FLAGS="-fsanitize=address" \
+    -DCMAKE_C_FLAGS="-fsanitize=address"
 ninja
 ctest -V -j4
 

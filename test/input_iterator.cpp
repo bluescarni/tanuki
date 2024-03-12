@@ -8,6 +8,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "input_iterator.hpp"
+#include "sentinel.hpp"
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 

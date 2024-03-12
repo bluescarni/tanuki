@@ -9,6 +9,7 @@
 #ifndef FACADE_RANGES_HPP
 #define FACADE_RANGES_HPP
 
+#include <concepts>
 #include <iterator>
 #include <type_traits>
 #include <utility>

@@ -9,12 +9,8 @@
 #ifndef FACADE_RANGES_HPP
 #define FACADE_RANGES_HPP
 
-#include <concepts>
-#include <cstddef>
-#include <functional>
 #include <iterator>
 #include <type_traits>
-#include <typeinfo>
 #include <utility>
 
 #include <tanuki/tanuki.hpp>
@@ -158,43 +154,14 @@ auto e(T &x)
 
 } // namespace begin_end_impl
 
-// This struct stores internally a sentinel of type S
-// and enables comparison and distance computation with
-// respect to an iterator of type It (which is always passed
-// wrapped into an any_ref).
-template <typename S, typename It>
-struct sentinel_box {
-    S m_sentinel;
-
-    [[nodiscard]] bool at_end(const any_ref &r_it) const
-    {
-        if (const auto *ptr = value_ptr<std::reference_wrapper<const It>>(r_it)) {
-            return static_cast<bool>(ptr->get() == m_sentinel);
-        }
-
-        throw std::runtime_error("Unable to compare an iterator of type '" + tanuki::demangle(typeid(It).name())
-                                 + "' to a sentinel of type '" + tanuki::demangle(typeid(S).name()) + "'");
-    }
-    [[nodiscard]] std::ptrdiff_t distance_to_iter(const any_ref &r_it) const
-        requires with_ptrdiff_t_difference<It, S>
-    {
-        if (const auto *ptr = value_ptr<std::reference_wrapper<const It>>(r_it)) {
-            return static_cast<std::ptrdiff_t>(ptr->get() - m_sentinel);
-        }
-
-        throw std::runtime_error("Unable to compute the distance between an iterator of type '"
-                                 + tanuki::demangle(typeid(It).name()) + "' and a sentinel of type '"
-                                 + tanuki::demangle(typeid(S).name()) + "'");
-    }
-};
-
 template <typename T, typename V, typename R, typename RR, typename CR, typename CRR,
           template <typename, typename, typename> typename It>
 concept is_generic_range = requires(T &x) {
     {
         make_generic_iterator<It>{}(begin_end_impl::b(x))
     } -> std::same_as<It<V, R, RR>>;
-    // NOTE: these two are the minimal requirements for the sentinel type.
+    // NOTE: these two are the minimal requirements for the sentinel type,
+    // and the conceptual requirements for the S and It types of sentinel_box.
     requires std::copyable<decltype(begin_end_impl::e(x))>;
     requires minimal_eq_comparable<decltype(begin_end_impl::b(x)), decltype(begin_end_impl::e(x))>;
     // If we are building a random access range, then we also need to be able to compute the distance

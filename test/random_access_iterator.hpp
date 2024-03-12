@@ -36,9 +36,6 @@ concept incrementable_by_ptrdiff_t = requires(T &a, std::ptrdiff_t n) { static_c
 template <typename T>
 concept decrementable_by_ptrdiff_t = requires(T &a, std::ptrdiff_t n) { static_cast<void>(a -= n); };
 
-template <typename T, typename U = T>
-concept with_ptrdiff_t_difference = requires(const T &a, const U &b) { static_cast<std::ptrdiff_t>(a - b); };
-
 // Fwd declaration of the interface.
 template <typename, typename, typename>
 struct random_access_iterator_iface;

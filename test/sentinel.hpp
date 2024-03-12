@@ -14,6 +14,7 @@
 #include <functional>
 #include <stdexcept>
 #include <type_traits>
+#include <typeinfo>
 
 #include <tanuki/tanuki.hpp>
 
@@ -32,9 +33,9 @@ template <typename T>
 struct is_reference_wrapper<std::reference_wrapper<T>> : std::true_type {
 };
 
+// A type-erased interface for storing references to objects.
 template <typename Base, typename Holder, typename T>
     requires is_reference_wrapper<T>::value
-
 struct any_ref_iface_impl : public Base {
 };
 
@@ -52,13 +53,42 @@ inline constexpr auto any_ref_config
 
 using any_ref = tanuki::wrap<any_ref_iface, any_ref_config>;
 
-template <typename T>
-concept has_at_end = requires(const T &x, const any_ref &ar) {
+// Detect if T - U is well defined, returning something which is castable to std::ptrdiff_t.
+template <typename T, typename U = T>
+concept with_ptrdiff_t_difference = requires(const T &a, const U &b) { static_cast<std::ptrdiff_t>(a - b); };
+
+// This struct stores internally a sentinel of type S
+// and enables comparison and distance computation with
+// respect to an iterator of type It (which is always passed
+// wrapped into an any_ref).
+template <typename S, typename It>
+struct sentinel_box {
+    S m_sentinel;
+
+    [[nodiscard]] bool at_end(const any_ref &r_it) const
     {
-        x.at_end(ar)
-    } -> std::same_as<bool>;
+        if (const auto *ptr = value_ptr<std::reference_wrapper<const It>>(r_it)) {
+            return static_cast<bool>(ptr->get() == m_sentinel);
+        }
+
+        throw std::runtime_error("Unable to compare an iterator of type '" + tanuki::demangle(typeid(It).name())
+                                 + "' to a sentinel of type '" + tanuki::demangle(typeid(S).name()) + "'");
+    }
+    // NOTE: this is enabled only if subtraction between It and S is well defined.
+    [[nodiscard]] std::ptrdiff_t distance_to_iter(const any_ref &r_it) const
+        requires with_ptrdiff_t_difference<It, S>
+    {
+        if (const auto *ptr = value_ptr<std::reference_wrapper<const It>>(r_it)) {
+            return static_cast<std::ptrdiff_t>(ptr->get() - m_sentinel);
+        }
+
+        throw std::runtime_error("Unable to compute the distance between an iterator of type '"
+                                 + tanuki::demangle(typeid(It).name()) + "' and a sentinel of type '"
+                                 + tanuki::demangle(typeid(S).name()) + "'");
+    }
 };
 
+// NOTE: this is needed only for sized sentinels.
 template <typename T>
 concept has_distance_to_iter = requires(const T &x, const any_ref &ar) {
     {
@@ -66,9 +96,18 @@ concept has_distance_to_iter = requires(const T &x, const any_ref &ar) {
     } -> std::same_as<std::ptrdiff_t>;
 };
 
-// Definition of the interface implementation.
+// Detect instances of sentinel_box.
+template <typename>
+struct is_sentinel_box : std::false_type {
+};
+
+template <typename S, typename It>
+struct is_sentinel_box<sentinel_box<S, It>> : std::true_type {
+};
+
+// Definition of the interface implementation for sentinel.
 template <typename Base, typename Holder, typename T>
-    requires std::copyable<T> && has_at_end<T>
+    requires is_sentinel_box<T>::value
 struct sentinel_iface_impl : public Base, tanuki::iface_impl_helper<Base, Holder> {
     [[nodiscard]] bool at_end(const any_ref &ar) const final
     {
@@ -99,16 +138,15 @@ struct sentinel_iface {
 struct default_sentinel {
     void *ptr = nullptr;
 
-    // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-    [[nodiscard]] bool at_end(const any_ref &) const
+    [[nodiscard]] friend bool operator==(int *, const default_sentinel &)
     {
         return false;
     }
 };
 
-inline constexpr auto sentinel_config
-    = tanuki::config<default_sentinel>{.static_size = tanuki::holder_size<default_sentinel, sentinel_iface>,
-                                       .static_align = tanuki::holder_align<default_sentinel, sentinel_iface>};
+inline constexpr auto sentinel_config = tanuki::config<sentinel_box<default_sentinel, int *>>{
+    .static_size = tanuki::holder_size<sentinel_box<default_sentinel, int *>, sentinel_iface>,
+    .static_align = tanuki::holder_align<sentinel_box<default_sentinel, int *>, sentinel_iface>};
 
 } // namespace detail
 

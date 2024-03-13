@@ -110,7 +110,6 @@ if(NOT _YACMACompilerLinkerSettingsRun)
         _YACMA_CHECK_ENABLE_DEBUG_CXX_FLAG(-Wc99-designator)
         _YACMA_CHECK_ENABLE_DEBUG_CXX_FLAG(-Wreorder-init-list)
         _YACMA_CHECK_ENABLE_DEBUG_CXX_FLAG(-Wsizeof-pointer-div)
-        _YACMA_CHECK_ENABLE_DEBUG_CXX_FLAG(-Wsizeof-array-div)
         _YACMA_CHECK_ENABLE_DEBUG_CXX_FLAG(-Wxor-used-as-pow)
         _YACMA_CHECK_ENABLE_DEBUG_CXX_FLAG(-Wfinal-dtor-non-final-class)
         # New warnings in clang 11.
@@ -123,6 +122,8 @@ if(NOT _YACMACompilerLinkerSettingsRun)
         # NOTE: this is a new flag in Clang 13 which seems to give
         # incorrect warnings for UDLs.
         _YACMA_CHECK_ENABLE_DEBUG_CXX_FLAG(-Wno-reserved-identifier)
+        _YACMA_CHECK_ENABLE_DEBUG_CXX_FLAG(-Warray-bounds-pointer-arithmetic)
+        _YACMA_CHECK_ENABLE_DEBUG_CXX_FLAG(-Warray-parameter)
     endif()
 
     # Common configuration for GCC, clang and Intel.

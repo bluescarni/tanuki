@@ -481,6 +481,14 @@ struct TANUKI_VISIBLE holder final : public impl_from_iface<IFace, holder<T, IFa
     // throw on destruction, the program will terminate.
     ~holder() final = default;
 
+// NOTE: silence false positives on gcc.
+#if defined(__GNUC__) && !defined(__clang__)
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+
+#endif
+
     // NOTE: special-casing to avoid the single-argument ctor
     // potentially competing with the copy/move ctors.
     template <typename U>
@@ -499,6 +507,12 @@ struct TANUKI_VISIBLE holder final : public impl_from_iface<IFace, holder<T, IFa
         : m_value(std::forward<U>(x)...)
     {
     }
+
+#if defined(__GNUC__) && !defined(__clang__)
+
+#pragma GCC diagnostic pop
+
+#endif
 
     // NOTE: mark everything else as private so that it is going to be
     // unreachable from the interface implementation.
@@ -541,7 +555,7 @@ private:
     [[nodiscard]] value_iface<IFace, Sem> *_tanuki_copy_init_holder(void *ptr) const final
     {
         if constexpr (std::copy_constructible<T>) {
-            // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+            // NOLINTNEXTLINE(cppcoreguidelines-owning-memory,clang-analyzer-cplusplus.PlacementNew)
             return ::new (ptr) holder(m_value);
         } else {
             throw std::invalid_argument("Attempting to copy-construct a non-copyable value type");
@@ -554,7 +568,7 @@ private:
     _tanuki_move_init_holder(void *ptr) && noexcept final
     {
         if constexpr (std::move_constructible<T>) {
-            // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+            // NOLINTNEXTLINE(cppcoreguidelines-owning-memory,clang-analyzer-cplusplus.PlacementNew)
             return ::new (ptr) holder(std::move(m_value));
         } else {
             throw std::invalid_argument("Attempting to move-construct a non-movable value type"); // LCOV_EXCL_LINE
@@ -929,16 +943,20 @@ class TANUKI_VISIBLE wrap
     {
         const auto *ptr = reinterpret_cast<const std::byte *>(this->m_pv_iface);
 
-        // NOTE: this is not 100% portable, for the following reasons:
-        // - if ptr is not within static_storage, the results of the comparisons are unspecified;
-        // - even if we used std::less & co. (instead of builtin comparisons), in principle static_storage
-        //   could be interleaved with another object while at the same time respecting the total
-        //   pointer ordering guarantees given by the standard.
+        // NOTE: although we are using std::less and friends here (and thus avoiding the use of
+        // builtin comparison operators, which could in principle be optimised out by the compiler),
+        // this is not 100% portable, because in principle static_storage
+        // could be interleaved with another object while at the same time respecting the total
+        // pointer ordering guarantees given by the standard. This could happen for instance on
+        // segmented memory architectures.
+        //
         // In pratice, this should be ok an all commonly-used platforms.
+        //
         // NOTE: it seems like the only truly portable way of implementing this is to compare ptr
         // to the addresses of all elements in static_storage. Unfortunately, it seems like compilers
         // are not able to optimise this to a simple pointer comparison.
-        return ptr >= this->static_storage && ptr < this->static_storage + sizeof(this->static_storage);
+        return std::greater_equal<void>{}(ptr, this->static_storage)
+               && std::less<void>{}(ptr, this->static_storage + sizeof(this->static_storage));
     }
 
     // Implementation of generic construction. This will constrcut

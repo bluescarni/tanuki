@@ -181,20 +181,17 @@ namespace detail
 // LCOV_EXCL_STOP
 
 // Type-trait to detect instances of std::reference_wrapper.
-template <typename T>
-struct is_reference_wrapper : std::false_type {
-};
+template <typename>
+inline constexpr bool is_reference_wrapper_v = false;
 
 template <typename T>
-struct is_reference_wrapper<std::reference_wrapper<T>> : std::true_type {
-};
+inline constexpr bool is_reference_wrapper_v<std::reference_wrapper<T>> = true;
 
 // Implementation of the concept to detect any wrap instance.
 // This will be specialised after the definition of the
 // wrap class.
 template <typename>
-struct is_any_wrap_impl : std::false_type {
-};
+inline constexpr bool is_any_wrap_v = false;
 
 // This is a base class for value_iface, used
 // to check that an interface implementation
@@ -349,19 +346,17 @@ struct TANUKI_VISIBLE composite_iface : public IFace0, public IFace1, public IFa
 
 // Concept to detect any wrap instance.
 template <typename T>
-concept any_wrap = detail::is_any_wrap_impl<T>::value;
+concept any_wrap = detail::is_any_wrap_v<T>;
 
 namespace detail
 {
 
 // Detection of a composite interface.
 template <typename>
-struct is_composite_interface : std::false_type {
-};
+inline constexpr bool is_composite_interface_v = false;
 
 template <typename IFace0, typename IFace1, typename... IFaceN>
-struct is_composite_interface<composite_iface<IFace0, IFace1, IFaceN...>> : std::true_type {
-};
+inline constexpr bool is_composite_interface_v<composite_iface<IFace0, IFace1, IFaceN...>> = true;
 
 // Private base for the unspecialised iface_impl.
 struct iface_impl_base {
@@ -375,7 +370,7 @@ struct iface_impl_base {
 // NOTE: prohibit the definition of an external implementation
 // for the composite interface.
 template <typename IFace, typename Base, typename Holder, typename T>
-    requires(!detail::is_composite_interface<IFace>::value)
+    requires(!detail::is_composite_interface_v<IFace>)
 struct iface_impl final : detail::iface_impl_base {
 };
 
@@ -528,7 +523,7 @@ private:
 
     [[nodiscard]] bool _tanuki_is_reference() const noexcept final
     {
-        return is_reference_wrapper<T>::value;
+        return is_reference_wrapper_v<T>;
     }
 
     // Clone this, and cast the result to the value interface.
@@ -851,12 +846,10 @@ using value_t_from_arg = std::conditional_t<std::is_function_v<std::remove_cvref
 // to avoid ambiguities in the wrap class between the nullary emplace ctor
 // and the generic ctor.
 template <typename>
-struct is_in_place_type : std::false_type {
-};
+inline constexpr bool is_in_place_type_v = false;
 
 template <typename T>
-struct is_in_place_type<std::in_place_type_t<T>> : std::true_type {
-};
+inline constexpr bool is_in_place_type_v<std::in_place_type_t<T>> = true;
 
 // Implementation of the pointer interface for the wrap
 // class, conditionally-enabled depending on the configuration.
@@ -883,16 +876,6 @@ struct wrap_pointer_iface {
 
 template <typename Wrap, typename IFace>
 struct wrap_pointer_iface<false, Wrap, IFace> {
-};
-
-// This is a re-implementation of std::same_as
-// in order to work around a GCC 10 bug.
-template <typename, typename>
-struct same_as : std::false_type {
-};
-
-template <typename T>
-struct same_as<T, T> : std::true_type {
 };
 
 } // namespace detail
@@ -1179,7 +1162,7 @@ public:
             // Make extra sure this does not compete with the invalid ctor.
             requires !std::same_as<invalid_wrap_t, std::remove_cvref_t<T>>;
             // Must not compete with the emplace ctor.
-            requires !detail::is_in_place_type<std::remove_cvref_t<T>>::value;
+            requires !detail::is_in_place_type_v<std::remove_cvref_t<T>>;
             // Must not compete with copy/move.
             requires !std::same_as<std::remove_cvref_t<T>, W>;
             // We must be able to invoke the construction function.
@@ -1495,16 +1478,16 @@ public:
 #if defined(__clang__)
     template <typename T, typename W, typename... Args>
         requires(requires(W &w, Args &&...args) {
-            requires detail::same_as<W, wrap>::value;
+            requires std::is_same_v<W, wrap>;
             // Forbid emplacing a wrap inside a wrap.
-            requires !detail::same_as<T, W>::value;
+            requires(!std::is_same_v<T, W>);
             w.template ctor_impl<T>(std::forward<Args>(args)...);
         })
     friend void
     emplace(W &w,
             Args &&...args) noexcept(noexcept(std::declval<W &>().template ctor_impl<T>(std::forward<Args>(args)...)))
 #elif defined(__GNUC__)
-    template <typename T, std::enable_if_t<!detail::same_as<T, wrap>::value, int> = 0, typename... Args>
+    template <typename T, std::enable_if_t<!std::is_same_v<T, wrap>, int> = 0, typename... Args>
         requires(requires(wrap &w, Args &&...args) { w.ctor_impl<T>(std::forward<Args>(args)...); })
     friend void emplace(wrap &w, Args &&...args) noexcept(noexcept(w.ctor_impl<T>(std::forward<Args>(args)...)))
 #else
@@ -1695,8 +1678,7 @@ namespace detail
 
 // Specialise is_any_wrap_impl.
 template <typename IFace, auto Cfg>
-struct is_any_wrap_impl<wrap<IFace, Cfg>> : std::true_type {
-};
+inline constexpr bool is_any_wrap_v<wrap<IFace, Cfg>> = true;
 
 // Base class for iface_impl_helper.
 struct iface_impl_helper_base {
@@ -1709,7 +1691,7 @@ consteval bool iface_impl_value_getter_is_noexcept()
 {
     using T = typename detail::holder_value<Holder>::type;
 
-    if constexpr (detail::is_reference_wrapper<T>::value) {
+    if constexpr (detail::is_reference_wrapper_v<T>) {
         return !std::is_const_v<std::remove_reference_t<std::unwrap_reference_t<T>>>;
     }
 
@@ -1739,7 +1721,7 @@ struct iface_impl_helper : public detail::iface_impl_helper_base {
 
         auto &val = static_cast<Holder *>(this)->m_value;
 
-        if constexpr (detail::is_reference_wrapper<T>::value) {
+        if constexpr (detail::is_reference_wrapper_v<T>) {
             if constexpr (std::is_const_v<std::remove_reference_t<std::unwrap_reference_t<T>>>) {
                 // NOLINTNEXTLINE(google-readability-casting)
                 throw std::runtime_error("Invalid access to a const reference of type '"
@@ -1762,7 +1744,7 @@ struct iface_impl_helper : public detail::iface_impl_helper_base {
 
         const auto &val = static_cast<const Holder *>(this)->m_value;
 
-        if constexpr (detail::is_reference_wrapper<T>::value) {
+        if constexpr (detail::is_reference_wrapper_v<T>) {
             return val.get();
         } else {
             return val;

@@ -133,7 +133,10 @@ endif()
 
 # Optional Boost.Serialization support.
 if(TANUKI_WITH_BOOST_S11N)
-  find_package(Boost REQUIRED serialization)
+  # NOTE: we rely on Boost.align to check alignment of pointers
+  # at runtime in debug mode. The Boost.align library appeared in
+  # version 1.59.0 but its API was updated in 1.61.0.
+  find_package(Boost 1.61.0 REQUIRED serialization)
   add_library(tanuki_boost_s11n INTERFACE)
   target_link_libraries(tanuki_boost_s11n INTERFACE Boost::serialization)
   target_compile_definitions(tanuki_boost_s11n INTERFACE TANUKI_WITH_BOOST_S11N)

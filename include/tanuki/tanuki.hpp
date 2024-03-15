@@ -43,6 +43,14 @@
 #include <boost/serialization/split_member.hpp>
 #include <boost/serialization/tracking.hpp>
 
+#if !defined(NDEBUG)
+
+// NOTE: this is used in pointer alignment checks at runtime
+// in debug mode.
+#include <boost/align/is_aligned.hpp>
+
+#endif
+
 #endif
 
 // Versioning.
@@ -550,6 +558,10 @@ private:
     [[nodiscard]] value_iface<IFace, Sem> *_tanuki_copy_init_holder(void *ptr) const final
     {
         if constexpr (std::copy_constructible<T>) {
+#if defined(TANUKI_WITH_BOOST_S11N)
+            assert(boost::alignment::is_aligned(ptr, alignof(T)));
+#endif
+
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory,clang-analyzer-cplusplus.PlacementNew)
             return ::new (ptr) holder(m_value);
         } else {
@@ -563,6 +575,10 @@ private:
     _tanuki_move_init_holder(void *ptr) && noexcept final
     {
         if constexpr (std::move_constructible<T>) {
+#if defined(TANUKI_WITH_BOOST_S11N)
+            assert(boost::alignment::is_aligned(ptr, alignof(T)));
+#endif
+
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory,clang-analyzer-cplusplus.PlacementNew)
             return ::new (ptr) holder(std::move(m_value));
         } else {
@@ -934,6 +950,9 @@ class TANUKI_VISIBLE wrap
         // segmented memory architectures.
         //
         // In pratice, this should be ok an all commonly-used platforms.
+        //
+        // NOTE: ptr will be null if the storage type is dynamic, hence another assumption
+        // here is that nullptr is not included in the storage range of static_storage.
         //
         // NOTE: it seems like the only truly portable way of implementing this is to compare ptr
         // to the addresses of all elements in static_storage. Unfortunately, it seems like compilers

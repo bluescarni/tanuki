@@ -90,3 +90,7 @@ endif()
 ADD_TANUKI_TESTCASE(sqlite_ts)
 target_link_libraries(sqlite_ts PRIVATE tanuki_sqlite)
 target_compile_definitions(sqlite_ts PRIVATE "-DTANUKI_SQLITE_FILE=\"${CMAKE_CURRENT_SOURCE_DIR}/simple.db\"")
+
+if(TANUKI_TEST_PYBIND11)
+  add_subdirectory(pybind11)
+endif()

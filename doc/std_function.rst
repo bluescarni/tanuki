@@ -63,7 +63,7 @@ Next, we see how the call operator is implemented:
    :lines: 40-56
 
 The call operator will ultimately invoke (via `std::invoke <https://en.cppreference.com/w/cpp/utility/functional/invoke>`__)
-the value type with the supplied arguments ``args`` (possibly going through a cast to ``void`` in order
+the type-erased value with the supplied arguments ``args`` (possibly going through a cast to ``void`` in order
 to emulate C++23's `std::invoke_r() <https://en.cppreference.com/w/cpp/utility/functional/invoke>`__).
 Before doing that, however, we must check that the object we are invoking is not a null pointer to
 a (member) function - if that is the case, we will be raising an exception rather than incurring

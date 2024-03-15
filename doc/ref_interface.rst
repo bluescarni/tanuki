@@ -84,10 +84,10 @@ an equivalent reference interface which does **not** use the :c:macro:`TANUKI_RE
    :language: c++
    :lines: 33-41
 
-Here is what is going on: we will first make the :cpp:class:`wrap` class inherit from ``foo_ref_iface2::impl``,
-and then, using the `curiously recurring template pattern (CRTP) <https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern>`__,
-we will be invoking the :cpp:func:`wrap::iface_ptr` function on the :cpp:class:`wrap` object
-to access a pointer to the ``foo_iface`` interface, from which we will finally invoke the ``foo()``
+Here is what is going on: tanuki makes the :cpp:class:`wrap` class inherit from ``foo_ref_iface2::impl``,
+so that, via the `curiously recurring template pattern (CRTP) <https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern>`__,
+we can invoke the :cpp:func:`wrap::iface_ptr` function on the :cpp:class:`wrap` object
+to access a pointer to the ``foo_iface`` interface, via which we finally invoke the ``foo()``
 member function. Phew!
 
 The :c:macro:`TANUKI_REF_IFACE_MEMFUN` macro works by defining several variadic overloads for the
@@ -145,6 +145,10 @@ Second, we can use the custom configuration instance to define another wrap type
 .. code-block:: console
 
    foo_iface_impl calling foo()
+
+As a final comment, it should be noted that the reference interface is useful beyond just enabling dot-style
+access to the member functions. For instance, it also allows to define nested types and inline friend functions and operators
+that will be accessible via `ADL <https://en.cppreference.com/w/cpp/language/adl>`__.
 
 Full code listing
 -----------------

@@ -10,6 +10,8 @@ if(NOT CMAKE_BUILD_TYPE)
 	FORCE)
 endif()
 
+# NOTE: technically a C++ only project, but we are compiling
+# sqlite.c in the tests.
 project(tanuki VERSION 1.0.0 LANGUAGES CXX C)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/yacma")

@@ -385,51 +385,68 @@ struct iface_impl final : detail::iface_impl_base {
 namespace detail
 {
 
-// Detect the presence of an external interface implementation.
+// NOTE: this section contains the metaprogramming necessary to determine whether or
+// not an interface has an implementation, and to automatically synthesise composite
+// interface implementations.
+
+// Detect the presence of an external or intrusive interface implementation.
+// NOTE: at this stage, we are only checking for the existence of a specialisation
+// of iface_impl (external) or an 'impl' typedef (intrusive). Further checks are
+// implemented later.
 template <typename IFace, typename Base, typename Holder, typename T>
 concept iface_has_external_impl = !std::derived_from<iface_impl<IFace, Base, Holder, T>, iface_impl_base>;
 
-// Detect the presence of an intrusive interface implementation.
 template <typename IFace, typename Base, typename Holder, typename T>
 concept iface_has_intrusive_impl = requires() { typename IFace::template impl<Base, Holder, T>; };
 
-// Helper to fetch the interface implementation.
+// Helper to fetch the implementation of a non-composite interface
 template <typename, typename, typename, typename>
-struct get_iface_impl {
+struct get_nc_iface_impl {
 };
 
 // External interface implementation.
 // NOTE: this will take the precedence in case an intrusive
 // implementation is also available.
 template <typename IFace, typename Base, typename Holder, typename T>
-    requires iface_has_external_impl<IFace, Base, Holder, T>
-struct get_iface_impl<IFace, Base, Holder, T> {
+    requires
+    // NOTE: this concept also indirectly checks that IFace
+    // is not composite, as composite interfaces are prevented from
+    // having external implementations.
+    iface_has_external_impl<IFace, Base, Holder, T>
+struct get_nc_iface_impl<IFace, Base, Holder, T> {
     using type = iface_impl<IFace, Base, Holder, T>;
 };
 
 // Intrusive interface implementation.
 template <typename IFace, typename Base, typename Holder, typename T>
-    requires(!is_composite_interface_v<IFace>)
-            && iface_has_intrusive_impl<IFace, Base, Holder, T> && (!iface_has_external_impl<IFace, Base, Holder, T>)
-struct get_iface_impl<IFace, Base, Holder, T> {
+    requires
+    // NOTE: we might end up instantiating this struct with a composite
+    // IFace when doing concept checking in impl_from_iface_impl. This seems
+    // to confuse some compilers (e.g., MSVC) since the composite interface may
+    // have several 'impl' typedefs inherited from the individual interfaces.
+    // Prevent this issue by disabling this specialisation if IFace is a composite
+    // interface.
+    (!is_composite_interface_v<IFace>) && iface_has_intrusive_impl<IFace, Base, Holder, T>
+    && (!iface_has_external_impl<IFace, Base, Holder, T>)
+    struct get_nc_iface_impl<IFace, Base, Holder, T> {
     using type = typename IFace::template impl<Base, Holder, T>;
 };
 
 template <typename IFace, typename Base, typename Holder, typename T>
-concept with_external_or_intrusive_iface_impl = requires() { typename get_iface_impl<IFace, Base, Holder, T>::type; };
+concept with_external_or_intrusive_iface_impl
+    = requires() { typename get_nc_iface_impl<IFace, Base, Holder, T>::type; };
 
 // Meta-programming to select the implementation of an interface.
-
-// By default, the Base for the interface implementation is
-// value_iface of IFace (which transitively makes IFace also a base for
-// the implementation).
 template <typename, typename, typename, wrap_semantics>
 struct impl_from_iface_impl {
 };
 
+// For non-composite interfaces, the Base for the interface implementation is
+// value_iface of IFace (which transitively makes IFace also a base for
+// the implementation).
 template <typename IFace, typename Holder, typename T, wrap_semantics Sem>
     requires with_external_or_intrusive_iface_impl<IFace, value_iface<IFace, Sem>, Holder, T>
-struct impl_from_iface_impl<IFace, Holder, T, Sem> : get_iface_impl<IFace, value_iface<IFace, Sem>, Holder, T> {
+struct impl_from_iface_impl<IFace, Holder, T, Sem> : get_nc_iface_impl<IFace, value_iface<IFace, Sem>, Holder, T> {
 };
 
 // For composite interfaces, we synthesize a class hierarchy in which every
@@ -442,23 +459,23 @@ struct c_iface_assembler {
 template <typename Holder, typename T, typename CurIFace, typename CurBase, typename NextIFace, typename... IFaceN>
     requires requires() {
         requires with_external_or_intrusive_iface_impl<CurIFace, CurBase, Holder, T>;
-        typename c_iface_assembler<Holder, T, NextIFace, typename get_iface_impl<CurIFace, CurBase, Holder, T>::type,
+        typename c_iface_assembler<Holder, T, NextIFace, typename get_nc_iface_impl<CurIFace, CurBase, Holder, T>::type,
                                    IFaceN...>::type;
     }
 struct c_iface_assembler<Holder, T, CurIFace, CurBase, NextIFace, IFaceN...> {
-    using cur_impl = typename get_iface_impl<CurIFace, CurBase, Holder, T>::type;
+    using cur_impl = typename get_nc_iface_impl<CurIFace, CurBase, Holder, T>::type;
     using type = typename c_iface_assembler<Holder, T, NextIFace, cur_impl, IFaceN...>::type;
 };
 
 template <typename Holder, typename T, typename CurIFace, typename CurBase, typename LastIFace>
     requires requires() {
         requires with_external_or_intrusive_iface_impl<CurIFace, CurBase, Holder, T>;
-        typename get_iface_impl<LastIFace, typename get_iface_impl<CurIFace, CurBase, Holder, T>::type, Holder,
-                                T>::type;
+        typename get_nc_iface_impl<LastIFace, typename get_nc_iface_impl<CurIFace, CurBase, Holder, T>::type, Holder,
+                                   T>::type;
     }
 struct c_iface_assembler<Holder, T, CurIFace, CurBase, LastIFace> {
-    using cur_impl = typename get_iface_impl<CurIFace, CurBase, Holder, T>::type;
-    using type = typename get_iface_impl<LastIFace, cur_impl, Holder, T>::type;
+    using cur_impl = typename get_nc_iface_impl<CurIFace, CurBase, Holder, T>::type;
+    using type = typename get_nc_iface_impl<LastIFace, cur_impl, Holder, T>::type;
 };
 
 template <typename Holder, typename T, wrap_semantics Sem, typename IFace0, typename IFace1, typename... IFaceN>

@@ -324,10 +324,6 @@ template <typename T>
 concept noncv_rvalue_reference
     = std::is_rvalue_reference_v<T> && std::same_as<std::remove_cvref_t<T>, std::remove_reference_t<T>>;
 
-// NOTE: constrain value types to be non-cv qualified destructible objects.
-template <typename T>
-concept valid_value_type = std::is_object_v<T> && (!std::is_const_v<T>)&&(!std::is_volatile_v<T>)&&std::destructible<T>;
-
 #if defined(__clang__)
 
 #pragma GCC diagnostic push
@@ -355,6 +351,10 @@ struct TANUKI_VISIBLE composite_iface : public IFace0, public IFace1, public IFa
 // Concept to detect any wrap instance.
 template <typename T>
 concept any_wrap = detail::is_any_wrap_v<T>;
+
+// Concept checking for value types. Must be non-cv qualified destructible objects.
+template <typename T>
+concept valid_value_type = std::is_object_v<T> && (!std::is_const_v<T>)&&(!std::is_volatile_v<T>)&&std::destructible<T>;
 
 namespace detail
 {
@@ -498,6 +498,8 @@ using impl_from_iface = typename impl_from_iface_impl<IFace, Holder, T, Sem>::ty
 // for the value type T.
 template <typename IFace, typename Holder, typename T, wrap_semantics Sem>
 concept iface_has_impl = requires() {
+    // NOTE: include the check on the validity of the value type.
+    requires valid_value_type<T>;
     typename impl_from_iface<IFace, Holder, T, Sem>;
     // NOTE: this will check that the implementation derives
     // from its Base (e.g., the check will fail in case of
@@ -809,7 +811,7 @@ enum class wrap_ctor { always_explicit, ref_implicit, always_implicit };
 // NOTE: the DefaultValueType is subject to the constraints
 // for valid value types.
 template <typename DefaultValueType = void, typename RefIFace = no_ref_iface>
-    requires std::same_as<DefaultValueType, void> || detail::valid_value_type<DefaultValueType>
+    requires std::same_as<DefaultValueType, void> || valid_value_type<DefaultValueType>
 struct TANUKI_VISIBLE config final : detail::config_base {
     using default_value_type = DefaultValueType;
 
@@ -1029,8 +1031,6 @@ class TANUKI_VISIBLE wrap
         // destructible.
         std::default_initializable<detail::impl_from_iface<iface_t, holder_t<T>, T, Cfg.semantics>>
         && std::destructible<detail::impl_from_iface<iface_t, holder_t<T>, T, Cfg.semantics>> &&
-        // T must be a valid value type.
-        detail::valid_value_type<T> &&
         // T must be constructible from the construction arguments.
         std::constructible_from<T, U &&...>
         void ctor_impl(U &&...x) noexcept(Cfg.semantics == wrap_semantics::value

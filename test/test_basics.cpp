@@ -51,6 +51,9 @@ template <typename Base, typename Holder, typename T>
 struct any_iface_impl<Base, Holder, T> : Base {
 };
 
+template <typename T, typename IFace>
+concept with_holder_size = requires() { requires(tanuki::holder_size<T, IFace> > 0u); };
+
 struct large {
     std::array<char, 100> buffer = {1, 2, 3};
     std::string str = "hello world                                                                            ";
@@ -188,6 +191,16 @@ TEST_CASE("basics")
     const wrap_t wfunc2(&my_func);
     REQUIRE(value_isa<void (*)(int)>(wfunc1));
     REQUIRE(value_isa<void (*)(int)>(wfunc2));
+
+    // Minimal test for iface_with_impl.
+    REQUIRE(!tanuki::iface_with_impl<any_iface, nonwrappable>);
+    REQUIRE(!tanuki::iface_with_impl<any_iface &, const nonwrappable &>);
+    REQUIRE(!tanuki::iface_with_impl<void, void>);
+
+    // Test that concept checking on holder_size fails
+    // if an interface does not have an implementation for
+    // a type.
+    REQUIRE(!with_holder_size<nonwrappable, any_iface>);
 }
 
 TEST_CASE("assignment")

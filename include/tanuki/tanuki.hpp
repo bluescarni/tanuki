@@ -949,6 +949,11 @@ template <typename Wrap, typename IFace>
 struct wrap_pointer_iface<false, Wrap, IFace> {
 };
 
+// NOTE: it is important that the checks on the
+// interface implementation come *before* the std::constructible_from check.
+// This helps breaking infinite recursions that can arise when
+// the generic constructor of wrap is implicit
+// (see also the test_inf_loop_bug test).
 template <typename T, typename IFace, wrap_semantics Sem, typename... U>
 concept wrap_constructible_from =
     // The interface must have an implementation for T.
@@ -1029,13 +1034,7 @@ class TANUKI_VISIBLE wrap
 
     // Implementation of generic construction. This will constrcut
     // a holder with value type T using the construction argument(s) x.
-    // NOTE: it is important that the checks on the
-    // interface implementation come *before* the std::constructible_from check.
-    // This helps breaking infinite recursions that can arise when
-    // the generic constructor of wrap is implicit
-    // (see also the test_inf_loop_bug test).
     template <typename T, typename... U>
-        requires detail::wrap_constructible_from<T, iface_t, Cfg.semantics, U &&...>
     void ctor_impl(U &&...x) noexcept(Cfg.semantics == wrap_semantics::value && sizeof(holder_t<T>) <= Cfg.static_size
                                       && alignof(holder_t<T>) <= Cfg.static_align
                                       && std::is_nothrow_constructible_v<holder_t<T>, U &&...>)
@@ -1541,32 +1540,13 @@ public:
 #endif
 
     // Emplacement.
-    // NOTE: this is a mess on earlier clang/GCC versions...
-#if defined(__clang__)
-    template <typename T, typename W, typename... Args>
-        requires(requires(W &w, Args &&...args) {
-            requires std::is_same_v<W, wrap>;
-            // Forbid emplacing a wrap inside a wrap.
-            requires(!std::is_same_v<T, W>);
-            w.template ctor_impl<T>(std::forward<Args>(args)...);
-        })
-    friend void
-    emplace(W &w,
-            Args &&...args) noexcept(noexcept(std::declval<W &>().template ctor_impl<T>(std::forward<Args>(args)...)))
-#elif defined(__GNUC__)
-    template <typename T, std::enable_if_t<!std::is_same_v<T, wrap>, int> = 0, typename... Args>
-        requires(requires(wrap &w, Args &&...args) { w.ctor_impl<T>(std::forward<Args>(args)...); })
-    friend void emplace(wrap &w, Args &&...args) noexcept(noexcept(w.ctor_impl<T>(std::forward<Args>(args)...)))
-#else
-    // This should be the canonical version.
     template <typename T, typename... Args>
-        requires(requires(wrap &w, Args &&...args) {
-            // Forbid emplacing a wrap inside a wrap.
-            requires !std::same_as<T, wrap>;
-            w.ctor_impl<T>(std::forward<Args>(args)...);
-        })
-    friend void emplace(wrap &w, Args &&...args) noexcept(noexcept(w.ctor_impl<T>(std::forward<Args>(args)...)))
-#endif
+        requires
+        // Forbid emplacing a wrap inside a wrap.
+        (!std::same_as<T, wrap>) &&
+        // We must be able to invoke the construction function.
+        detail::wrap_constructible_from<T, iface_t, Cfg.semantics, Args &&...>
+        friend void emplace(wrap &w, Args &&...args) noexcept(noexcept(w.ctor_impl<T>(std::forward<Args>(args)...)))
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
             // Destroy the value in w if necessary.

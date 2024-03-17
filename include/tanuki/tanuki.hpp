@@ -414,13 +414,21 @@ struct get_iface_impl<IFace, Base, Holder, T> {
     using type = typename IFace::template impl<Base, Holder, T>;
 };
 
+template <typename IFace, typename Base, typename Holder, typename T>
+concept with_external_or_intrusive_iface_impl = requires() { typename get_iface_impl<IFace, Base, Holder, T>::type; };
+
 // Meta-programming to select the implementation of an interface.
 
 // By default, the Base for the interface implementation is
 // value_iface of IFace (which transitively makes IFace also a base for
 // the implementation).
+template <typename, typename, typename, wrap_semantics>
+struct impl_from_iface_impl {
+};
+
 template <typename IFace, typename Holder, typename T, wrap_semantics Sem>
-struct impl_from_iface_impl : get_iface_impl<IFace, value_iface<IFace, Sem>, Holder, T> {
+    requires with_external_or_intrusive_iface_impl<IFace, value_iface<IFace, Sem>, Holder, T>
+struct impl_from_iface_impl<IFace, Holder, T, Sem> : get_iface_impl<IFace, value_iface<IFace, Sem>, Holder, T> {
 };
 
 // For composite interfaces, we synthesize a class hierarchy in which every
@@ -428,17 +436,35 @@ struct impl_from_iface_impl : get_iface_impl<IFace, value_iface<IFace, Sem>, Hol
 // derives from value_iface of the composite interface.
 template <typename Holder, typename T, typename CurIFace, typename CurBase, typename NextIFace, typename... IFaceN>
 struct c_iface_assembler {
+};
+
+template <typename Holder, typename T, typename CurIFace, typename CurBase, typename NextIFace, typename... IFaceN>
+    requires requires() {
+        requires with_external_or_intrusive_iface_impl<CurIFace, CurBase, Holder, T>;
+        typename c_iface_assembler<Holder, T, NextIFace, typename get_iface_impl<CurIFace, CurBase, Holder, T>::type,
+                                   IFaceN...>::type;
+    }
+struct c_iface_assembler<Holder, T, CurIFace, CurBase, NextIFace, IFaceN...> {
     using cur_impl = typename get_iface_impl<CurIFace, CurBase, Holder, T>::type;
     using type = typename c_iface_assembler<Holder, T, NextIFace, cur_impl, IFaceN...>::type;
 };
 
 template <typename Holder, typename T, typename CurIFace, typename CurBase, typename LastIFace>
+    requires requires() {
+        requires with_external_or_intrusive_iface_impl<CurIFace, CurBase, Holder, T>;
+        typename get_iface_impl<LastIFace, typename get_iface_impl<CurIFace, CurBase, Holder, T>::type, Holder,
+                                T>::type;
+    }
 struct c_iface_assembler<Holder, T, CurIFace, CurBase, LastIFace> {
     using cur_impl = typename get_iface_impl<CurIFace, CurBase, Holder, T>::type;
     using type = typename get_iface_impl<LastIFace, cur_impl, Holder, T>::type;
 };
 
 template <typename Holder, typename T, wrap_semantics Sem, typename IFace0, typename IFace1, typename... IFaceN>
+    requires requires() {
+        typename c_iface_assembler<Holder, T, IFace0, value_iface<composite_iface<IFace0, IFace1, IFaceN...>, Sem>,
+                                   IFace1, IFaceN...>::type;
+    }
 struct impl_from_iface_impl<composite_iface<IFace0, IFace1, IFaceN...>, Holder, T, Sem> {
     using type =
         typename c_iface_assembler<Holder, T, IFace0, value_iface<composite_iface<IFace0, IFace1, IFaceN...>, Sem>,
@@ -447,6 +473,7 @@ struct impl_from_iface_impl<composite_iface<IFace0, IFace1, IFaceN...>, Holder, 
 
 // Helper alias.
 template <typename IFace, typename Holder, typename T, wrap_semantics Sem>
+    requires requires() { typename impl_from_iface_impl<IFace, Holder, T, Sem>::type; }
 using impl_from_iface = typename impl_from_iface_impl<IFace, Holder, T, Sem>::type;
 
 // Concept to check that the interface IFace has an implementation

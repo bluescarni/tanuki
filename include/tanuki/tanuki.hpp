@@ -949,6 +949,17 @@ template <typename Wrap, typename IFace>
 struct wrap_pointer_iface<false, Wrap, IFace> {
 };
 
+template <typename T, typename IFace, wrap_semantics Sem, typename... U>
+concept wrap_constructible_from =
+    // The interface must have an implementation for T.
+    iface_has_impl<IFace, holder<T, IFace, Sem>, T, Sem> &&
+    // The implementation must be default-initable and
+    // destructible.
+    std::default_initializable<impl_from_iface<IFace, holder<T, IFace, Sem>, T, Sem>>
+    && std::destructible<impl_from_iface<IFace, holder<T, IFace, Sem>, T, Sem>> &&
+    // T must be constructible from the construction arguments.
+    std::constructible_from<T, U...>;
+
 } // namespace detail
 
 // Tag structure to construct/assign a wrap
@@ -1024,19 +1035,10 @@ class TANUKI_VISIBLE wrap
     // the generic constructor of wrap is implicit
     // (see also the test_inf_loop_bug test).
     template <typename T, typename... U>
-        requires
-        // The interface must have an implementation for T.
-        detail::iface_has_impl<iface_t, holder_t<T>, T, Cfg.semantics> &&
-        // The implementation must be default-initable and
-        // destructible.
-        std::default_initializable<detail::impl_from_iface<iface_t, holder_t<T>, T, Cfg.semantics>>
-        && std::destructible<detail::impl_from_iface<iface_t, holder_t<T>, T, Cfg.semantics>> &&
-        // T must be constructible from the construction arguments.
-        std::constructible_from<T, U &&...>
-        void ctor_impl(U &&...x) noexcept(Cfg.semantics == wrap_semantics::value
-                                          && sizeof(holder_t<T>) <= Cfg.static_size
-                                          && alignof(holder_t<T>) <= Cfg.static_align
-                                          && std::is_nothrow_constructible_v<holder_t<T>, U &&...>)
+        requires detail::wrap_constructible_from<T, iface_t, Cfg.semantics, U &&...>
+    void ctor_impl(U &&...x) noexcept(Cfg.semantics == wrap_semantics::value && sizeof(holder_t<T>) <= Cfg.static_size
+                                      && alignof(holder_t<T>) <= Cfg.static_align
+                                      && std::is_nothrow_constructible_v<holder_t<T>, U &&...>)
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
             if constexpr (sizeof(holder_t<T>) > Cfg.static_size || alignof(holder_t<T>) > Cfg.static_align) {
@@ -1212,34 +1214,29 @@ public:
     // I.e., trailing-style concept checks may not short
     // circuit, which is particularly problematic for a default
     // constructor.
-    template <typename W = wrap>
-        requires(requires(W &w) {
-            requires !Cfg.invalid_default_ctor;
-            requires std::default_initializable<ref_iface_t>;
-            // A default value type must have been specified
-            // in the configuration.
-            requires !std::same_as<void, default_value_t>;
-            // We must be able to invoke the construction function.
-            w.template ctor_impl<default_value_t>();
-        })
+    template <typename = void>
+        requires(!Cfg.invalid_default_ctor) && std::default_initializable<ref_iface_t> &&
+                // A default value type must have been specified
+                // in the configuration.
+                (!std::same_as<void, default_value_t>) &&
+                // We must be able to invoke the construction function.
+                detail::wrap_constructible_from<default_value_t, iface_t, Cfg.semantics>
     wrap() noexcept(noexcept(this->ctor_impl<default_value_t>()) && detail::nothrow_default_initializable<ref_iface_t>)
     {
         ctor_impl<default_value_t>();
     }
 
     // Generic ctor from a wrappable value.
-    template <typename T, typename W = wrap>
-        requires(requires(W &w, T &&x) {
-            requires std::default_initializable<ref_iface_t>;
-            // Make extra sure this does not compete with the invalid ctor.
-            requires !std::same_as<invalid_wrap_t, std::remove_cvref_t<T>>;
-            // Must not compete with the emplace ctor.
-            requires !detail::is_in_place_type_v<std::remove_cvref_t<T>>;
-            // Must not compete with copy/move.
-            requires !std::same_as<std::remove_cvref_t<T>, W>;
-            // We must be able to invoke the construction function.
-            w.template ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x));
-        })
+    template <typename T>
+        requires std::default_initializable<ref_iface_t> &&
+                 // Make extra sure this does not compete with the invalid ctor.
+                 (!std::same_as<invalid_wrap_t, std::remove_cvref_t<T>>) &&
+                 // Must not compete with the emplace ctor.
+                 (!detail::is_in_place_type_v<std::remove_cvref_t<T>>) &&
+                 // Must not compete with copy/move.
+                 (!std::same_as<std::remove_cvref_t<T>, wrap>) &&
+                 // We must be able to invoke the construction function.
+                 detail::wrap_constructible_from<detail::value_t_from_arg<T &&>, iface_t, Cfg.semantics, T &&>
     explicit(explicit_ctor < wrap_ctor::always_implicit)
         // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,google-explicit-constructor,hicpp-explicit-conversions)
         wrap(T &&x) noexcept(noexcept(this->ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x)))
@@ -1252,12 +1249,11 @@ public:
     // NOTE: this is implemented separately from the generic ctor
     // only in order to work around compiler bugs when the explicit()
     // clause contains complex expressions.
-    template <typename T, typename W = wrap>
-        requires(requires(W &w, std::reference_wrapper<T> ref) {
-            requires std::default_initializable<ref_iface_t>;
-            // We must be able to invoke the construction function.
-            w.template ctor_impl<std::reference_wrapper<T>>(std::move(ref));
-        })
+    template <typename T>
+        requires std::default_initializable<ref_iface_t> &&
+                 // We must be able to invoke the construction function.
+                 detail::wrap_constructible_from<std::reference_wrapper<T>, iface_t, Cfg.semantics,
+                                                 std::reference_wrapper<T>>
     explicit(explicit_ctor == wrap_ctor::always_explicit)
         // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
         wrap(std::reference_wrapper<T> ref) noexcept(
@@ -1270,13 +1266,12 @@ public:
     // Generic in-place initialisation.
     // NOTE: this will *value-init* if no args
     // are provided. This must be documented well.
-    template <typename T, typename W = wrap, typename... U>
-        requires(requires(W &w, U &&...args) {
-            requires std::default_initializable<ref_iface_t>;
-            // Forbid emplacing a wrap inside a wrap.
-            requires !std::same_as<T, W>;
-            w.template ctor_impl<T>(std::forward<U>(args)...);
-        })
+    template <typename T, typename... U>
+        requires std::default_initializable<ref_iface_t> &&
+                 // Forbid emplacing a wrap inside a wrap.
+                 (!std::same_as<T, wrap>) &&
+                 // We must be able to invoke the construction function.
+                 detail::wrap_constructible_from<T, iface_t, Cfg.semantics, U &&...>
     explicit wrap(std::in_place_type_t<T>, U &&...args) noexcept(noexcept(this->ctor_impl<T>(std::forward<U>(args)...))
                                                                  && detail::nothrow_default_initializable<ref_iface_t>)
     {
@@ -1474,19 +1469,19 @@ public:
     }
 
     // Generic assignment.
-    template <typename T, typename W = wrap>
-        requires(requires(W &w, T &&x) {
-            // NOTE: not 100% sure about this, but it seems consistent
-            // for generic assignment to be enabled only if copy/move
-            // assignment are as well.
-            requires(Cfg.copyable && Cfg.movable) || Cfg.semantics == wrap_semantics::reference;
-            // Make extra sure this does not compete with the invalid assignment operator.
-            requires !std::same_as<invalid_wrap_t, std::remove_cvref_t<T>>;
-            // Must not compete with copy/move assignment.
-            requires !std::same_as<std::remove_cvref_t<T>, W>;
-            w.template ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x));
-        })
-    wrap &operator=(T &&x)
+    template <typename T>
+        requires
+        // NOTE: not 100% sure about this, but it seems consistent
+        // for generic assignment to be enabled only if copy/move
+        // assignment are as well.
+        ((Cfg.copyable && Cfg.movable) || Cfg.semantics == wrap_semantics::reference) &&
+        // Make extra sure this does not compete with the invalid assignment operator.
+        (!std::same_as<invalid_wrap_t, std::remove_cvref_t<T>>) &&
+        // Must not compete with copy/move assignment.
+        (!std::same_as<std::remove_cvref_t<T>, wrap>) &&
+        // We must be able to invoke the construction function.
+        detail::wrap_constructible_from<detail::value_t_from_arg<T &&>, iface_t, Cfg.semantics, T &&>
+        wrap &operator=(T &&x)
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
             // Handle invalid object.

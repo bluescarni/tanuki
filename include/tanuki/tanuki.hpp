@@ -409,7 +409,8 @@ struct get_iface_impl<IFace, Base, Holder, T> {
 
 // Intrusive interface implementation.
 template <typename IFace, typename Base, typename Holder, typename T>
-    requires iface_has_intrusive_impl<IFace, Base, Holder, T> && (!iface_has_external_impl<IFace, Base, Holder, T>)
+    requires(!is_composite_interface_v<IFace>)
+            && iface_has_intrusive_impl<IFace, Base, Holder, T> && (!iface_has_external_impl<IFace, Base, Holder, T>)
 struct get_iface_impl<IFace, Base, Holder, T> {
     using type = typename IFace::template impl<Base, Holder, T>;
 };

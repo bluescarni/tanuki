@@ -512,7 +512,7 @@ concept iface_has_impl = requires() {
 // holder -> iface impl -> value_iface -> iface.
 // The holder class implements the value_iface interface.
 // NOTE: this class has several conceptual requirements which
-// are checked in wrap::ctor_impl().
+// are checked in the generic ctors of the wrap class.
 template <typename T, typename IFace, wrap_semantics Sem>
 struct TANUKI_VISIBLE holder final : public impl_from_iface<IFace, holder<T, IFace, Sem>, T, Sem> {
     TANUKI_NO_UNIQUE_ADDRESS T m_value;
@@ -726,6 +726,12 @@ struct holder_value<holder<T, IFace, Sem>> {
 
 } // namespace detail
 
+// Concept to check that the interface IFace has an implementation
+// for the value type T.
+// NOTE: like in the holder_size helpers, we check that the implementation
+// exists for both semantics types. At this time it is not possible
+// for an implementation to exist only for one semantics type and hence
+// the double check is superfluous, but let us just keep it for consistency.
 template <typename IFace, typename T>
 concept iface_with_impl
     = detail::iface_has_impl<IFace, detail::holder<T, IFace, wrap_semantics::value>, T, wrap_semantics::value>
@@ -949,19 +955,22 @@ template <typename Wrap, typename IFace>
 struct wrap_pointer_iface<false, Wrap, IFace> {
 };
 
+// Concept for checking that we can construct a holder object
+// for the interface IFace containing the value type T via the
+// construction arguments U.
+//
 // NOTE: it is important that the checks on the
 // interface implementation come *before* the std::constructible_from check.
 // This helps breaking infinite recursions that can arise when
 // the generic constructor of wrap is implicit
 // (see also the test_inf_loop_bug test).
 template <typename T, typename IFace, wrap_semantics Sem, typename... U>
-concept wrap_constructible_from =
+concept holder_constructible_from =
     // The interface must have an implementation for T.
     iface_has_impl<IFace, holder<T, IFace, Sem>, T, Sem> &&
-    // The implementation must be default-initable and
-    // destructible.
-    std::default_initializable<impl_from_iface<IFace, holder<T, IFace, Sem>, T, Sem>>
-    && std::destructible<impl_from_iface<IFace, holder<T, IFace, Sem>, T, Sem>> &&
+    // The implementation must be default-initable (this also implies
+    // destructability).
+    std::default_initializable<impl_from_iface<IFace, holder<T, IFace, Sem>, T, Sem>> &&
     // T must be constructible from the construction arguments.
     std::constructible_from<T, U...>;
 
@@ -1034,6 +1043,8 @@ class TANUKI_VISIBLE wrap
 
     // Implementation of generic construction. This will constrcut
     // a holder with value type T using the construction argument(s) x.
+    // NOTE: the requirements for the construction of the holder object
+    // are in the holder_constructible_from concept.
     template <typename T, typename... U>
     void ctor_impl(U &&...x) noexcept(Cfg.semantics == wrap_semantics::value && sizeof(holder_t<T>) <= Cfg.static_size
                                       && alignof(holder_t<T>) <= Cfg.static_align
@@ -1201,25 +1212,19 @@ public:
 
     // Default initialisation into the default value type.
     // NOTE: need to document that this value-inits.
-    // NOTE: the extra W template argument appearing
-    // here and in the other ctors/assignment operators
-    // is to work around compiler issues: earlier versions
-    // of clang error out complaining about an incomplete type
-    // if we just use wrap instead of W. Older clang versions
-    // also suffer from this bug
+    // NOTE: the extra default template parameter is a workaround
+    // for older clang versions:
     //
     // https://github.com/llvm/llvm-project/issues/55945
     //
-    // I.e., trailing-style concept checks may not short
-    // circuit, which is particularly problematic for a default
-    // constructor.
+    // I.e., trailing-style concept checks may not short circuit.
     template <typename = void>
         requires(!Cfg.invalid_default_ctor) && std::default_initializable<ref_iface_t> &&
                 // A default value type must have been specified
                 // in the configuration.
                 (!std::same_as<void, default_value_t>) &&
-                // We must be able to invoke the construction function.
-                detail::wrap_constructible_from<default_value_t, iface_t, Cfg.semantics>
+                // We must be able to construct the holder.
+                detail::holder_constructible_from<default_value_t, iface_t, Cfg.semantics>
     wrap() noexcept(noexcept(this->ctor_impl<default_value_t>()) && detail::nothrow_default_initializable<ref_iface_t>)
     {
         ctor_impl<default_value_t>();
@@ -1234,8 +1239,8 @@ public:
                  (!detail::is_in_place_type_v<std::remove_cvref_t<T>>) &&
                  // Must not compete with copy/move.
                  (!std::same_as<std::remove_cvref_t<T>, wrap>) &&
-                 // We must be able to invoke the construction function.
-                 detail::wrap_constructible_from<detail::value_t_from_arg<T &&>, iface_t, Cfg.semantics, T &&>
+                 // We must be able to construct the holder.
+                 detail::holder_constructible_from<detail::value_t_from_arg<T &&>, iface_t, Cfg.semantics, T &&>
     explicit(explicit_ctor < wrap_ctor::always_implicit)
         // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,google-explicit-constructor,hicpp-explicit-conversions)
         wrap(T &&x) noexcept(noexcept(this->ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x)))
@@ -1250,9 +1255,9 @@ public:
     // clause contains complex expressions.
     template <typename T>
         requires std::default_initializable<ref_iface_t> &&
-                 // We must be able to invoke the construction function.
-                 detail::wrap_constructible_from<std::reference_wrapper<T>, iface_t, Cfg.semantics,
-                                                 std::reference_wrapper<T>>
+                 // We must be able to construct the holder.
+                 detail::holder_constructible_from<std::reference_wrapper<T>, iface_t, Cfg.semantics,
+                                                   std::reference_wrapper<T>>
     explicit(explicit_ctor == wrap_ctor::always_explicit)
         // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
         wrap(std::reference_wrapper<T> ref) noexcept(
@@ -1269,8 +1274,8 @@ public:
         requires std::default_initializable<ref_iface_t> &&
                  // Forbid emplacing a wrap inside a wrap.
                  (!std::same_as<T, wrap>) &&
-                 // We must be able to invoke the construction function.
-                 detail::wrap_constructible_from<T, iface_t, Cfg.semantics, U &&...>
+                 // We must be able to construct the holder.
+                 detail::holder_constructible_from<T, iface_t, Cfg.semantics, U &&...>
     explicit wrap(std::in_place_type_t<T>, U &&...args) noexcept(noexcept(this->ctor_impl<T>(std::forward<U>(args)...))
                                                                  && detail::nothrow_default_initializable<ref_iface_t>)
     {
@@ -1478,8 +1483,8 @@ public:
         (!std::same_as<invalid_wrap_t, std::remove_cvref_t<T>>) &&
         // Must not compete with copy/move assignment.
         (!std::same_as<std::remove_cvref_t<T>, wrap>) &&
-        // We must be able to invoke the construction function.
-        detail::wrap_constructible_from<detail::value_t_from_arg<T &&>, iface_t, Cfg.semantics, T &&>
+        // We must be able to construct the holder.
+        detail::holder_constructible_from<detail::value_t_from_arg<T &&>, iface_t, Cfg.semantics, T &&>
         wrap &operator=(T &&x)
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
@@ -1544,8 +1549,8 @@ public:
         requires
         // Forbid emplacing a wrap inside a wrap.
         (!std::same_as<T, wrap>) &&
-        // We must be able to invoke the construction function.
-        detail::wrap_constructible_from<T, iface_t, Cfg.semantics, Args &&...>
+        // We must be able to construct the holder.
+        detail::holder_constructible_from<T, iface_t, Cfg.semantics, Args &&...>
         friend void emplace(wrap &w, Args &&...args) noexcept(noexcept(w.ctor_impl<T>(std::forward<Args>(args)...)))
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {

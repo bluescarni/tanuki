@@ -54,6 +54,9 @@ struct any_iface_impl<Base, Holder, T> : Base {
 template <typename T, typename IFace>
 concept with_holder_size = requires() { requires(tanuki::holder_size<T, IFace> > 0u); };
 
+template <typename T, typename IFace>
+concept with_holder_align = requires() { requires(tanuki::holder_align<T, IFace> > 0u); };
+
 struct large {
     std::array<char, 100> buffer = {1, 2, 3};
     std::string str = "hello world                                                                            ";
@@ -201,6 +204,9 @@ TEST_CASE("basics")
     // if an interface does not have an implementation for
     // a type.
     REQUIRE(!with_holder_size<nonwrappable, any_iface>);
+
+    // Same on holder_align.
+    REQUIRE(!with_holder_align<nonwrappable, any_iface>);
 }
 
 TEST_CASE("assignment")

@@ -724,6 +724,12 @@ struct holder_value<holder<T, IFace, Sem>> {
 
 } // namespace detail
 
+template <typename IFace, typename T>
+concept iface_with_impl
+    = detail::iface_has_impl<IFace, detail::holder<T, IFace, wrap_semantics::value>, T, wrap_semantics::value>
+      && detail::iface_has_impl<IFace, detail::holder<T, IFace, wrap_semantics::reference>, T,
+                                wrap_semantics::reference>;
+
 namespace detail
 {
 
@@ -768,13 +774,15 @@ struct config_base {
 // that size/alignment are the same regardless of semantics (which should always
 // be the case).
 template <typename T, typename IFace>
-    requires(sizeof(detail::holder<T, IFace, wrap_semantics::value>)
-             == sizeof(detail::holder<T, IFace, wrap_semantics::reference>))
+    requires iface_with_impl<IFace, T>
+                 && (sizeof(detail::holder<T, IFace, wrap_semantics::value>)
+                     == sizeof(detail::holder<T, IFace, wrap_semantics::reference>))
 inline constexpr auto holder_size = sizeof(detail::holder<T, IFace, wrap_semantics::value>);
 
 template <typename T, typename IFace>
-    requires(alignof(detail::holder<T, IFace, wrap_semantics::value>)
-             == alignof(detail::holder<T, IFace, wrap_semantics::reference>))
+    requires iface_with_impl<IFace, T>
+                 && (alignof(detail::holder<T, IFace, wrap_semantics::value>)
+                     == alignof(detail::holder<T, IFace, wrap_semantics::reference>))
 inline constexpr auto holder_align = alignof(detail::holder<T, IFace, wrap_semantics::value>);
 
 // Default implementation of the reference interface.

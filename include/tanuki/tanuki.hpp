@@ -1019,7 +1019,7 @@ class TANUKI_VISIBLE wrap
     // Implementation of generic construction. This will constrcut
     // a holder with value type T using the construction argument(s) x.
     // NOTE: it is important that the checks on the
-    // interface implementation come *before* the checks on T.
+    // interface implementation come *before* the std::constructible_from check.
     // This helps breaking infinite recursions that can arise when
     // the generic constructor of wrap is implicit
     // (see also the test_inf_loop_bug test).

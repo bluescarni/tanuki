@@ -408,27 +408,15 @@ struct get_nc_iface_impl {
 // NOTE: this will take the precedence in case an intrusive
 // implementation is also available.
 template <typename IFace, typename Base, typename Holder, typename T>
-    requires
-    // NOTE: this concept also indirectly checks that IFace
-    // is not composite, as composite interfaces are prevented from
-    // having external implementations.
-    iface_has_external_impl<IFace, Base, Holder, T>
+    requires iface_has_external_impl<IFace, Base, Holder, T>
 struct get_nc_iface_impl<IFace, Base, Holder, T> {
     using type = iface_impl<IFace, Base, Holder, T>;
 };
 
 // Intrusive interface implementation.
 template <typename IFace, typename Base, typename Holder, typename T>
-    requires
-    // NOTE: we might end up instantiating this struct with a composite
-    // IFace when doing concept checking in impl_from_iface_impl. This seems
-    // to confuse some compilers (e.g., MSVC) since the composite interface may
-    // have several 'impl' typedefs inherited from the individual interfaces.
-    // Prevent this issue by disabling this specialisation if IFace is a composite
-    // interface.
-    (!is_composite_interface_v<IFace>) && iface_has_intrusive_impl<IFace, Base, Holder, T>
-    && (!iface_has_external_impl<IFace, Base, Holder, T>)
-    struct get_nc_iface_impl<IFace, Base, Holder, T> {
+    requires iface_has_intrusive_impl<IFace, Base, Holder, T> && (!iface_has_external_impl<IFace, Base, Holder, T>)
+struct get_nc_iface_impl<IFace, Base, Holder, T> {
     using type = typename IFace::template impl<Base, Holder, T>;
 };
 
@@ -445,8 +433,15 @@ struct impl_from_iface_impl {
 // value_iface of IFace (which transitively makes IFace also a base for
 // the implementation).
 template <typename IFace, typename Holder, typename T, wrap_semantics Sem>
-    requires with_external_or_intrusive_iface_impl<IFace, value_iface<IFace, Sem>, Holder, T>
-struct impl_from_iface_impl<IFace, Holder, T, Sem> : get_nc_iface_impl<IFace, value_iface<IFace, Sem>, Holder, T> {
+    requires
+    // NOTE: we add an initial concept check on IFace here in order to avoid
+    // instantiating the with_external_or_intrusive_iface_impl concept with a
+    // composite interface. This seems to confuse some compilers (e.g., MSVC)
+    // since the composite interface may have several 'impl' typedefs inherited
+    // from the individual interfaces.
+    (!is_composite_interface_v<IFace>)
+    && with_external_or_intrusive_iface_impl<IFace, value_iface<IFace, Sem>, Holder, T>
+    struct impl_from_iface_impl<IFace, Holder, T, Sem> : get_nc_iface_impl<IFace, value_iface<IFace, Sem>, Holder, T> {
 };
 
 // For composite interfaces, we synthesize a class hierarchy in which every
@@ -728,7 +723,7 @@ struct holder_value<holder<T, IFace, Sem>> {
 
 // Concept to check that the interface IFace has an implementation
 // for the value type T.
-// NOTE: like in the holder_size helpers, we check that the implementation
+// NOTE: like in the holder_size helper, we check that the implementation
 // exists for both semantics types. At this time it is not possible
 // for an implementation to exist only for one semantics type and hence
 // the double check is superfluous, but let us just keep it for consistency.

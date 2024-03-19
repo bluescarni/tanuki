@@ -41,9 +41,7 @@ concept referenceable = requires() { typename template_arg_with_ref<T>; };
 template <typename T, typename R>
 concept dereferenceable = requires(T &x) {
     requires referenceable<R>;
-    {
-        *x
-    } -> std::same_as<R>;
+    { *x } -> std::same_as<R>;
 };
 
 // Concept to check that a type is pre-incrementable.
@@ -58,18 +56,18 @@ concept minimal_io_iterator = std::movable<T> && dereferenceable<T, R> && pre_in
 // Definition of the interface implementation.
 template <typename Base, typename Holder, typename T, typename R>
     requires minimal_io_iterator<T, R>
-struct io_iterator_iface_impl : public Base, tanuki::iface_impl_helper<Base, Holder> {
+struct io_iterator_iface_impl : public Base {
     void operator++() final
     {
-        static_cast<void>(++this->value());
+        static_cast<void>(++fetch_value<Holder>(this));
     }
     R deref() final
     {
-        return *(this->value());
+        return *fetch_value<Holder>(this);
     }
     [[nodiscard]] bool equal_to_sentinel(const sentinel &s) const final
     {
-        return s->at_end(any_ref(std::ref(this->value())));
+        return s->at_end(any_ref(std::ref(fetch_value<Holder>(this))));
     }
 };
 

@@ -354,7 +354,8 @@ concept any_wrap = detail::is_any_wrap_v<T>;
 
 // Concept checking for value types. Must be non-cv qualified destructible objects.
 template <typename T>
-concept valid_value_type = std::is_object_v<T> && (!std::is_const_v<T>)&&(!std::is_volatile_v<T>)&&std::destructible<T>;
+concept valid_value_type
+    = std::is_object_v<T> && (!std::is_const_v<T>) && (!std::is_volatile_v<T>) && std::destructible<T>;
 
 namespace detail
 {
@@ -873,15 +874,15 @@ struct cfg_ref_type<config<DefaultValueType, RefIFace>> {
 #define TANUKI_REF_IFACE_MEMFUN(name)                                                                                  \
     template <typename JustWrap = Wrap, typename... MemFunArgs>                                                        \
     auto name(MemFunArgs &&...args) & noexcept(                                                                        \
-        noexcept(iface_ptr(*static_cast<JustWrap *>(this))->name(std::forward<MemFunArgs>(args)...)))                  \
-        -> decltype(iface_ptr(*static_cast<JustWrap *>(this))->name(std::forward<MemFunArgs>(args)...))                \
+        noexcept(iface_ptr(*static_cast<JustWrap *>(this)) -> name(std::forward<MemFunArgs>(args)...)))                \
+        ->decltype(iface_ptr(*static_cast<JustWrap *>(this))->name(std::forward<MemFunArgs>(args)...))                 \
     {                                                                                                                  \
         return iface_ptr(*static_cast<Wrap *>(this))->name(std::forward<MemFunArgs>(args)...);                         \
     }                                                                                                                  \
     template <typename JustWrap = Wrap, typename... MemFunArgs>                                                        \
     auto name(MemFunArgs &&...args) const & noexcept(                                                                  \
-        noexcept(iface_ptr(*static_cast<const JustWrap *>(this))->name(std::forward<MemFunArgs>(args)...)))            \
-        -> decltype(iface_ptr(*static_cast<const JustWrap *>(this))->name(std::forward<MemFunArgs>(args)...))          \
+        noexcept(iface_ptr(*static_cast<const JustWrap *>(this)) -> name(std::forward<MemFunArgs>(args)...)))          \
+        ->decltype(iface_ptr(*static_cast<const JustWrap *>(this))->name(std::forward<MemFunArgs>(args)...))           \
     {                                                                                                                  \
         return iface_ptr(*static_cast<const Wrap *>(this))->name(std::forward<MemFunArgs>(args)...);                   \
     }                                                                                                                  \
@@ -1808,6 +1809,65 @@ template <typename Base, typename Holder>
     requires std::derived_from<Base, detail::iface_impl_helper_base>
 struct iface_impl_helper<Base, Holder> {
 };
+
+namespace detail
+{
+
+template <typename>
+inline constexpr bool is_holder_v = false;
+
+template <typename T, typename IFace, wrap_semantics Sem>
+inline constexpr bool is_holder_v<holder<T, IFace, Sem>> = true;
+
+template <class From, class To>
+concept explicitly_convertible_to = requires { static_cast<To>(std::declval<From>()); };
+
+template <typename Holder, typename U>
+    requires is_holder_v<Holder> && explicitly_convertible_to<const U &, const Holder &>
+const auto &fetch_value(const U *h) noexcept
+{
+    assert(h != nullptr);
+
+    using T = typename holder_value<Holder>::type;
+
+    const auto &val = static_cast<const Holder &>(*h).m_value;
+
+    if constexpr (is_reference_wrapper_v<T>) {
+        return val.get();
+    } else {
+        return val;
+    }
+}
+
+template <typename Holder, typename U>
+    requires is_holder_v<Holder> && explicitly_convertible_to<U &, Holder &>
+auto &fetch_value(U *h) noexcept(iface_impl_value_getter_is_noexcept<Holder>())
+{
+    assert(h != nullptr);
+
+    using T = typename holder_value<Holder>::type;
+
+    auto &val = static_cast<Holder &>(*h).m_value;
+
+    if constexpr (is_reference_wrapper_v<T>) {
+        if constexpr (std::is_const_v<std::remove_reference_t<std::unwrap_reference_t<T>>>) {
+            // NOLINTNEXTLINE(google-readability-casting)
+            throw std::runtime_error("Invalid access to a const reference of type '"
+                                     + demangle(typeid(std::unwrap_reference_t<T>).name())
+                                     + "' via a non-const member function");
+
+            // LCOV_EXCL_START
+            return *static_cast<unwrap_cvref_t<T> *>(nullptr);
+            // LCOV_EXCL_STOP
+        } else {
+            return val.get();
+        }
+    } else {
+        return val;
+    }
+}
+
+} // namespace detail
 
 template <typename IFace, auto Cfg>
 bool has_dynamic_storage(const wrap<IFace, Cfg> &w) noexcept

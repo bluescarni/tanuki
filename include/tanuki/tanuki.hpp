@@ -211,6 +211,7 @@ struct value_iface_base {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsuggest-final-methods"
+#pragma GCC diagnostic ignored "-Wsuggest-final-types"
 
 #endif
 

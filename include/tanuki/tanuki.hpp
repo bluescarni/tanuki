@@ -207,6 +207,14 @@ inline constexpr bool is_any_wrap_v = false;
 struct value_iface_base {
 };
 
+#if defined(__GNUC__) && !defined(__clang__)
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsuggest-final-methods"
+#pragma GCC diagnostic ignored "-Wsuggest-final-types"
+
+#endif
+
 // Interface containing methods to interact
 // with the value in the holder class.
 // NOTE: we need to template value_iface on the semantics
@@ -312,6 +320,12 @@ private:
 
 #endif
 };
+
+#if defined(__GNUC__) && !defined(__clang__)
+
+#pragma GCC diagnostic pop
+
+#endif
 
 // Concept to detect if a type is default initialisable without throwing.
 template <typename T>

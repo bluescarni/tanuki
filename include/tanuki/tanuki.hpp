@@ -1833,18 +1833,15 @@ inline constexpr bool is_holder_v = false;
 template <typename T, typename IFace, wrap_semantics Sem>
 inline constexpr bool is_holder_v<holder<T, IFace, Sem>> = true;
 
-template <class From, class To>
-concept explicitly_convertible_to = requires { static_cast<To>(std::declval<From>()); };
-
 template <typename Holder, typename U>
-    requires is_holder_v<Holder> && explicitly_convertible_to<const U &, const Holder &>
+    requires is_holder_v<Holder> && std::derived_from<Holder, U>
 const auto &fetch_value(const U *h) noexcept
 {
     assert(h != nullptr);
 
     using T = typename holder_value<Holder>::type;
 
-    const auto &val = static_cast<const Holder &>(*h).m_value;
+    const auto &val = static_cast<const Holder *>(h)->m_value;
 
     if constexpr (is_reference_wrapper_v<T>) {
         return val.get();
@@ -1854,14 +1851,14 @@ const auto &fetch_value(const U *h) noexcept
 }
 
 template <typename Holder, typename U>
-    requires is_holder_v<Holder> && explicitly_convertible_to<U &, Holder &>
+    requires is_holder_v<Holder> && std::derived_from<Holder, U>
 auto &fetch_value(U *h) noexcept(iface_impl_value_getter_is_noexcept<Holder>())
 {
     assert(h != nullptr);
 
     using T = typename holder_value<Holder>::type;
 
-    auto &val = static_cast<Holder &>(*h).m_value;
+    auto &val = static_cast<Holder *>(h)->m_value;
 
     if constexpr (is_reference_wrapper_v<T>) {
         if constexpr (std::is_const_v<std::remove_reference_t<std::unwrap_reference_t<T>>>) {

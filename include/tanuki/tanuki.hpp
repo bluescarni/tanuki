@@ -1746,96 +1746,25 @@ namespace detail
 template <typename IFace, auto Cfg>
 inline constexpr bool is_any_wrap_v<wrap<IFace, Cfg>> = true;
 
-// Base class for iface_impl_helper.
-struct iface_impl_helper_base {
-};
-
-// Helper to determine if the non-const value() getter
-// overload in iface_impl_helper can be marked as noexcept.
-template <typename Holder>
-consteval bool iface_impl_value_getter_is_noexcept()
-{
-    using T = typename detail::holder_value<Holder>::type;
-
-    if constexpr (detail::is_reference_wrapper_v<T>) {
-        return !std::is_const_v<std::remove_reference_t<std::unwrap_reference_t<T>>>;
-    }
-
-    return true;
-}
-
-} // namespace detail
-
-// Helper that can be used to reduce typing in an
-// interface implementation. This implements value()
-// helpers for fetching the value held in Holder,
-// automatically unwrapping it in case it is
-// a std::reference_wrapper.
-// NOTE: only Holder is strictly necessary here. However,
-// we require Base to be passed in as well, so that,
-// in composite interfaces:
-// - we don't end up inheriting the same class from
-//   mulitple places,
-// - we can detect if iface_impl_helper has already been
-//   used in an interface implementation.
-template <typename Base, typename Holder>
-struct iface_impl_helper : public detail::iface_impl_helper_base {
-    template <typename H = Holder>
-    auto &value() noexcept(detail::iface_impl_value_getter_is_noexcept<H>())
-    {
-        using T = typename detail::holder_value<Holder>::type;
-
-        auto &val = static_cast<Holder *>(this)->m_value;
-
-        if constexpr (detail::is_reference_wrapper_v<T>) {
-            if constexpr (std::is_const_v<std::remove_reference_t<std::unwrap_reference_t<T>>>) {
-                // NOLINTNEXTLINE(google-readability-casting)
-                throw std::runtime_error("Invalid access to a const reference of type '"
-                                         + demangle(typeid(std::unwrap_reference_t<T>).name())
-                                         + "' via a non-const member function");
-
-                // LCOV_EXCL_START
-                return *static_cast<unwrap_cvref_t<T> *>(nullptr);
-                // LCOV_EXCL_STOP
-            } else {
-                return val.get();
-            }
-        } else {
-            return val;
-        }
-    }
-    const auto &value() const noexcept
-    {
-        using T = typename detail::holder_value<Holder>::type;
-
-        const auto &val = static_cast<const Holder *>(this)->m_value;
-
-        if constexpr (detail::is_reference_wrapper_v<T>) {
-            return val.get();
-        } else {
-            return val;
-        }
-    }
-};
-
-// Specialisation of iface_impl_helper if Base derives
-// from iface_impl_helper_base. This indicates that
-// we are in a composite interface situation, in which we want
-// to avoid defining another set of value() helpers (this would
-// lead to ambiguities).
-template <typename Base, typename Holder>
-    requires std::derived_from<Base, detail::iface_impl_helper_base>
-struct iface_impl_helper<Base, Holder> {
-};
-
-namespace detail
-{
-
 template <typename>
 inline constexpr bool is_holder_v = false;
 
 template <typename T, typename IFace, wrap_semantics Sem>
 inline constexpr bool is_holder_v<holder<T, IFace, Sem>> = true;
+
+// Helper to determine if the non-const getval() overload
+// can be marked as noexcept.
+template <typename Holder>
+consteval bool getval_is_noexcept()
+{
+    using T = typename holder_value<Holder>::type;
+
+    if constexpr (is_reference_wrapper_v<T>) {
+        return !std::is_const_v<std::remove_reference_t<std::unwrap_reference_t<T>>>;
+    } else {
+        return true;
+    }
+}
 
 } // namespace detail
 
@@ -1861,7 +1790,7 @@ const auto &getval(const U *h) noexcept
 
 template <typename Holder, typename U>
     requires any_holder<Holder> && std::derived_from<Holder, U>
-auto &getval(U *h) noexcept(detail::iface_impl_value_getter_is_noexcept<Holder>())
+auto &getval(U *h) noexcept(detail::getval_is_noexcept<Holder>())
 {
     assert(h != nullptr);
 

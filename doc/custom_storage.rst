@@ -97,7 +97,7 @@ Analogously to :cpp:var:`config::static_size`, :cpp:var:`config::static_align` a
 for the alignment constraints imposed not only by the value type but also by the type-erasure
 machinery. That is, if you specify a :cpp:var:`config::static_align` of 8, that does not necessarily
 mean that it is possible to store in static storage values with an alignment of 8 or less, as the
-type-erasure machinery might impose additional alignment constraints.
+type-erasure machinery might impose stricter alignment constraints.
 
 Similarly to :cpp:var:`holder_size`, the :cpp:var:`holder_align` helper can be used to
 compute the alignment requirement of :cpp:class:`wrap`'s static storage for a specific value type ``T``.

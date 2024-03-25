@@ -82,12 +82,12 @@ Configuration options
 
       The constructor is always implicit.
 
-.. cpp:var:: template <typename T, typename IFace> inline constexpr std::size_t holder_size
+.. cpp:var:: template <typename T, typename IFace> requires iface_with_impl<IFace, T> inline constexpr std::size_t holder_size
 
    Helper to compute the amount of memory (in bytes) needed to store in a :cpp:class:`wrap`
    a value of type :cpp:type:`T` wrapped by the interface :cpp:type:`IFace`.
 
-.. cpp:var:: template <typename T, typename IFace> inline constexpr std::size_t holder_align
+.. cpp:var:: template <typename T, typename IFace> requires iface_with_impl<IFace, T> inline constexpr std::size_t holder_align
 
    Helper to compute the amount of memory (in bytes) needed to store in a :cpp:class:`wrap`
    a value of type :cpp:type:`T` wrapped by the interface :cpp:type:`IFace`.

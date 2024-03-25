@@ -27,3 +27,8 @@ Utilities
    .. cpp:function:: const auto &value() const noexcept
 
       :return: a const reference to the value stored in the :cpp:type:`Holder`.
+
+.. cpp:concept:: template <typename IFace, typename T> iface_with_impl
+
+   This concept is satisfied if the interface :cpp:type:`IFace` has an implementation
+   for the value type :cpp:type:`T`.

@@ -8,27 +8,30 @@ Utilities
    A shorthand type alias that removes ``std::reference_wrapper``, const/volatile and reference
    qualifiers (in that order) from :cpp:type:`T`.
 
-.. cpp:struct:: template <typename Base, typename Holder> iface_impl_helper 
-
-   Helper class for interface implementations.
-
-   Interface implementations that inherit from this class can use the
-   :cpp:func:`value()` functions to access the type-erased value stored
-   in a :cpp:class:`wrap`. If the :cpp:class:`wrap` contains a
-   `std::reference_wrapper <https://en.cppreference.com/w/cpp/utility/functional/reference_wrapper>`__,
-   the :cpp:func:`value()` functions will automatically unwrap the reference.
-
-   .. cpp:function:: auto &value()
-
-      :return: a mutable reference to the value stored in the :cpp:type:`Holder`.
-
-      :exception std\:\:runtime_error: if the :cpp:type:`Holder` stores a const reference.
-
-   .. cpp:function:: const auto &value() const noexcept
-
-      :return: a const reference to the value stored in the :cpp:type:`Holder`.
-
 .. cpp:concept:: template <typename IFace, typename T> iface_with_impl
 
    This concept is satisfied if the interface :cpp:type:`IFace` has an implementation
    for the value type :cpp:type:`T`.
+
+.. cpp:function:: template <typename Holder, typename T> requires any_holder<Holder> && std::derived_from<Holder, T> [[nodiscard]] const auto &getval(const T *h) noexcept
+
+.. cpp:function:: template <typename Holder, typename T> requires any_holder<Holder> && std::derived_from<Holder, T> [[nodiscard]] auto &getval(T *h)
+
+   Type-erased value getters.
+
+   These getters will return a reference to the type-erased value stored in a :cpp:class:`holder` of type
+   :cpp:type:`Holder` deriving from :cpp:type:`T`. They are meant to be used within the implementation of
+   an :ref:`interface <getval_intro>`. Internally, they will employ the
+   `curiously recurring template pattern (CRTP) <https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern>`__
+   to cast *h* to :cpp:type:`Holder` and fetch the type-erased value via the ``m_value`` data member.
+
+   If the type-erased value stored in *h* is a ``std::reference_wrapper``, these getters will return a
+   reference to the referenced-to value.
+
+   The second overload is ``noexcept`` if *h* does **not** contain a reference or if it contains a non-const reference.
+
+   :param h: the input :cpp:class:`holder`, cast to its base :cpp:type:`T`.
+
+   :return: a reference to the type-erased value stored in *h*.
+
+   :throws std\:\:runtime_error: if the second overload is invoked on a :cpp:class:`holder` storing a const reference.

@@ -1773,7 +1773,7 @@ concept any_holder = detail::is_holder_v<T>;
 
 template <typename Holder, typename U>
     requires any_holder<Holder> && std::derived_from<Holder, U>
-const auto &getval(const U *h) noexcept
+[[nodiscard]] const auto &getval(const U *h) noexcept
 {
     assert(h != nullptr);
 
@@ -1790,7 +1790,7 @@ const auto &getval(const U *h) noexcept
 
 template <typename Holder, typename U>
     requires any_holder<Holder> && std::derived_from<Holder, U>
-auto &getval(U *h) noexcept(detail::getval_is_noexcept<Holder>())
+[[nodiscard]] auto &getval(U *h) noexcept(detail::getval_is_noexcept<Holder>())
 {
     assert(h != nullptr);
 

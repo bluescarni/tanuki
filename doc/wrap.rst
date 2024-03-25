@@ -99,3 +99,16 @@ The ``wrap`` class
 .. cpp:var:: inline constexpr auto invalid_wrap = invalid_wrap_t{}
 
    A global instance of :cpp:struct:`invalid_wrap_t`.
+
+.. cpp:struct:: template <typename T, typename IFace, wrap_semantics Sem> holder
+
+   Holder class for type-erased values.
+
+   .. note::
+
+      This class is to be regarded as an implementation detail, and as such it is left
+      undocumented on purpose.
+
+.. cpp:concept:: template <typename T> any_holder
+
+   This concept is satisfied if :cpp:type:`T` is any instance of :cpp:class:`holder`.

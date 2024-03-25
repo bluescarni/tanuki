@@ -65,32 +65,27 @@ That is, the ``foo1_wrap`` wrapper provides access, via the arrow operator ``->`
 to the ``foo1_iface_impl::foo()`` member function, which in turn invokes
 ``foo_model::foo()``.
 
-Take 2: Introducing ``iface_impl_helper``
------------------------------------------
+.. _getval_intro:
 
-The use of the CRTP in the interface implementation can be a bit noisy
-and off-putting. tanuki provides a class, called :cpp:class:`iface_impl_helper`,
-which can help reduce typing in an interface implementation. Let us see it
+Take 2: Introducing ``getval()``
+--------------------------------
+
+The use of the CRTP in the interface implementation can be a bit verbose and ugly.
+tanuki provides a couple of helpers, called :cpp:func:`getval()`,
+which can help reducing typing in an interface implementation. Let us see them
 in action with a second version of the interface implementation:
 
 .. literalinclude:: ../tutorial/simple_interface.cpp
    :language: c++
    :lines: 29-36
 
-This time, in addition to deriving from ``Base``, the ``foo2_iface_impl`` implementation also
-derives from :cpp:class:`iface_impl_helper`. :cpp:class:`iface_impl_helper` is itself templated
-on two parameters: the ``Base`` for the implementation and the ``Holder`` class.
-:cpp:class:`iface_impl_helper` provides ``value()`` getters which return references
-to the type-erased value. This way we can access the type-erased value via ``this->value()``
-without ugly casts:
+Here we have replaced the explicit ``static_cast`` with an invocation of :cpp:func:`getval()`,
+which, behind the scenes, performs the CRTP downcast and returns a (const) reference to the
+type-erased value.
 
-.. literalinclude:: ../tutorial/simple_interface.cpp
-   :language: c++
-   :lines: 31-35
-
-Note that :cpp:class:`iface_impl_helper` does a bit more than providing value getters, as it will be explained
-in a later tutorial. In any case, from now on, all interface implementations shown in these tutorials will make use
-of :cpp:class:`iface_impl_helper`.
+Note that :cpp:func:`getval()` does a bit more than providing access to the type-erased value, as it will be explained
+in a :ref:`later tutorial <wrap_reference>`. In any case, from now on, all interface implementations
+shown in these tutorials will make use of :cpp:func:`getval()` to reduce typing.
 
 Let us see the new interface implementation in action:
 
@@ -112,7 +107,7 @@ function (such as, e.g., an ``int``)? The compiler will loudly complain:
 .. code-block:: console
 
    simple_interface.cpp:34:23: error: request for member ‘foo’ in [...] which is of non-class type ‘const int’
-   34 |         this->value().foo();
+   34 |         m_value.foo();
 
 This is of course not ideal, for at least a couple of reasons:
 

@@ -7,7 +7,7 @@ Configuration options
 
    Configuration struct.
 
-   This struct stores tunable types and parameters for the :cpp:class:`wrap` class.
+   This struct stores tunable config options for the :cpp:class:`wrap` class.
    
    :cpp:type:`DefaultValueType` represents the type used by the default constructor
    of :cpp:class:`wrap`. If set to ``void``, the default constructor of :cpp:class:`wrap`
@@ -81,6 +81,8 @@ Configuration options
    .. cpp:enumerator:: always_implicit
 
       The constructor is always implicit.
+
+.. cpp:enum-class:: wrap_semantics
 
 .. cpp:var:: template <typename T, typename IFace> requires iface_with_impl<IFace, T> inline constexpr std::size_t holder_size
 

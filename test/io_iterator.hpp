@@ -59,15 +59,15 @@ template <typename Base, typename Holder, typename T, typename R>
 struct io_iterator_iface_impl : public Base {
     void operator++() final
     {
-        static_cast<void>(++fetch_value<Holder>(this));
+        static_cast<void>(++getval<Holder>(this));
     }
     R deref() final
     {
-        return *fetch_value<Holder>(this);
+        return *getval<Holder>(this);
     }
     [[nodiscard]] bool equal_to_sentinel(const sentinel &s) const final
     {
-        return s->at_end(any_ref(std::ref(fetch_value<Holder>(this))));
+        return s->at_end(any_ref(std::ref(getval<Holder>(this))));
     }
 };
 

@@ -338,23 +338,6 @@ template <typename T>
 concept noncv_rvalue_reference
     = std::is_rvalue_reference_v<T> && std::same_as<std::remove_cvref_t<T>, std::remove_reference_t<T>>;
 
-#if defined(__clang__)
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wexceptions"
-
-#elif defined(__GNUC__)
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wterminate"
-
-#elif defined(_MSC_VER)
-
-#pragma warning(push)
-#pragma warning(disable : 4297)
-
-#endif
-
 } // namespace detail
 
 // Composite interface.
@@ -517,6 +500,25 @@ concept iface_has_impl = requires() {
     requires std::derived_from<impl_from_iface<IFace, Holder, T, Sem>, value_iface_base>;
 };
 
+} // namespace detail
+
+#if defined(__clang__)
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wexceptions"
+
+#elif defined(__GNUC__)
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wterminate"
+
+#elif defined(_MSC_VER)
+
+#pragma warning(push)
+#pragma warning(disable : 4297)
+
+#endif
+
 // Class for holding an instance of the value type T.
 // The inheritance diagram is:
 // holder -> iface impl -> value_iface -> iface.
@@ -524,7 +526,7 @@ concept iface_has_impl = requires() {
 // NOTE: this class has several conceptual requirements which
 // are checked in the generic ctors of the wrap class.
 template <typename T, typename IFace, wrap_semantics Sem>
-struct TANUKI_VISIBLE holder final : public impl_from_iface<IFace, holder<T, IFace, Sem>, T, Sem> {
+struct TANUKI_VISIBLE holder final : public detail::impl_from_iface<IFace, holder<T, IFace, Sem>, T, Sem> {
     TANUKI_NO_UNIQUE_ADDRESS T m_value;
 
     // Make sure we don't end up accidentally copying/moving
@@ -555,7 +557,7 @@ struct TANUKI_VISIBLE holder final : public impl_from_iface<IFace, holder<T, IFa
         requires(!std::same_as<holder, std::remove_cvref_t<U>>)
     explicit holder(U &&x) noexcept(
         std::is_nothrow_constructible_v<T, U &&>
-        && nothrow_default_initializable<impl_from_iface<IFace, holder<T, IFace, Sem>, T, Sem>>)
+        && detail::nothrow_default_initializable<detail::impl_from_iface<IFace, holder<T, IFace, Sem>, T, Sem>>)
         : m_value(std::forward<U>(x))
     {
     }
@@ -563,7 +565,7 @@ struct TANUKI_VISIBLE holder final : public impl_from_iface<IFace, holder<T, IFa
         requires(sizeof...(U) != 1u)
     explicit holder(U &&...x) noexcept(
         std::is_nothrow_constructible_v<T, U &&...>
-        && nothrow_default_initializable<impl_from_iface<IFace, holder<T, IFace, Sem>, T, Sem>>)
+        && detail::nothrow_default_initializable<detail::impl_from_iface<IFace, holder<T, IFace, Sem>, T, Sem>>)
         : m_value(std::forward<U>(x)...)
     {
     }
@@ -588,11 +590,11 @@ private:
 
     [[nodiscard]] bool _tanuki_is_reference() const noexcept final
     {
-        return is_reference_wrapper_v<T>;
+        return detail::is_reference_wrapper_v<T>;
     }
 
     // Clone this, and cast the result to the value interface.
-    [[nodiscard]] value_iface<IFace, Sem> *_tanuki_clone() const final
+    [[nodiscard]] detail::value_iface<IFace, Sem> *_tanuki_clone() const final
     {
         if constexpr (std::copy_constructible<T>) {
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
@@ -602,7 +604,7 @@ private:
         }
     }
     // Same as above, but return a shared ptr.
-    [[nodiscard]] std::shared_ptr<value_iface<IFace, Sem>> _tanuki_shared_clone() const final
+    [[nodiscard]] std::shared_ptr<detail::value_iface<IFace, Sem>> _tanuki_shared_clone() const final
     {
         if constexpr (std::copy_constructible<T>) {
             return std::make_shared<holder>(m_value);
@@ -612,7 +614,7 @@ private:
     }
     // Copy-init a new holder into the storage beginning at ptr.
     // Then cast the result to the value interface and return.
-    [[nodiscard]] value_iface<IFace, Sem> *_tanuki_copy_init_holder(void *ptr) const final
+    [[nodiscard]] detail::value_iface<IFace, Sem> *_tanuki_copy_init_holder(void *ptr) const final
     {
         if constexpr (std::copy_constructible<T>) {
 #if defined(TANUKI_WITH_BOOST_S11N)
@@ -627,7 +629,7 @@ private:
     }
     // Move-init a new holder into the storage beginning at ptr.
     // Then cast the result to the value interface and return.
-    [[nodiscard]] value_iface<IFace, Sem> *
+    [[nodiscard]] detail::value_iface<IFace, Sem> *
     // NOLINTNEXTLINE(bugprone-exception-escape)
     _tanuki_move_init_holder(void *ptr) && noexcept final
     {
@@ -643,7 +645,7 @@ private:
         }
     }
     // Copy-assign m_value into the m_value of v_iface.
-    void _tanuki_copy_assign_value_to(value_iface<IFace, Sem> *v_iface) const final
+    void _tanuki_copy_assign_value_to(detail::value_iface<IFace, Sem> *v_iface) const final
     {
         if constexpr (std::is_copy_assignable_v<T>) {
             // NOTE: I don't think it is necessary to invoke launder here,
@@ -659,7 +661,7 @@ private:
     }
     // Move-assign m_value into the m_value of v_iface.
     // NOLINTNEXTLINE(bugprone-exception-escape)
-    void _tanuki_move_assign_value_to(value_iface<IFace, Sem> *v_iface) && noexcept final
+    void _tanuki_move_assign_value_to(detail::value_iface<IFace, Sem> *v_iface) && noexcept final
     {
         if constexpr (std::is_move_assignable_v<T>) {
             assert(typeid(T) == v_iface->_tanuki_value_type_index());
@@ -688,7 +690,7 @@ private:
     }
     // Swap m_value with the m_value of v_iface.
     // NOLINTNEXTLINE(bugprone-exception-escape)
-    void _tanuki_swap_value(value_iface<IFace, Sem> *v_iface) noexcept final
+    void _tanuki_swap_value(detail::value_iface<IFace, Sem> *v_iface) noexcept final
     {
         if constexpr (std::swappable<T>) {
             assert(typeid(T) == v_iface->_tanuki_value_type_index());
@@ -707,7 +709,7 @@ private:
     template <typename Archive>
     void serialize(Archive &ar, unsigned)
     {
-        ar &boost::serialization::base_object<value_iface<IFace, Sem>>(*this);
+        ar &boost::serialization::base_object<detail::value_iface<IFace, Sem>>(*this);
         ar & m_value;
     }
 
@@ -723,6 +725,9 @@ private:
 #pragma warning(pop)
 
 #endif
+
+namespace detail
+{
 
 // Detection of the holder value type.
 template <typename>
@@ -744,9 +749,8 @@ struct holder_value<holder<T, IFace, Sem>> {
 // the double check is superfluous, but let us just keep it for consistency.
 template <typename IFace, typename T>
 concept iface_with_impl
-    = detail::iface_has_impl<IFace, detail::holder<T, IFace, wrap_semantics::value>, T, wrap_semantics::value>
-      && detail::iface_has_impl<IFace, detail::holder<T, IFace, wrap_semantics::reference>, T,
-                                wrap_semantics::reference>;
+    = detail::iface_has_impl<IFace, holder<T, IFace, wrap_semantics::value>, T, wrap_semantics::value>
+      && detail::iface_has_impl<IFace, holder<T, IFace, wrap_semantics::reference>, T, wrap_semantics::reference>;
 
 namespace detail
 {
@@ -793,15 +797,15 @@ struct config_base {
 // be the case).
 template <typename T, typename IFace>
     requires iface_with_impl<IFace, T>
-                 && (sizeof(detail::holder<T, IFace, wrap_semantics::value>)
-                     == sizeof(detail::holder<T, IFace, wrap_semantics::reference>))
-inline constexpr auto holder_size = sizeof(detail::holder<T, IFace, wrap_semantics::value>);
+                 && (sizeof(holder<T, IFace, wrap_semantics::value>)
+                     == sizeof(holder<T, IFace, wrap_semantics::reference>))
+inline constexpr auto holder_size = sizeof(holder<T, IFace, wrap_semantics::value>);
 
 template <typename T, typename IFace>
     requires iface_with_impl<IFace, T>
-                 && (alignof(detail::holder<T, IFace, wrap_semantics::value>)
-                     == alignof(detail::holder<T, IFace, wrap_semantics::reference>))
-inline constexpr auto holder_align = alignof(detail::holder<T, IFace, wrap_semantics::value>);
+                 && (alignof(holder<T, IFace, wrap_semantics::value>)
+                     == alignof(holder<T, IFace, wrap_semantics::reference>))
+inline constexpr auto holder_align = alignof(holder<T, IFace, wrap_semantics::value>);
 
 // Default implementation of the reference interface.
 struct TANUKI_VISIBLE no_ref_iface {
@@ -1023,7 +1027,7 @@ class TANUKI_VISIBLE wrap
 
     // Shortcut for the holder type corresponding to the value type T.
     template <typename T>
-    using holder_t = detail::holder<T, IFace, Cfg.semantics>;
+    using holder_t = holder<T, IFace, Cfg.semantics>;
 
     // Helper to detect the type of storage in use. Returns true for static
     // storage, false for dynamic storage (including the invalid state).
@@ -1833,17 +1837,22 @@ inline constexpr bool is_holder_v = false;
 template <typename T, typename IFace, wrap_semantics Sem>
 inline constexpr bool is_holder_v<holder<T, IFace, Sem>> = true;
 
+} // namespace detail
+
+template <typename T>
+concept any_holder = detail::is_holder_v<T>;
+
 template <typename Holder, typename U>
-    requires is_holder_v<Holder> && std::derived_from<Holder, U>
-const auto &fetch_value(const U *h) noexcept
+    requires any_holder<Holder> && std::derived_from<Holder, U>
+const auto &getval(const U *h) noexcept
 {
     assert(h != nullptr);
 
-    using T = typename holder_value<Holder>::type;
+    using T = typename detail::holder_value<Holder>::type;
 
     const auto &val = static_cast<const Holder *>(h)->m_value;
 
-    if constexpr (is_reference_wrapper_v<T>) {
+    if constexpr (detail::is_reference_wrapper_v<T>) {
         return val.get();
     } else {
         return val;
@@ -1851,16 +1860,16 @@ const auto &fetch_value(const U *h) noexcept
 }
 
 template <typename Holder, typename U>
-    requires is_holder_v<Holder> && std::derived_from<Holder, U>
-auto &fetch_value(U *h) noexcept(iface_impl_value_getter_is_noexcept<Holder>())
+    requires any_holder<Holder> && std::derived_from<Holder, U>
+auto &getval(U *h) noexcept(detail::iface_impl_value_getter_is_noexcept<Holder>())
 {
     assert(h != nullptr);
 
-    using T = typename holder_value<Holder>::type;
+    using T = typename detail::holder_value<Holder>::type;
 
     auto &val = static_cast<Holder *>(h)->m_value;
 
-    if constexpr (is_reference_wrapper_v<T>) {
+    if constexpr (detail::is_reference_wrapper_v<T>) {
         if constexpr (std::is_const_v<std::remove_reference_t<std::unwrap_reference_t<T>>>) {
             // NOLINTNEXTLINE(google-readability-casting)
             throw std::runtime_error("Invalid access to a const reference of type '"
@@ -1877,8 +1886,6 @@ auto &fetch_value(U *h) noexcept(iface_impl_value_getter_is_noexcept<Holder>())
         return val;
     }
 }
-
-} // namespace detail
 
 template <typename IFace, auto Cfg>
 bool has_dynamic_storage(const wrap<IFace, Cfg> &w) noexcept
@@ -1986,15 +1993,15 @@ struct tracking_level<tanuki::detail::value_iface<IFace, tanuki::wrap_semantics:
     namespace boost::serialization                                                                                     \
     {                                                                                                                  \
     template <tanuki::wrap_semantics Sem>                                                                              \
-    struct guid_defined<tanuki::detail::holder<ud_type, __VA_ARGS__, Sem>> : boost::mpl::true_ {                       \
+    struct guid_defined<tanuki::holder<ud_type, __VA_ARGS__, Sem>> : boost::mpl::true_ {                               \
     };                                                                                                                 \
     template <>                                                                                                        \
-    inline const char *guid<tanuki::detail::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::value>>()             \
+    inline const char *guid<tanuki::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::value>>()                     \
     {                                                                                                                  \
         return "tanuki::wrap<" #__VA_ARGS__ ">@" #ud_type "#val";                                                      \
     }                                                                                                                  \
     template <>                                                                                                        \
-    inline const char *guid<tanuki::detail::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::reference>>()         \
+    inline const char *guid<tanuki::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::reference>>()                 \
     {                                                                                                                  \
         return "tanuki::wrap<" #__VA_ARGS__ ">@" #ud_type "#ref";                                                      \
     }                                                                                                                  \
@@ -2004,15 +2011,15 @@ struct tracking_level<tanuki::detail::value_iface<IFace, tanuki::wrap_semantics:
     namespace boost::serialization                                                                                     \
     {                                                                                                                  \
     template <tanuki::wrap_semantics Sem>                                                                              \
-    struct guid_defined<tanuki::detail::holder<ud_type, __VA_ARGS__, Sem>> : boost::mpl::true_ {                       \
+    struct guid_defined<tanuki::holder<ud_type, __VA_ARGS__, Sem>> : boost::mpl::true_ {                               \
     };                                                                                                                 \
     template <>                                                                                                        \
-    inline const char *guid<tanuki::detail::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::value>>()             \
+    inline const char *guid<tanuki::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::value>>()                     \
     {                                                                                                                  \
         return gid "#val";                                                                                             \
     }                                                                                                                  \
     template <>                                                                                                        \
-    inline const char *guid<tanuki::detail::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::reference>>()         \
+    inline const char *guid<tanuki::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::reference>>()                 \
     {                                                                                                                  \
         return gid "#ref";                                                                                             \
     }                                                                                                                  \
@@ -2022,23 +2029,22 @@ struct tracking_level<tanuki::detail::value_iface<IFace, tanuki::wrap_semantics:
     namespace boost::archive::detail::extra_detail                                                                     \
     {                                                                                                                  \
     template <>                                                                                                        \
-    struct init_guid<tanuki::detail::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::value>> {                    \
-        static guid_initializer<tanuki::detail::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::value>> const &g; \
+    struct init_guid<tanuki::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::value>> {                            \
+        static guid_initializer<tanuki::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::value>> const &g;         \
     };                                                                                                                 \
     template <>                                                                                                        \
-    struct init_guid<tanuki::detail::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::reference>> {                \
-        static guid_initializer<tanuki::detail::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::reference>> const \
-            &g;                                                                                                        \
+    struct init_guid<tanuki::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::reference>> {                        \
+        static guid_initializer<tanuki::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::reference>> const &g;     \
     };                                                                                                                 \
-    guid_initializer<tanuki::detail::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::value>> const                \
-        &init_guid<tanuki::detail::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::value>>::g                     \
+    guid_initializer<tanuki::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::value>> const                        \
+        &init_guid<tanuki::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::value>>::g                             \
         = ::boost::serialization::singleton<guid_initializer<                                                          \
-            tanuki::detail::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::value>>>::get_mutable_instance()      \
+            tanuki::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::value>>>::get_mutable_instance()              \
               .export_guid();                                                                                          \
-    guid_initializer<tanuki::detail::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::reference>> const            \
-        &init_guid<tanuki::detail::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::reference>>::g                 \
+    guid_initializer<tanuki::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::reference>> const                    \
+        &init_guid<tanuki::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::reference>>::g                         \
         = ::boost::serialization::singleton<guid_initializer<                                                          \
-            tanuki::detail::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::reference>>>::get_mutable_instance()  \
+            tanuki::holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::reference>>>::get_mutable_instance()          \
               .export_guid();                                                                                          \
     }
 

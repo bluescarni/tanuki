@@ -36,17 +36,15 @@ struct foo_iface {
 
 template <typename T>
 concept fooable = requires(const T &x) {
-    {
-        x.foo()
-    } -> std::same_as<void>;
+    { x.foo() } -> std::same_as<void>;
 };
 
 template <typename Base, typename Holder, typename T>
     requires fooable<T>
-struct foo_iface_impl<Base, Holder, T> : Base, tanuki::iface_impl_helper<Base, Holder> {
+struct foo_iface_impl<Base, Holder, T> : Base {
     void foo() const final
     {
-        this->value().foo();
+        getval<Holder>(this).foo();
     }
 };
 
@@ -67,17 +65,15 @@ struct bar_iface {
 
 template <typename T>
 concept barable = requires(const T &x) {
-    {
-        x.bar()
-    } -> std::same_as<void>;
+    { x.bar() } -> std::same_as<void>;
 };
 
 template <typename Base, typename Holder, typename T>
     requires barable<T>
-struct bar_iface_impl<Base, Holder, T> : Base, tanuki::iface_impl_helper<Base, Holder> {
+struct bar_iface_impl<Base, Holder, T> : Base {
     void bar() const final
     {
-        this->value().bar();
+        getval<Holder>(this).bar();
     }
 };
 
@@ -176,10 +172,10 @@ struct fooT_iface {
 
 template <typename Base, typename Holder, typename T, typename U>
     requires fooable<T>
-struct fooT_iface_impl<Base, Holder, T, U> : Base, tanuki::iface_impl_helper<Base, Holder> {
+struct fooT_iface_impl<Base, Holder, T, U> : Base {
     void foo() const final
     {
-        this->value().foo();
+        getval<Holder>(this).foo();
     }
 };
 
@@ -202,10 +198,10 @@ struct barT_iface {
 
 template <typename Base, typename Holder, typename T, typename U>
     requires barable<T>
-struct barT_iface_impl<Base, Holder, T, U> : Base, tanuki::iface_impl_helper<Base, Holder> {
+struct barT_iface_impl<Base, Holder, T, U> : Base {
     void bar() const final
     {
-        this->value().bar();
+        getval<Holder>(this).bar();
     }
 };
 

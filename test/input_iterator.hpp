@@ -27,9 +27,7 @@ namespace detail
 template <typename T, typename RR>
 concept with_iter_move = requires(const T &x) {
     requires referenceable<RR>;
-    {
-        std::ranges::iter_move(x)
-    } -> std::same_as<RR>;
+    { std::ranges::iter_move(x) } -> std::same_as<RR>;
 };
 
 // NOTE: the std::input_iterator concept specifies
@@ -38,9 +36,7 @@ concept with_iter_move = requires(const T &x) {
 template <typename T, typename R>
 concept const_dereferenceable = requires(const T &x) {
     requires referenceable<R>;
-    {
-        *x
-    } -> std::same_as<R>;
+    { *x } -> std::same_as<R>;
 };
 
 // Gather the minimal requirements for a type T
@@ -53,15 +49,14 @@ concept minimal_input_iterator = minimal_io_iterator<T, R> && with_iter_move<T, 
 // Definition of the interface implementation.
 template <typename Base, typename Holder, typename T, typename V, typename R, typename RR>
     requires minimal_input_iterator<T, V, R, RR>
-struct input_iterator_iface_impl : io_iterator_iface_impl<Base, Holder, T, R>,
-                                   tanuki::iface_impl_helper<io_iterator_iface_impl<Base, Holder, T, R>, Holder> {
+struct input_iterator_iface_impl : io_iterator_iface_impl<Base, Holder, T, R> {
     R const_deref() const final
     {
-        return *(this->value());
+        return *getval<Holder>(this);
     }
     RR iter_move() const final
     {
-        return std::ranges::iter_move(this->value());
+        return std::ranges::iter_move(getval<Holder>(this));
     }
 };
 

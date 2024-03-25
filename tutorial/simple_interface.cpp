@@ -27,11 +27,11 @@ struct foo_model {
 };
 
 template <typename Base, typename Holder, typename T>
-struct foo2_iface_impl : public Base, tanuki::iface_impl_helper<Base, Holder> {
+struct foo2_iface_impl : public Base {
     void foo() const override
     {
         std::cout << "foo2_iface_impl calling foo()\n";
-        this->value().foo();
+        getval<Holder>(this).foo();
     }
 };
 
@@ -48,11 +48,11 @@ concept fooable = requires(const T &x) { x.foo(); };
 
 template <typename Base, typename Holder, typename T>
     requires fooable<T>
-struct foo3_iface_impl : public Base, tanuki::iface_impl_helper<Base, Holder> {
+struct foo3_iface_impl : public Base {
     void foo() const override
     {
         std::cout << "foo3_iface_impl calling foo()\n";
-        this->value().foo();
+        getval<Holder>(this).foo();
     }
 };
 
@@ -70,19 +70,19 @@ struct foo4_iface_impl {
 
 template <typename Base, typename Holder, typename T>
     requires fooable<T>
-struct foo4_iface_impl<Base, Holder, T> : public Base, tanuki::iface_impl_helper<Base, Holder> {
+struct foo4_iface_impl<Base, Holder, T> : public Base {
     void foo() const override
     {
         std::cout << "foo4_iface_impl calling foo()\n";
-        this->value().foo();
+        getval<Holder>(this).foo();
     }
 };
 
 template <typename Base, typename Holder>
-struct foo4_iface_impl<Base, Holder, int> : public Base, tanuki::iface_impl_helper<Base, Holder> {
+struct foo4_iface_impl<Base, Holder, int> : public Base {
     void foo() const override
     {
-        std::cout << "foo4_iface_impl implementing foo() for the integer " << this->value() << "\n";
+        std::cout << "foo4_iface_impl implementing foo() for the integer " << getval<Holder>(this) << "\n";
     }
 };
 

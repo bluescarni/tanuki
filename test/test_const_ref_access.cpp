@@ -28,10 +28,10 @@ concept fooable = requires(T &x) { static_cast<void>(x.foo()); };
 
 template <typename Base, typename Holder, typename T>
     requires fooable<tanuki::unwrap_cvref_t<T>>
-struct foo_iface_impl<Base, Holder, T> : Base, tanuki::iface_impl_helper<Base, Holder> {
+struct foo_iface_impl<Base, Holder, T> : Base {
     void foo() final
     {
-        static_cast<void>(this->value().foo());
+        static_cast<void>(getval<Holder>(this).foo());
     }
 };
 

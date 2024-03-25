@@ -3,10 +3,10 @@
 #include <tanuki/tanuki.hpp>
 
 template <typename Base, typename Holder, typename T>
-struct foo_iface_impl : public Base, tanuki::iface_impl_helper<Base, Holder> {
+struct foo_iface_impl : public Base {
     void foo() const final
     {
-        this->value().foo();
+        getval<Holder>(this).foo();
     }
 };
 
@@ -20,10 +20,10 @@ struct foo_iface {
 };
 
 template <typename Base, typename Holder, typename T>
-struct bar_iface_impl : public Base, tanuki::iface_impl_helper<Base, Holder> {
+struct bar_iface_impl : public Base {
     void bar() const final
     {
-        this->value().bar();
+        getval<Holder>(this).bar();
     }
 };
 

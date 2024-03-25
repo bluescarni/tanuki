@@ -28,10 +28,10 @@ struct any_iface {
 };
 
 template <typename Base, typename Holder, typename>
-struct foo_iface_impl : Base, tanuki::iface_impl_helper<Base, Holder> {
+struct foo_iface_impl : Base {
     void foo() const final
     {
-        this->value().foo();
+        getval<Holder>(this).foo();
     }
 };
 
@@ -45,10 +45,10 @@ struct foo_iface {
 };
 
 template <typename Base, typename Holder, typename>
-struct bar_iface_impl : Base, tanuki::iface_impl_helper<Base, Holder> {
+struct bar_iface_impl : Base {
     void bar() final
     {
-        this->value().bar();
+        getval<Holder>(this).bar();
     }
 };
 
@@ -105,7 +105,7 @@ TEST_CASE("misc utils")
     REQUIRE(has_static_storage(w));
     REQUIRE(!has_dynamic_storage(w));
 
-    // Test the unwrapping in iface_impl_helper.
+    // Test the unwrapping in getval().
     {
         using wrap_foo_t = tanuki::wrap<foo_iface, tanuki::config<void, foo_ref_iface>{.pointer_interface = false}>;
         wrap_foo_t wf0{fooer{}}, wf0_ref{std::ref(wf0)}, wf0_cref{std::cref(wf0)};

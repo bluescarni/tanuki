@@ -42,29 +42,29 @@ struct func_iface {
 
 template <typename Base, typename Holder, typename T, typename R, typename... Args>
     requires std::is_invocable_r_v<R, const tanuki::unwrap_cvref_t<T> &, Args...>
-struct func_iface_impl<Base, Holder, T, R, Args...> : Base, tanuki::iface_impl_helper<Base, Holder> {
+struct func_iface_impl<Base, Holder, T, R, Args...> : Base {
     R operator()(Args... args) const final
     {
         using uT = tanuki::unwrap_cvref_t<T>;
 
         if constexpr (std::is_pointer_v<uT> || std::is_member_pointer_v<uT>) {
-            if (this->value() == nullptr) {
+            if (getval<Holder>(this) == nullptr) {
                 throw std::bad_function_call{};
             }
         } else if constexpr (tanuki::any_wrap<uT>) {
-            if (is_invalid(this->value())) {
+            if (is_invalid(getval<Holder>(this))) {
                 throw std::bad_function_call{};
             }
         } else if constexpr (is_any_function<uT>::value) {
-            if (!this->value()) {
+            if (!getval<Holder>(this)) {
                 throw std::bad_function_call{};
             }
         }
 
         if constexpr (std::same_as<R, void>) {
-            static_cast<void>(std::invoke(this->value(), std::forward<Args>(args)...));
+            static_cast<void>(std::invoke(getval<Holder>(this), std::forward<Args>(args)...));
         } else {
-            return std::invoke(this->value(), std::forward<Args>(args)...);
+            return std::invoke(getval<Holder>(this), std::forward<Args>(args)...);
         }
     }
     explicit operator bool() const noexcept final
@@ -72,11 +72,11 @@ struct func_iface_impl<Base, Holder, T, R, Args...> : Base, tanuki::iface_impl_h
         using uT = tanuki::unwrap_cvref_t<T>;
 
         if constexpr (std::is_pointer_v<uT> || std::is_member_pointer_v<uT>) {
-            return this->value() != nullptr;
+            return getval<Holder>(this) != nullptr;
         } else if constexpr (tanuki::any_wrap<uT>) {
-            return !is_invalid(this->value());
+            return !is_invalid(getval<Holder>(this));
         } else if constexpr (is_any_function<uT>::value) {
-            return static_cast<bool>(this->value());
+            return static_cast<bool>(getval<Holder>(this));
         } else {
             return true;
         }

@@ -16,10 +16,10 @@
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
 template <typename Base, typename Holder, typename>
-struct foobar_iface_impl : Base, tanuki::iface_impl_helper<Base, Holder> {
+struct foobar_iface_impl : Base {
     void foo() const noexcept final
     {
-        this->value().foo();
+        getval<Holder>(this).foo();
     }
     void bar() noexcept final {}
     void fuzz() && final {}

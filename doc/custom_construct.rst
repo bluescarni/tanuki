@@ -19,14 +19,14 @@ then default construction will initialise a :cpp:class:`wrap` into the
 as `std::function <https://en.cppreference.com/w/cpp/utility/functional/function>`__
 for which an empty state is meaningful.
 
-The other option is to specify a custom (i.e., non-``void``) ``DefaultValueType``
+The other option is to specify a custom (i.e., non-``void``) :cpp:type:`~config::DefaultValueType`
 as first template argument in :cpp:struct:`config`, in which case the default constructor of
-:cpp:class:`wrap` will value-initialise an interal value of type ``DefaultValueType``.
-Note that a custom ``DefaultValueType`` must satisfy the requirements
+:cpp:class:`wrap` will value-initialise an interal value of type :cpp:type:`~config::DefaultValueType`.
+Note that a custom :cpp:type:`~config::DefaultValueType` must satisfy the requirements
 of the :cpp:class:`wrap` interface.
 
 If both the :cpp:var:`config::invalid_default_ctor` option is activated and
-a custom ``DefaultValueType`` is specified, then the :cpp:var:`config::invalid_default_ctor` option
+a custom :cpp:type:`~config::DefaultValueType` is specified, then the :cpp:var:`config::invalid_default_ctor` option
 takes the precedence.
 
 .. _invalid_state:

@@ -11,12 +11,12 @@ The ``wrap`` class
 
       The default constructor is enabled in the following circumstances:
 
-      - the configuration option :cpp:var:`config::invalid_default_ctor` is set to
+      - the configuration option :cpp:var:`~config::invalid_default_ctor` in :cpp:var:`Cfg` is set to
         ``true``. In this case, the default constructor initialises into the
         :ref:`invalid state <invalid_state>`. Otherwise,
-      - a non-``void`` default-initialisable ``DefaultValueType`` with a valid :cpp:type:`IFace` implementation
-        has been specified as first template argument in the in :cpp:struct:`config` structure. In this case,
-        the default constructor value-initialises an instance of ``DefaultValueType`` as
+      - a non-``void`` default-initialisable :cpp:type:`~config::DefaultValueType` with a valid interface implementation
+        for :cpp:type:`IFace` has been specified as first template argument in :cpp:var:`Cfg`. In this case,
+        the default constructor value-initialises an instance of :cpp:type:`~config::DefaultValueType` as
         the internal type-erased type.
 
       In both cases, :cpp:type:`IFace`, its implementation and the :ref:`reference interface <ref_interface>` must
@@ -24,8 +24,8 @@ The ``wrap`` class
 
       :throws: any exception thrown by the default constructor of :cpp:type:`IFace`, its implementation, or
         the :ref:`reference interface <ref_interface>`, by the value-initialisation of a
-        non-``void`` ``DefaultValueType`` or by memory allocation errors
-        if the non-``void`` ``DefaultValueType`` does not fit in static storage. If it can be
+        non-``void`` :cpp:type:`~config::DefaultValueType` or by memory allocation errors
+        if the non-``void`` :cpp:type:`~config::DefaultValueType` does not fit in static storage. If it can be
         determined at compile time that none of these conditions can occurr, then this constructor
         is marked ``noexcept``.
 
@@ -40,7 +40,42 @@ The ``wrap`` class
         If the default constructor of the reference interface does not throw, then this constructor
         is marked ``noexcept``.
 
-   .. cpp:function:: template <typename T> explicit wrap(T &&x)
+   .. cpp:function:: template <typename T> wrap(T &&x)
+
+      Generic constructor.
+
+      This constructor will create a :cpp:class:`wrap` from the input value *x*.
+
+      This constructor is enabled only if *all* the following conditions are satisfied:
+
+      - the :ref:`reference interface <ref_interface>` is default-initialisable;
+      - after the removal of reference and cv-qualifiers, :cpp:type:`T` is not
+
+        - the same as :cpp:class:`wrap` (so that this constructor does not interfere with
+          the copy/move constructors),
+        - an instance of ``std::in_place_type_t`` (so that this constructor does not interfere
+          with the in-place constructor),
+        - the same as :cpp:struct:`invalid_wrap_t` (so that this constructor does not interfere
+          with the constructor into the :ref:`invalid state <invalid_state>`);
+
+      - the interface :cpp:type:`IFace` has a valid, default-initialisable implementation for the value type :cpp:type:`T`
+        (see the :cpp:concept:`iface_with_impl` concept);
+      - *x* can be perfectly-forwarded to construct an instance of the value type.
+
+      This constructor is marked ``explicit`` if either:
+
+      - :cpp:type:`T` is a ``std::reference_wrapper`` and the value of :cpp:var:`~config::explicit_ctor` in :cpp:var:`Cfg`
+        if :cpp:enumerator:`wrap_ctor::always_explicit`, or
+      - :cpp:type:`T` is *not* a ``std::reference_wrapper`` and the value of :cpp:var:`~config::explicit_ctor` in :cpp:var:`Cfg`
+        is less than :cpp:enumerator:`wrap_ctor::always_implicit`.
+
+      Otherwise, the constructor is implicit.
+
+      :throws: any exception thrown by the default constructor of :cpp:type:`IFace`, its implementation, or
+        the :ref:`reference interface <ref_interface>`, by the construction of the value type or by memory allocation errors
+        if the value type does not fit in static storage. If it can be
+        determined at compile time that none of these conditions can occurr, then this constructor
+        is marked ``noexcept``.
 
    .. cpp:function:: [[nodiscard]] friend bool is_invalid(const wrap &w) noexcept
 

@@ -3,7 +3,7 @@
 Configuration options
 =====================
 
-.. cpp:struct:: template <typename DefaultValueType = void, typename RefIFace = no_ref_iface> config
+.. cpp:struct:: template <typename DefaultValueType = void, typename RefIFace = no_ref_iface> requires std::same_as<DefaultValueType, void> || valid_value_type<DefaultValueType> config
 
    Configuration struct.
 
@@ -42,6 +42,8 @@ Configuration options
 
       This option selects when the generic constructor of the :cpp:class:`wrap` class
       is ``explicit``.
+
+   .. cpp:var:: wrap_semantics semantics = wrap_semantics::value
 
    .. cpp:var:: bool copyable = true
 
@@ -102,4 +104,5 @@ Configuration options
 
    - :cpp:var:`Cfg` is an instance of the primary :cpp:class:`config` template,
    - :cpp:var:`config::static_align` is a power of two,
-   - :cpp:var:`config::explicit_ctor` is one of the enumerators defined in :cpp:enum:`wrap_ctor`.
+   - :cpp:var:`config::explicit_ctor` is one of the enumerators defined in :cpp:enum:`wrap_ctor`,
+   - :cpp:var:`config::semantics` is one of the enumerators defined in :cpp:enum:`wrap_semantics`.

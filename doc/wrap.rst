@@ -3,7 +3,7 @@
 The ``wrap`` class
 ==================
 
-.. cpp:class:: template <typename IFace, auto Cfg = default_config> wrap
+.. cpp:class:: template <typename IFace, auto Cfg = default_config> requires std::is_polymorphic_v<IFace> && std::has_virtual_destructor_v<IFace> && valid_config<Cfg> wrap
 
    .. cpp:function:: wrap()
 
@@ -99,6 +99,10 @@ The ``wrap`` class
 .. cpp:var:: inline constexpr auto invalid_wrap = invalid_wrap_t{}
 
    A global instance of :cpp:struct:`invalid_wrap_t`.
+
+.. cpp:concept:: template <typename T> any_wrap
+
+   This concept is satisfied if :cpp:type:`T` is any instance of :cpp:class:`wrap`.
 
 .. cpp:struct:: template <typename T, typename IFace, wrap_semantics Sem> holder
 

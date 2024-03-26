@@ -864,18 +864,6 @@ namespace detail
 template <std::size_t N>
 concept power_of_two = (N > 0u) && ((N & (N - 1u)) == 0u);
 
-// Concept for checking that Cfg is a valid config instance.
-template <auto Cfg>
-concept valid_config =
-    // This checks that decltype(Cfg) is a specialisation from the primary config template.
-    std::derived_from<std::remove_const_t<decltype(Cfg)>, config_base> &&
-    // The static alignment value must be a power of 2.
-    power_of_two<Cfg.static_align> &&
-    // Cfg.explicit_ctor must be set to one of the valid enumerators.
-    (Cfg.explicit_ctor >= wrap_ctor::always_explicit && Cfg.explicit_ctor <= wrap_ctor::always_implicit) &&
-    // Cfg.semantics must be one of the two valid enumerators.
-    (Cfg.semantics == wrap_semantics::value || Cfg.semantics == wrap_semantics::reference);
-
 // Machinery to infer the reference interface from a config instance.
 template <typename>
 struct cfg_ref_type {
@@ -887,6 +875,18 @@ struct cfg_ref_type<config<DefaultValueType, RefIFace>> {
 };
 
 } // namespace detail
+
+// Concept for checking that Cfg is a valid config instance.
+template <auto Cfg>
+concept valid_config =
+    // This checks that decltype(Cfg) is a specialisation from the primary config template.
+    std::derived_from<std::remove_const_t<decltype(Cfg)>, detail::config_base> &&
+    // The static alignment value must be a power of 2.
+    detail::power_of_two<Cfg.static_align> &&
+    // Cfg.explicit_ctor must be set to one of the valid enumerators.
+    (Cfg.explicit_ctor >= wrap_ctor::always_explicit && Cfg.explicit_ctor <= wrap_ctor::always_implicit) &&
+    // Cfg.semantics must be one of the two valid enumerators.
+    (Cfg.semantics == wrap_semantics::value || Cfg.semantics == wrap_semantics::reference);
 
 // Helpers to ease the definition of a reference interface.
 #define TANUKI_REF_IFACE_MEMFUN(name)                                                                                  \
@@ -1004,7 +1004,7 @@ using unwrap_cvref_t = std::remove_cvref_t<std::unwrap_reference_t<T>>;
 
 // The wrap class.
 template <typename IFace, auto Cfg = default_config>
-    requires std::is_polymorphic_v<IFace> && std::has_virtual_destructor_v<IFace> && detail::valid_config<Cfg>
+    requires std::is_polymorphic_v<IFace> && std::has_virtual_destructor_v<IFace> && valid_config<Cfg>
 class TANUKI_VISIBLE wrap
     : private detail::wrap_storage<IFace, Cfg.static_size, Cfg.static_align, Cfg.semantics>,
       // NOTE: the reference interface is not supposed to hold any data: it will always

@@ -23,7 +23,7 @@ Utilities
    :cpp:type:`Holder` deriving from :cpp:type:`T`. They are meant to be used within the implementation of
    an :ref:`interface <getval_intro>`. Internally, they will employ the
    `curiously recurring template pattern (CRTP) <https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern>`__
-   to cast *h* to :cpp:type:`Holder` and fetch the type-erased value via the ``m_value`` data member.
+   to cast *h* to :cpp:type:`Holder` and fetch the type-erased value stored within.
 
    If the type-erased value stored in *h* is a ``std::reference_wrapper``, these getters will return a
    reference to the referenced-to value.
@@ -35,3 +35,16 @@ Utilities
    :return: a reference to the type-erased value stored in *h*.
 
    :throws std\:\:runtime_error: if the second overload is invoked on a :cpp:class:`holder` storing a const reference.
+
+.. cpp:struct:: template <typename IFace0, typename IFace1, typename... IFaceN> composite_iface: public IFace0, public IFace1, public IFaceN...
+
+   Composite interface.
+
+   This class can be used to create a :ref:`composite interface <composite_interfaces>` by multiply inheriting
+   from the interfaces :cpp:type:`IFace0`, :cpp:type:`IFace1` and :cpp:type:`IFaceN`.
+
+.. cpp:concept:: template <typename T> valid_value_type = std::is_object_v<T> && (!std::is_const_v<T>) && (!std::is_volatile_v<T>) && std::destructible<T>
+
+   This concept detects if :cpp:type:`T` is a type that can be type-erased by a :cpp:class:`wrap`.
+
+   :cpp:type:`T` must be a non-cv qualified destructible object.

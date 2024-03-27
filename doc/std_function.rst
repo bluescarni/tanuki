@@ -204,7 +204,7 @@ to ``lambda_double`` instead:
    :language: c++
    :lines: 150-152
 
-The last assertion confirms that a reference to ``lambda_double`` (rather than a copy) has been
+The second ``assert()`` confirms that a reference to ``lambda_double`` (rather than a copy) has been
 captured in ``c0_ref``.
 
 Because our ``callable`` has been designed to be immutable, we cannot construct an instance

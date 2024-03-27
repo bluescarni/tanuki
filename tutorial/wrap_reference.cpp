@@ -15,16 +15,16 @@ concept barable = requires(T &x) { x.bar(); };
 
 template <typename Base, typename Holder, typename T>
     requires fooable<tanuki::unwrap_cvref_t<T>> && barable<tanuki::unwrap_cvref_t<T>>
-struct foobar_iface_impl<Base, Holder, T> : public Base, tanuki::iface_impl_helper<Base, Holder> {
+struct foobar_iface_impl<Base, Holder, T> : public Base {
     void foo() const override
     {
         std::cout << "foobar_iface_impl calling foo()\n";
-        this->value().foo();
+        getval<Holder>(this).foo();
     }
     void bar() override
     {
         std::cout << "foobar_iface_impl calling bar()\n";
-        this->value().bar();
+        getval<Holder>(this).bar();
     }
 };
 

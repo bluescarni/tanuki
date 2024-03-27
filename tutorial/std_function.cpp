@@ -36,22 +36,22 @@ struct callable_iface {
 
 template <typename Base, typename Holder, typename T, typename R, typename... Args>
     requires std::is_invocable_r_v<R, const tanuki::unwrap_cvref_t<T> &, Args...> && std::copy_constructible<T>
-struct callable_iface_impl<Base, Holder, T, R, Args...> : public Base, tanuki::iface_impl_helper<Base, Holder> {
+struct callable_iface_impl<Base, Holder, T, R, Args...> : public Base {
     R operator()(Args... args) const final
     {
         using unrefT = tanuki::unwrap_cvref_t<T>;
 
         // Check for null function pointer.
         if constexpr (std::is_pointer_v<unrefT> || std::is_member_pointer_v<unrefT>) {
-            if (this->value() == nullptr) {
+            if (getval<Holder>(this) == nullptr) {
                 throw std::bad_function_call{};
             }
         }
 
         if constexpr (std::is_same_v<R, void>) {
-            static_cast<void>(std::invoke(this->value(), std::forward<Args>(args)...));
+            static_cast<void>(std::invoke(getval<Holder>(this), std::forward<Args>(args)...));
         } else {
-            return std::invoke(this->value(), std::forward<Args>(args)...);
+            return std::invoke(getval<Holder>(this), std::forward<Args>(args)...);
         }
     }
 
@@ -60,9 +60,9 @@ struct callable_iface_impl<Base, Holder, T, R, Args...> : public Base, tanuki::i
         using unrefT = tanuki::unwrap_cvref_t<T>;
 
         if constexpr (std::is_pointer_v<unrefT> || std::is_member_pointer_v<unrefT>) {
-            return this->value() != nullptr;
+            return getval<Holder>(this) != nullptr;
         } else if constexpr (is_any_callable<unrefT>::value || is_any_std_func<unrefT>::value) {
-            return static_cast<bool>(this->value());
+            return static_cast<bool>(getval<Holder>(this));
         } else {
             return true;
         }

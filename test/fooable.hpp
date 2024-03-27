@@ -54,10 +54,10 @@ namespace fooable
 
 template <typename Base, typename Holder, typename T, typename U>
     requires(requires(const T &x) { static_cast<void>(x.foo()); })
-struct FOOABLE_DLL_PUBLIC_INLINE_CLASS foo_iface_impl : public Base, tanuki::iface_impl_helper<Base, Holder> {
+struct FOOABLE_DLL_PUBLIC_INLINE_CLASS foo_iface_impl : public Base {
     void foo() const final
     {
-        this->value().foo();
+        getval<Holder>(this).foo();
     }
 };
 

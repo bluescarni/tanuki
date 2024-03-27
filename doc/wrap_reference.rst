@@ -52,8 +52,8 @@ of a type which satisfies these concepts.
 
 Here is what is going on: when a :cpp:class:`wrap` is constructed from
 a `std::reference_wrapper <https://en.cppreference.com/w/cpp/utility/functional/reference_wrapper>`__,
-the :cpp:func:`iface_impl_helper::value()` functions will automatically unwrap the reference
-wrapper and return a reference to the pointed-to value. This allows to use the same code
+the :cpp:func:`getval()` functions will automatically unwrap the reference
+wrapper and return a reference to the referred-to value. This allows to use the same code
 for the implementation of an interface, regardless of whether a copy or a reference is being
 stored in the ``Holder``. Let us see a usage example:
 
@@ -91,7 +91,7 @@ A caveat about const references
 Storing const references in a :cpp:class:`wrap` object is possible, but it comes with a caveat:
 if you try to invoke a non-const member function of the interface on a :cpp:class:`wrap` object
 containing a const reference, then a ``std::runtime_error`` exception will be thrown by the
-:cpp:func:`iface_impl_helper::value()` accessor:
+:cpp:func:`getval()` accessor:
 
 .. literalinclude:: ../tutorial/wrap_reference.cpp
    :language: c++

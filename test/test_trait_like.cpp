@@ -55,19 +55,20 @@ struct tweet {
 // Implement the summary trait for news_article and tweet.
 template <typename Base, typename Holder, typename T>
     requires std::same_as<tanuki::unwrap_cvref_t<T>, news_article>
-struct summary_iface_impl<Base, Holder, T> : Base, tanuki::iface_impl_helper<Base, Holder> {
+struct summary_iface_impl<Base, Holder, T> : Base {
     [[nodiscard]] std::string summarize() const final
     {
-        return this->value().headline + ", by " + this->value().author + " (" + this->value().location + ")";
+        return getval<Holder>(this).headline + ", by " + getval<Holder>(this).author + " ("
+               + getval<Holder>(this).location + ")";
     }
 };
 
 template <typename Base, typename Holder, typename T>
     requires std::same_as<tanuki::unwrap_cvref_t<T>, tweet>
-struct summary_iface_impl<Base, Holder, T> : Base, tanuki::iface_impl_helper<Base, Holder> {
+struct summary_iface_impl<Base, Holder, T> : Base {
     [[nodiscard]] std::string summarize() const final
     {
-        return this->value().username + ": " + this->value().content;
+        return getval<Holder>(this).username + ": " + getval<Holder>(this).content;
     }
 };
 
@@ -127,10 +128,10 @@ struct foo_capable {
 // Implement the fooable trait for foo_capable.
 template <typename Base, typename Holder, typename T>
     requires std::same_as<tanuki::unwrap_cvref_t<T>, foo_capable>
-struct fooable_iface_impl<Base, Holder, T> : Base, tanuki::iface_impl_helper<Base, Holder> {
+struct fooable_iface_impl<Base, Holder, T> : Base {
     [[nodiscard]] std::string foo() const final
     {
-        return this->value().foo;
+        return getval<Holder>(this).foo;
     }
 };
 

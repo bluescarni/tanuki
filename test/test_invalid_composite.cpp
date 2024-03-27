@@ -17,10 +17,10 @@ struct foo_iface;
 
 template <typename Base, typename Holder, typename T>
     requires fooable<T> && std::derived_from<Base, foo_iface>
-struct foo_iface_impl<Base, Holder, T> : public Base, tanuki::iface_impl_helper<Base, Holder> {
+struct foo_iface_impl<Base, Holder, T> : public Base {
     void foo() const final
     {
-        this->value().foo();
+        getval<Holder>(this).foo();
     }
 };
 
@@ -44,10 +44,10 @@ struct bar_iface;
 
 template <typename Base, typename Holder, typename T>
     requires barable<T> && std::derived_from<Base, bar_iface>
-struct bar_iface_impl<Base, Holder, T> : public Base, tanuki::iface_impl_helper<Base, Holder> {
+struct bar_iface_impl<Base, Holder, T> : public Base {
     void bar() const final
     {
-        this->value().bar();
+        getval<Holder>(this).bar();
     }
 };
 
@@ -81,11 +81,10 @@ struct bar2_iface;
 
 template <typename Base, typename Holder, typename T>
     requires barable<T> && std::derived_from<foo_iface_impl<Base, Holder, T>, bar2_iface>
-struct bar2_iface_impl<Base, Holder, T> : foo_iface_impl<Base, Holder, T>,
-                                          tanuki::iface_impl_helper<foo_iface_impl<Base, Holder, T>, Holder> {
+struct bar2_iface_impl<Base, Holder, T> : foo_iface_impl<Base, Holder, T> {
     void bar() const final
     {
-        this->value().bar();
+        getval<Holder>(this).bar();
     }
 };
 

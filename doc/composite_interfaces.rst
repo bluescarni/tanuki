@@ -87,7 +87,7 @@ The ``bar_iface`` interface and its implementation, however, are now different:
 
 .. literalinclude:: ../tutorial/compose2.cpp
    :language: c++
-   :lines: 22-37
+   :lines: 22-36
 
 ``bar_iface`` and its implementation now inherit from ``foo_iface`` and its implementation respectively.
 In other words, ``bar_iface`` now plays the role of a composite interface. Let us wrap it and show
@@ -95,7 +95,7 @@ its usage with the ``foobar_model`` class from the previous example:
 
 .. literalinclude:: ../tutorial/compose2.cpp
    :language: c++
-   :lines: 39-61
+   :lines: 38-60
 
 .. code-block:: console
 

@@ -34,12 +34,10 @@ concept minimal_bidirectional_iterator = minimal_forward_iterator<T, V, R, RR> &
 
 template <typename Base, typename Holder, typename T, typename V, typename R, typename RR>
     requires minimal_bidirectional_iterator<T, V, R, RR>
-struct bidirectional_iterator_iface_impl
-    : forward_iterator_iface_impl<Base, Holder, T, V, R, RR>,
-      tanuki::iface_impl_helper<forward_iterator_iface_impl<Base, Holder, T, V, R, RR>, Holder> {
+struct bidirectional_iterator_iface_impl : forward_iterator_iface_impl<Base, Holder, T, V, R, RR> {
     void operator--() final
     {
-        static_cast<void>(--this->value());
+        static_cast<void>(--getval<Holder>(this));
     }
 };
 

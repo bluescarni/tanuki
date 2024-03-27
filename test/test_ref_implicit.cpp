@@ -41,10 +41,11 @@ struct news_article {
 
 template <typename Base, typename Holder, typename T>
     requires std::same_as<tanuki::unwrap_cvref_t<T>, news_article>
-struct summary_iface_impl<Base, Holder, T> : Base, tanuki::iface_impl_helper<Base, Holder> {
+struct summary_iface_impl<Base, Holder, T> : Base {
     [[nodiscard]] std::string summarize() const final
     {
-        return this->value().headline + ", by " + this->value().author + " (" + this->value().location + ")";
+        return getval<Holder>(this).headline + ", by " + getval<Holder>(this).author + " ("
+               + getval<Holder>(this).location + ")";
     }
 };
 

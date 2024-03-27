@@ -158,9 +158,7 @@ auto e(T &x)
 template <typename T, typename V, typename R, typename RR, typename CR, typename CRR,
           template <typename, typename, typename> typename It>
 concept is_generic_range = requires(T &x) {
-    {
-        make_generic_iterator<It>{}(begin_end_impl::b(x))
-    } -> std::same_as<It<V, R, RR>>;
+    { make_generic_iterator<It>{}(begin_end_impl::b(x)) } -> std::same_as<It<V, R, RR>>;
     // NOTE: these two are the minimal requirements for the sentinel type,
     // and the conceptual requirements for the S and It types of sentinel_box.
     requires std::copyable<decltype(begin_end_impl::e(x))>;
@@ -171,9 +169,7 @@ concept is_generic_range = requires(T &x) {
                 || with_ptrdiff_t_difference<decltype(begin_end_impl::b(x)), decltype(begin_end_impl::e(x))>;
 
     // Const counterparts.
-    {
-        make_generic_iterator<It>{}(begin_end_impl::b(std::as_const(x)))
-    } -> std::same_as<It<V, CR, CRR>>;
+    { make_generic_iterator<It>{}(begin_end_impl::b(std::as_const(x))) } -> std::same_as<It<V, CR, CRR>>;
     requires std::copyable<decltype(begin_end_impl::e(std::as_const(x)))>;
     requires minimal_eq_comparable<decltype(begin_end_impl::b(std::as_const(x))),
                                    decltype(begin_end_impl::e(std::as_const(x)))>;
@@ -186,30 +182,29 @@ concept is_generic_range = requires(T &x) {
 template <typename Base, typename Holder, typename T, typename V, typename R, typename RR, typename CR, typename CRR,
           template <typename, typename, typename> typename It>
     requires std::derived_from<Base, generic_range_iface<V, R, RR, CR, CRR, It>>
-                 && is_generic_range<tanuki::unwrap_cvref_t<T>, V, R, RR, CR, CRR, It>
-struct generic_range_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, It> : public Base,
-                                                                          tanuki::iface_impl_helper<Base, Holder> {
+             && is_generic_range<tanuki::unwrap_cvref_t<T>, V, R, RR, CR, CRR, It>
+struct generic_range_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, It> : public Base {
     It<V, R, RR> begin() final
     {
-        return make_generic_iterator<It>{}(begin_end_impl::b(this->value()));
+        return make_generic_iterator<It>{}(begin_end_impl::b(getval<Holder>(this)));
     }
     sentinel end() final
     {
-        using iter_t = decltype(begin_end_impl::b(this->value()));
-        using sentinel_t = decltype(begin_end_impl::e(this->value()));
+        using iter_t = decltype(begin_end_impl::b(getval<Holder>(this)));
+        using sentinel_t = decltype(begin_end_impl::e(getval<Holder>(this)));
 
-        return sentinel(sentinel_box<sentinel_t, iter_t>{begin_end_impl::e(this->value())});
+        return sentinel(sentinel_box<sentinel_t, iter_t>{begin_end_impl::e(getval<Holder>(this))});
     }
     It<V, CR, CRR> begin() const final
     {
-        return make_generic_iterator<It>{}(begin_end_impl::b(this->value()));
+        return make_generic_iterator<It>{}(begin_end_impl::b(getval<Holder>(this)));
     }
     [[nodiscard]] sentinel end() const final
     {
-        using iter_t = decltype(begin_end_impl::b(this->value()));
-        using sentinel_t = decltype(begin_end_impl::e(this->value()));
+        using iter_t = decltype(begin_end_impl::b(getval<Holder>(this)));
+        using sentinel_t = decltype(begin_end_impl::e(getval<Holder>(this)));
 
-        return sentinel(sentinel_box<sentinel_t, iter_t>{begin_end_impl::e(this->value())});
+        return sentinel(sentinel_box<sentinel_t, iter_t>{begin_end_impl::e(getval<Holder>(this))});
     }
 };
 

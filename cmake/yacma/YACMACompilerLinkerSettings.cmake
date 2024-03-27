@@ -123,6 +123,7 @@ if(NOT _YACMACompilerLinkerSettingsRun)
         # incorrect warnings for UDLs.
         _YACMA_CHECK_ENABLE_DEBUG_CXX_FLAG(-Wno-reserved-identifier)
         _YACMA_CHECK_ENABLE_DEBUG_CXX_FLAG(-Warray-bounds-pointer-arithmetic)
+        # New warnings in clang 14.
         _YACMA_CHECK_ENABLE_DEBUG_CXX_FLAG(-Warray-parameter)
     endif()
 

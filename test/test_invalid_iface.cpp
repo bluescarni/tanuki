@@ -13,10 +13,10 @@ concept ostreamable = requires(std::ostream &os, const T &x) { os << x; };
 
 template <typename Base, typename Holder, typename T>
     requires ostreamable<T>
-struct print_iface_impl : Base, tanuki::iface_impl_helper<Base, Holder> {
+struct print_iface_impl : Base {
     void print() const final
     {
-        std::cout << this->value() << '\n';
+        std::cout << getval<Holder>(this) << '\n';
     }
 };
 
@@ -24,11 +24,11 @@ struct print_iface_impl : Base, tanuki::iface_impl_helper<Base, Holder> {
 int counter = 0;
 
 template <typename Base, typename Holder>
-struct print_iface_impl<Base, Holder, int> : Base, tanuki::iface_impl_helper<Base, Holder> {
+struct print_iface_impl<Base, Holder, int> : Base {
     void print() const final
     {
         ++counter;
-        std::cout << "int ostream: " << this->value() << '\n';
+        std::cout << "int ostream: " << getval<Holder>(this) << '\n';
     }
 };
 

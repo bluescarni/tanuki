@@ -3,11 +3,11 @@
 #include <tanuki/tanuki.hpp>
 
 template <typename Base, typename Holder, typename T>
-struct foo_iface_impl : public Base, tanuki::iface_impl_helper<Base, Holder> {
+struct foo_iface_impl : public Base {
     void foo() const override
     {
         std::cout << "foo_iface_impl calling foo()\n";
-        this->value().foo();
+        getval<Holder>(this).foo();
     }
 };
 

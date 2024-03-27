@@ -91,9 +91,7 @@ struct sentinel_box {
 // NOTE: this is needed only for sized sentinels.
 template <typename T>
 concept has_distance_to_iter = requires(const T &x, const any_ref &ar) {
-    {
-        x.distance_to_iter(ar)
-    } -> std::same_as<std::ptrdiff_t>;
+    { x.distance_to_iter(ar) } -> std::same_as<std::ptrdiff_t>;
 };
 
 // Detect instances of sentinel_box.
@@ -108,15 +106,15 @@ struct is_sentinel_box<sentinel_box<S, It>> : std::true_type {
 // Definition of the interface implementation for sentinel.
 template <typename Base, typename Holder, typename T>
     requires is_sentinel_box<T>::value
-struct sentinel_iface_impl : public Base, tanuki::iface_impl_helper<Base, Holder> {
+struct sentinel_iface_impl : public Base {
     [[nodiscard]] bool at_end(const any_ref &ar) const final
     {
-        return this->value().at_end(ar);
+        return getval<Holder>(this).at_end(ar);
     }
     [[nodiscard]] std::ptrdiff_t distance_to_iter(const any_ref &ar) const final
     {
         if constexpr (has_distance_to_iter<T>) {
-            return this->value().distance_to_iter(ar);
+            return getval<Holder>(this).distance_to_iter(ar);
         } else {
             throw std::runtime_error("The sentinel type '" + tanuki::demangle(typeid(T).name())
                                      + "' is not a sized sentinel");

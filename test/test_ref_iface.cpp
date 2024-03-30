@@ -107,6 +107,26 @@ TEST_CASE("ref_iface noinit")
     REQUIRE(!std::is_move_constructible_v<wrap1_t>);
 }
 
+#if defined(TANUKI_HAVE_EXPLICIT_THIS)
+
+struct any_ref_iface_explicit_this {
+    template <class Wrap>
+    void foo(this const Wrap &self)
+    {
+        iface_ptr(self)->foo();
+    }
+};
+
+TEST_CASE("ref_iface explicit this")
+{
+    using wrap1_t = tanuki::wrap<foobar_iface, tanuki::config<void, any_ref_iface_explicit_this>{}>;
+
+    wrap1_t w1{fooer{}};
+    w1.foo();
+}
+
+#endif
+
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
 #if defined(__GNUC__)

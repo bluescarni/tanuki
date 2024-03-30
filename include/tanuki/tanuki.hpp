@@ -76,6 +76,17 @@
 
 #endif
 
+// Detect the presence of C++23's "explicit this" feature.
+// Normally can do this via the standard __cpp_explicit_this_parameter
+// ifdef, except that for some reason clang 18 supports the feature but
+// does not set the ifdef.
+#if __cpp_explicit_this_parameter >= 202110L                                                                           \
+    || (__cplusplus >= 202302L && !defined(__apple_build_version__) && __clang_major__ >= 18)
+
+#define TANUKI_HAVE_EXPLICIT_THIS
+
+#endif
+
 // ABI tag setup.
 #if defined(__GNUC__) || defined(__clang__)
 
@@ -827,11 +838,56 @@ struct TANUKI_VISIBLE composite_ref_iface {
 // Enum to select the explicitness of the generic wrap ctors.
 enum class wrap_ctor { always_explicit, ref_implicit, always_implicit };
 
+namespace detail
+{
+
+// NOTE: the machinery in this section is used to detect if a type
+// defines in its scope a template type/typedef called "impl"
+// which depends on a single parameter. In order to do this, we
+// exploit the fact that if during concept checking a substitution
+// error occurs, then the concept is considered not satisfied.
+
+template <template <typename> typename>
+struct single_tt {
+};
+
+// NOTE: the purpose of this concept is to yield alwas true
+// for an input template-template TT depending on a single parameter.
+// We cannot simply use "concept single_tt_id = true" because of reasons
+// that have to do with constraint normalisation and illustrated partly here:
+//
+// https://stackoverflow.com/questions/69823200/gcc-disagrees-with-clang-and-msvc-when-concept-thats-always-true-is-used-to-imp
+// https://stackoverflow.com/questions/75442605/c20-concepts-constraint-normalization
+//
+// Basically, with "concept single_tt_id = true" during the normalisation phase
+// we would end up with the atomic constraint "true" and an empty parameter mapping.
+// Thus, it does not matter whether or not the "impl" type/typedef exists or not,
+// the concept will always be satisfied because no substitution takes place (due to
+// the parameter mapping being empty).
+template <template <typename> typename TT>
+concept single_tt_id = requires() { typename single_tt<TT>; };
+
+// NOTE: this is where we are checking that T defines an "impl" template
+// in its scope.
+template <typename T>
+concept with_impl_tt = single_tt_id<T::template impl>;
+
+} // namespace detail
+
+template <typename RefIFace>
+concept valid_ref_iface =
+#if defined(TANUKI_HAVE_EXPLICIT_THIS)
+    true
+#else
+    detail::with_impl_tt<RefIFace>
+#endif
+    ;
+
 // Configuration settings for the wrap class.
 // NOTE: the DefaultValueType is subject to the constraints
 // for valid value types.
 template <typename DefaultValueType = void, typename RefIFace = no_ref_iface>
-    requires std::same_as<DefaultValueType, void> || valid_value_type<DefaultValueType>
+    requires(std::same_as<DefaultValueType, void> || valid_value_type<DefaultValueType>) && valid_ref_iface<RefIFace>
 struct TANUKI_VISIBLE config final : detail::config_base {
     using default_value_type = DefaultValueType;
 
@@ -873,6 +929,9 @@ template <typename DefaultValueType, typename RefIFace>
 struct cfg_ref_type<config<DefaultValueType, RefIFace>> {
     using type = RefIFace;
 };
+
+template <auto Cfg>
+using cfg_ref_t = typename detail::cfg_ref_type<std::remove_const_t<decltype(Cfg)>>::type;
 
 } // namespace detail
 
@@ -1002,25 +1061,48 @@ inline constexpr invalid_wrap_t invalid_wrap{};
 template <typename T>
 using unwrap_cvref_t = std::remove_cvref_t<std::unwrap_reference_t<T>>;
 
+namespace detail
+{
+
+template <typename T, typename Wrap>
+struct get_ref_iface {
+};
+
+template <typename T, typename Wrap>
+    requires with_impl_tt<T>
+struct get_ref_iface<T, Wrap> {
+    using type = typename T::template impl<Wrap>;
+};
+
+#if defined(TANUKI_HAVE_EXPLICIT_THIS)
+
+template <typename T, typename Wrap>
+    requires(!with_impl_tt<T>)
+struct get_ref_iface<T, Wrap> {
+    using type = T;
+};
+
+#endif
+
+} // namespace detail
+
 // The wrap class.
 template <typename IFace, auto Cfg = default_config>
     requires std::is_polymorphic_v<IFace> && std::has_virtual_destructor_v<IFace> && valid_config<Cfg>
-class TANUKI_VISIBLE wrap
-    : private detail::wrap_storage<IFace, Cfg.static_size, Cfg.static_align, Cfg.semantics>,
-      // NOTE: the reference interface is not supposed to hold any data: it will always
-      // be def-inited (even when copying/moving a wrap object), its assignment operators
-      // will never be invoked, it will never be swapped, etc. This needs to be documented.
-      public detail::cfg_ref_type<std::remove_const_t<decltype(Cfg)>>::type::template impl<wrap<IFace, Cfg>>,
-      public detail::wrap_pointer_iface<Cfg.pointer_interface, wrap<IFace, Cfg>, IFace>
+class TANUKI_VISIBLE wrap : private detail::wrap_storage<IFace, Cfg.static_size, Cfg.static_align, Cfg.semantics>,
+                            // NOTE: the reference interface is not supposed to hold any data: it will always
+                            // be def-inited (even when copying/moving a wrap object), its assignment operators
+                            // will never be invoked, it will never be swapped, etc. This needs to be documented.
+                            public detail::get_ref_iface<detail::cfg_ref_t<Cfg>, wrap<IFace, Cfg>>::type,
+                            public detail::wrap_pointer_iface<Cfg.pointer_interface, wrap<IFace, Cfg>, IFace>
 {
     // Aliases for the two interfaces.
     using iface_t = IFace;
     using value_iface_t = detail::value_iface<iface_t, Cfg.semantics>;
 
     // Alias for the reference interface.
-    using ref_iface_t =
-        // NOTE: clang 14 needs the typename here, hopefully this is not harmful to other compilers.
-        typename detail::cfg_ref_type<std::remove_const_t<decltype(Cfg)>>::type::template impl<wrap<IFace, Cfg>>;
+    // NOTE: clang 14 needs the typename here, hopefully this is not harmful to other compilers.
+    using ref_iface_t = typename detail::get_ref_iface<detail::cfg_ref_t<Cfg>, wrap<IFace, Cfg>>::type;
 
     // The default value type.
     using default_value_t = typename decltype(Cfg)::default_value_type;

@@ -45,6 +45,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build
         run: bash tools/gha_osx_clang_14.sh
+  osx_clang_18:
+    runs-on: macos-11
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: bash tools/gha_osx_clang_18.sh
   windows_vs2022_cpp20:
     runs-on: windows-2022
     steps:

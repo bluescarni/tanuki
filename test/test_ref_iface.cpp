@@ -123,7 +123,6 @@ TEST_CASE("ref_iface explicit this")
 
     wrap1_t w1{fooer{}};
     w1.foo();
-    d;
 }
 
 #endif

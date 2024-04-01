@@ -879,7 +879,7 @@ struct single_tt {
 };
 
 // NOTE: the purpose of this concept is to yield alwas true
-// for an input template-template TT depending on a single parameter.
+// for any input template-template TT depending on a single parameter.
 // We cannot simply use "concept single_tt_id = true" because of reasons
 // that have to do with constraint normalisation and illustrated partly here:
 //
@@ -901,7 +901,7 @@ concept with_impl_tt = single_tt_id<T::template impl>;
 
 } // namespace detail
 
-// Concept for checking thar RefIFace is a valid
+// Concept for checking that RefIFace is a valid
 // reference interface. In C++>=23, anything goes,
 // in C++20 we need to make sure the impl typedef exists.
 template <typename RefIFace>
@@ -998,6 +998,8 @@ concept valid_config =
 
 #if defined(TANUKI_HAVE_EXPLICIT_THIS)
 
+// NOTE: this is the C++23 version of the macro,
+// leveraging the "explicit this" feature.
 #define TANUKI_REF_IFACE_MEMFUN2(name)                                                                                 \
     template <typename Wrap, typename... MemFunArgs>                                                                   \
     auto name(this Wrap &&self, MemFunArgs &&...args) noexcept(                                                        \
@@ -1152,7 +1154,6 @@ class TANUKI_VISIBLE wrap : private detail::wrap_storage<IFace, Cfg.static_size,
     using value_iface_t = detail::value_iface<iface_t, Cfg.semantics>;
 
     // Alias for the reference interface.
-    // NOTE: clang 14 needs the typename here, hopefully this is not harmful to other compilers.
     using ref_iface_t = detail::get_ref_iface_t<Cfg, wrap<IFace, Cfg>>;
 
     // The default value type.

@@ -110,11 +110,7 @@ TEST_CASE("ref_iface noinit")
 #if defined(TANUKI_HAVE_EXPLICIT_THIS)
 
 struct any_ref_iface_explicit_this {
-    template <typename Wrap>
-    void foo(this const Wrap &self)
-    {
-        iface_ptr(self)->foo();
-    }
+    TANUKI_REF_IFACE_MEMFUN2(foo)
     TANUKI_REF_IFACE_MEMFUN2(bar)
     TANUKI_REF_IFACE_MEMFUN2(fuzz)
 };
@@ -131,14 +127,17 @@ TEST_CASE("ref_iface explicit this")
 
     wrap1_t w1{fooer{}};
     w1.foo();
+    REQUIRE(noexcept(w1.foo()));
 
     w1.bar();
+    REQUIRE(!noexcept(w1.bar()));
     REQUIRE(barable<wrap1_t &>);
     REQUIRE(barable<wrap1_t &&>);
     REQUIRE(!barable<const wrap1_t &>);
     REQUIRE(!barable<const wrap1_t &&>);
 
     std::move(w1).fuzz();
+    REQUIRE(!noexcept(std::move(w1).fuzz()));
     REQUIRE(!fuzzable<wrap1_t &>);
     REQUIRE(fuzzable<wrap1_t &&>);
     REQUIRE(!fuzzable<const wrap1_t &>);

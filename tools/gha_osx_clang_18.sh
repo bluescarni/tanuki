@@ -18,7 +18,7 @@ source activate $deps_dir
 mkdir build
 cd build
 
-# GCC build.
+export CXXFLAGS="$CXXFLAGS -D_LIBCPP_DISABLE_AVAILABILITY"
 cmake -G Ninja ../ -DCMAKE_PREFIX_PATH=$deps_dir \
     -DCMAKE_CXX_STANDARD=23 \
     -DCMAKE_CXX_COMPILER=clang++ \

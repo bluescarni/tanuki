@@ -874,6 +874,9 @@ concept with_impl_tt = single_tt_id<T::template impl>;
 
 } // namespace detail
 
+// Concept for checking thar RefIFace is a valid
+// reference interface. In C++>=23, anything goes,
+// in C++20 we need to make sure the impl typedef exists.
 template <typename RefIFace>
 concept valid_ref_iface =
 #if defined(TANUKI_HAVE_EXPLICIT_THIS)
@@ -919,19 +922,6 @@ namespace detail
 
 template <std::size_t N>
 concept power_of_two = (N > 0u) && ((N & (N - 1u)) == 0u);
-
-// Machinery to infer the reference interface from a config instance.
-template <typename>
-struct cfg_ref_type {
-};
-
-template <typename DefaultValueType, typename RefIFace>
-struct cfg_ref_type<config<DefaultValueType, RefIFace>> {
-    using type = RefIFace;
-};
-
-template <auto Cfg>
-using cfg_ref_t = typename detail::cfg_ref_type<std::remove_const_t<decltype(Cfg)>>::type;
 
 } // namespace detail
 
@@ -1064,6 +1054,21 @@ using unwrap_cvref_t = std::remove_cvref_t<std::unwrap_reference_t<T>>;
 namespace detail
 {
 
+// NOTE: this section contains code for fetching the reference interface type
+// for a wrap instance.
+
+template <typename>
+struct cfg_ref_type {
+};
+
+template <typename DefaultValueType, typename RefIFace>
+struct cfg_ref_type<config<DefaultValueType, RefIFace>> {
+    using type = RefIFace;
+};
+
+template <auto Cfg>
+using cfg_ref_t = typename cfg_ref_type<std::remove_const_t<decltype(Cfg)>>::type;
+
 template <typename T, typename Wrap>
 struct get_ref_iface {
 };
@@ -1084,6 +1089,9 @@ struct get_ref_iface<T, Wrap> {
 
 #endif
 
+template <auto Cfg, typename Wrap>
+using get_ref_iface_t = typename get_ref_iface<cfg_ref_t<Cfg>, Wrap>::type;
+
 } // namespace detail
 
 // The wrap class.
@@ -1093,7 +1101,7 @@ class TANUKI_VISIBLE wrap : private detail::wrap_storage<IFace, Cfg.static_size,
                             // NOTE: the reference interface is not supposed to hold any data: it will always
                             // be def-inited (even when copying/moving a wrap object), its assignment operators
                             // will never be invoked, it will never be swapped, etc. This needs to be documented.
-                            public detail::get_ref_iface<detail::cfg_ref_t<Cfg>, wrap<IFace, Cfg>>::type,
+                            public detail::get_ref_iface_t<Cfg, wrap<IFace, Cfg>>,
                             public detail::wrap_pointer_iface<Cfg.pointer_interface, wrap<IFace, Cfg>, IFace>
 {
     // Aliases for the two interfaces.
@@ -1102,7 +1110,7 @@ class TANUKI_VISIBLE wrap : private detail::wrap_storage<IFace, Cfg.static_size,
 
     // Alias for the reference interface.
     // NOTE: clang 14 needs the typename here, hopefully this is not harmful to other compilers.
-    using ref_iface_t = typename detail::get_ref_iface<detail::cfg_ref_t<Cfg>, wrap<IFace, Cfg>>::type;
+    using ref_iface_t = detail::get_ref_iface_t<Cfg, wrap<IFace, Cfg>>;
 
     // The default value type.
     using default_value_t = typename decltype(Cfg)::default_value_type;

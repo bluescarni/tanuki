@@ -78,10 +78,11 @@
 
 // Detect the presence of C++23's "explicit this" feature.
 // Normally can do this via the standard __cpp_explicit_this_parameter
-// ifdef, except that for some reason clang 18 supports the feature but
-// does not set the ifdef.
+// ifdef, except that for some reason MSVC>=19.32 and clang>=18 support the feature but
+// do not set the ifdef.
 #if __cpp_explicit_this_parameter >= 202110L                                                                           \
-    || (__cplusplus >= 202302L && !defined(__apple_build_version__) && __clang_major__ >= 18)
+    || (__clang_major__ >= 18 && __cplusplus >= 202302L && !defined(__apple_build_version__))                          \
+    || (_MSC_VER >= 1932 && _MSVC_LANG > 202002L)
 
 #define TANUKI_HAVE_EXPLICIT_THIS
 

@@ -185,6 +185,32 @@ enum class TANUKI_VISIBLE wrap_semantics { value, reference };
 namespace detail
 {
 
+#if defined(TANUKI_HAVE_EXPLICIT_THIS)
+
+// Implementation of std::forward_like(), at this time still missing
+// in some compilers. See:
+// https://en.cppreference.com/w/cpp/utility/forward_like
+template <typename T, typename U>
+[[nodiscard]] constexpr auto &&forward_like(U &&x) noexcept
+{
+    constexpr bool is_adding_const = std::is_const_v<std::remove_reference_t<T>>;
+    if constexpr (std::is_lvalue_reference_v<T &&>) {
+        if constexpr (is_adding_const) {
+            return std::as_const(x);
+        } else {
+            return static_cast<U &>(x);
+        }
+    } else {
+        if constexpr (is_adding_const) {
+            return std::move(std::as_const(x));
+        } else {
+            return std::move(x);
+        }
+    }
+}
+
+#endif
+
 // LCOV_EXCL_START
 
 // std::unreachable() implementation:
@@ -970,6 +996,22 @@ concept valid_config =
         return std::move(*iface_ptr(*static_cast<const Wrap *>(this))).name(std::forward<MemFunArgs>(args)...);        \
     }
 
+#if defined(TANUKI_HAVE_EXPLICIT_THIS)
+
+#define TANUKI_REF_IFACE_MEMFUN2(name)                                                                                 \
+    template <typename Wrap, typename... MemFunArgs>                                                                   \
+    auto name(this Wrap &&self, MemFunArgs &&...args) noexcept(                                                        \
+        noexcept(tanuki::detail::forward_like<Wrap>(*iface_ptr(std::forward<Wrap>(self)))                              \
+                     .name(std::forward<MemFunArgs>(args)...)))                                                        \
+        -> decltype(tanuki::detail::forward_like<Wrap>(*iface_ptr(std::forward<Wrap>(self)))                           \
+                        .name(std::forward<MemFunArgs>(args)...))                                                      \
+    {                                                                                                                  \
+        return tanuki::detail::forward_like<Wrap>(*iface_ptr(std::forward<Wrap>(self)))                                \
+            .name(std::forward<MemFunArgs>(args)...);                                                                  \
+    }
+
+#endif
+
 namespace detail
 {
 
@@ -1715,7 +1757,23 @@ public:
             return w.m_pv_iface.get();
         }
     }
+    [[nodiscard]] friend const iface_t *iface_ptr(const wrap &&w) noexcept
+    {
+        if constexpr (Cfg.semantics == wrap_semantics::value) {
+            return w.m_pv_iface;
+        } else {
+            return w.m_pv_iface.get();
+        }
+    }
     [[nodiscard]] friend iface_t *iface_ptr(wrap &w) noexcept
+    {
+        if constexpr (Cfg.semantics == wrap_semantics::value) {
+            return w.m_pv_iface;
+        } else {
+            return w.m_pv_iface.get();
+        }
+    }
+    [[nodiscard]] friend iface_t *iface_ptr(wrap &&w) noexcept
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
             return w.m_pv_iface;

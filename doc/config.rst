@@ -1,3 +1,5 @@
+.. _config_settings:
+
 .. cpp:namespace-push:: tanuki
 
 Configuration options

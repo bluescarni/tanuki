@@ -86,6 +86,14 @@ The ``wrap`` class
 
       :return: the validity status for *w*.
 
+   .. cpp:function:: [[nodiscard]] friend const iface_t *iface_ptr(const wrap &w) noexcept
+
+   .. cpp:function:: [[nodiscard]] friend const iface_t *iface_ptr(const wrap &&w) noexcept
+
+   .. cpp:function:: [[nodiscard]] friend iface_t *iface_ptr(wrap &w) noexcept
+
+   .. cpp:function:: [[nodiscard]] friend iface_t *iface_ptr(wrap &&w) noexcept
+
    .. cpp:function:: template <typename T, typename... Args> friend void emplace(wrap &w, Args &&...args)
 
       Emplace a value into a :cpp:class:`wrap`.

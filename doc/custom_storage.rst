@@ -28,7 +28,7 @@ storage available for the type-erased value will be less than 24 bytes. How much
 is dependent on a variety of factors and difficult to compute in advance.
 
 For this reason, tanuki provides a :cpp:var:`holder_size` helper which can be used to compute
-how much **total** storage is needed to store a value of a type ``T`` in a :cpp:class:`wrap`.
+how much **total** memory is needed to statically store a value of a type ``T`` in a :cpp:class:`wrap`.
 Let us a see a simple example.
 
 We have our usual super-basic interface and its implementation:

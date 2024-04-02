@@ -5,7 +5,7 @@
 Configuration options
 =====================
 
-.. cpp:struct:: template <typename DefaultValueType = void, typename RefIFace = no_ref_iface> requires std::same_as<DefaultValueType, void> || valid_value_type<DefaultValueType> config
+.. cpp:struct:: template <typename DefaultValueType = void, typename RefIFace = no_ref_iface> requires (std::same_as<DefaultValueType, void> || valid_value_type<DefaultValueType>) && valid_ref_iface<RefIFace> config
 
    Configuration struct.
 
@@ -90,13 +90,20 @@ Configuration options
 
 .. cpp:var:: template <typename T, typename IFace> requires iface_with_impl<IFace, T> inline constexpr std::size_t holder_size
 
-   Helper to compute the amount of memory (in bytes) needed to store in a :cpp:class:`wrap`
+   Helper to compute the total amount of memory (in bytes) needed to statically store in a :cpp:class:`wrap`
    a value of type :cpp:type:`T` wrapped by the interface :cpp:type:`IFace`.
 
 .. cpp:var:: template <typename T, typename IFace> requires iface_with_impl<IFace, T> inline constexpr std::size_t holder_align
 
-   Helper to compute the amount of memory (in bytes) needed to store in a :cpp:class:`wrap`
+   Helper to compute the alignment (in bytes) required to statically store in a :cpp:class:`wrap`
    a value of type :cpp:type:`T` wrapped by the interface :cpp:type:`IFace`.
+
+.. cpp:concept:: template <typename RefIFace> valid_ref_iface
+
+   This concept is satisfied if :cpp:type:`RefIFace` is a valid :ref:`reference interface <ref_interface>`.
+
+   When using C++23, this concept is satisfied by any non-cv qualified class type. In C++20, :cpp:type:`RefIFace`
+   must also define in its scope an ``impl`` class template/template alias depending exactly on one parameter.
 
 .. cpp:concept:: template <auto Cfg> valid_config
 

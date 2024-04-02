@@ -905,11 +905,9 @@ concept with_impl_tt = single_tt_id<T::template impl>;
 // reference interface. In C++>=23, anything goes,
 // in C++20 we need to make sure the impl typedef exists.
 template <typename RefIFace>
-concept valid_ref_iface =
-#if defined(TANUKI_HAVE_EXPLICIT_THIS)
-    true
-#else
-    detail::with_impl_tt<RefIFace>
+concept valid_ref_iface = std::is_class_v<RefIFace> && std::same_as<RefIFace, std::remove_cv_t<RefIFace>>
+#if !defined(TANUKI_HAVE_EXPLICIT_THIS)
+                          && detail::with_impl_tt<RefIFace>
 #endif
     ;
 
@@ -1150,8 +1148,7 @@ class TANUKI_VISIBLE wrap : private detail::wrap_storage<IFace, Cfg.static_size,
                             public detail::wrap_pointer_iface<Cfg.pointer_interface, wrap<IFace, Cfg>, IFace>
 {
     // Aliases for the two interfaces.
-    using iface_t = IFace;
-    using value_iface_t = detail::value_iface<iface_t, Cfg.semantics>;
+    using value_iface_t = detail::value_iface<IFace, Cfg.semantics>;
 
     // Alias for the reference interface.
     using ref_iface_t = detail::get_ref_iface_t<Cfg, wrap<IFace, Cfg>>;
@@ -1372,7 +1369,7 @@ public:
                 // in the configuration.
                 (!std::same_as<void, default_value_t>) &&
                 // We must be able to construct the holder.
-                detail::holder_constructible_from<default_value_t, iface_t, Cfg.semantics>
+                detail::holder_constructible_from<default_value_t, IFace, Cfg.semantics>
     wrap() noexcept(noexcept(this->ctor_impl<default_value_t>()) && detail::nothrow_default_initializable<ref_iface_t>)
     {
         ctor_impl<default_value_t>();
@@ -1388,7 +1385,7 @@ public:
                  // Must not compete with copy/move.
                  (!std::same_as<std::remove_cvref_t<T>, wrap>) &&
                  // We must be able to construct the holder.
-                 detail::holder_constructible_from<detail::value_t_from_arg<T &&>, iface_t, Cfg.semantics, T &&>
+                 detail::holder_constructible_from<detail::value_t_from_arg<T &&>, IFace, Cfg.semantics, T &&>
     explicit(explicit_ctor < wrap_ctor::always_implicit)
         // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,google-explicit-constructor,hicpp-explicit-conversions)
         wrap(T &&x) noexcept(noexcept(this->ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x)))
@@ -1404,7 +1401,7 @@ public:
     template <typename T>
         requires std::default_initializable<ref_iface_t> &&
                  // We must be able to construct the holder.
-                 detail::holder_constructible_from<std::reference_wrapper<T>, iface_t, Cfg.semantics,
+                 detail::holder_constructible_from<std::reference_wrapper<T>, IFace, Cfg.semantics,
                                                    std::reference_wrapper<T>>
     explicit(explicit_ctor == wrap_ctor::always_explicit)
         // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
@@ -1423,7 +1420,7 @@ public:
                  // Forbid emplacing a wrap inside a wrap.
                  (!std::same_as<T, wrap>) &&
                  // We must be able to construct the holder.
-                 detail::holder_constructible_from<T, iface_t, Cfg.semantics, U &&...>
+                 detail::holder_constructible_from<T, IFace, Cfg.semantics, U &&...>
     explicit wrap(std::in_place_type_t<T>, U &&...args) noexcept(noexcept(this->ctor_impl<T>(std::forward<U>(args)...))
                                                                  && detail::nothrow_default_initializable<ref_iface_t>)
     {
@@ -1632,7 +1629,7 @@ public:
         // Must not compete with copy/move assignment.
         (!std::same_as<std::remove_cvref_t<T>, wrap>) &&
         // We must be able to construct the holder.
-        detail::holder_constructible_from<detail::value_t_from_arg<T &&>, iface_t, Cfg.semantics, T &&>
+        detail::holder_constructible_from<detail::value_t_from_arg<T &&>, IFace, Cfg.semantics, T &&>
         wrap &operator=(T &&x)
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
@@ -1698,7 +1695,7 @@ public:
         // Forbid emplacing a wrap inside a wrap.
         (!std::same_as<T, wrap>) &&
         // We must be able to construct the holder.
-        detail::holder_constructible_from<T, iface_t, Cfg.semantics, Args &&...>
+        detail::holder_constructible_from<T, IFace, Cfg.semantics, Args &&...>
         friend void emplace(wrap &w, Args &&...args) noexcept(noexcept(w.ctor_impl<T>(std::forward<Args>(args)...)))
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
@@ -1750,7 +1747,7 @@ public:
         return w.m_pv_iface->_tanuki_value_type_index();
     }
 
-    [[nodiscard]] friend const iface_t *iface_ptr(const wrap &w) noexcept
+    [[nodiscard]] friend const IFace *iface_ptr(const wrap &w) noexcept
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
             return w.m_pv_iface;
@@ -1758,7 +1755,7 @@ public:
             return w.m_pv_iface.get();
         }
     }
-    [[nodiscard]] friend const iface_t *iface_ptr(const wrap &&w) noexcept
+    [[nodiscard]] friend const IFace *iface_ptr(const wrap &&w) noexcept
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
             return w.m_pv_iface;
@@ -1766,7 +1763,7 @@ public:
             return w.m_pv_iface.get();
         }
     }
-    [[nodiscard]] friend iface_t *iface_ptr(wrap &w) noexcept
+    [[nodiscard]] friend IFace *iface_ptr(wrap &w) noexcept
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
             return w.m_pv_iface;
@@ -1774,7 +1771,7 @@ public:
             return w.m_pv_iface.get();
         }
     }
-    [[nodiscard]] friend iface_t *iface_ptr(wrap &&w) noexcept
+    [[nodiscard]] friend IFace *iface_ptr(wrap &&w) noexcept
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
             return w.m_pv_iface;

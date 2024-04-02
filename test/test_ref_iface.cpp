@@ -52,8 +52,23 @@ struct foobar_ref_iface {
     };
 };
 
+struct barbaz {
+};
+
 TEST_CASE("ref_iface basics")
 {
+    REQUIRE(!tanuki::valid_ref_iface<int>);
+    REQUIRE(!tanuki::valid_ref_iface<void>);
+    REQUIRE(!tanuki::valid_ref_iface<foobar_ref_iface &>);
+    REQUIRE(!tanuki::valid_ref_iface<const foobar_ref_iface>);
+    REQUIRE(tanuki::valid_ref_iface<foobar_ref_iface>);
+
+#if !defined(TANUKI_HAVE_EXPLICIT_THIS)
+
+    REQUIRE(!tanuki::valid_ref_iface<barbaz>);
+
+#endif
+
     using wrap1_t = tanuki::wrap<foobar_iface, tanuki::config<void, foobar_ref_iface>{.invalid_default_ctor = true}>;
     using wrap2_t = tanuki::wrap<foobar_iface, tanuki::config<fooer, foobar_ref_iface>{}>;
 
@@ -123,6 +138,8 @@ concept fuzzable = requires(T &&x) { std::forward<T>(x).fuzz(); };
 
 TEST_CASE("ref_iface explicit this")
 {
+    REQUIRE(tanuki::valid_ref_iface<any_ref_iface_explicit_this>);
+
     using wrap1_t = tanuki::wrap<foobar_iface, tanuki::config<void, any_ref_iface_explicit_this>{}>;
 
     wrap1_t w1{fooer{}};

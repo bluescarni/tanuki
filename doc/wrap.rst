@@ -86,13 +86,13 @@ The ``wrap`` class
 
       :return: the validity status for *w*.
 
-   .. cpp:function:: [[nodiscard]] friend const iface_t *iface_ptr(const wrap &w) noexcept
+   .. cpp:function:: [[nodiscard]] friend const IFace *iface_ptr(const wrap &w) noexcept
 
-   .. cpp:function:: [[nodiscard]] friend const iface_t *iface_ptr(const wrap &&w) noexcept
+   .. cpp:function:: [[nodiscard]] friend const IFace *iface_ptr(const wrap &&w) noexcept
 
-   .. cpp:function:: [[nodiscard]] friend iface_t *iface_ptr(wrap &w) noexcept
+   .. cpp:function:: [[nodiscard]] friend IFace *iface_ptr(wrap &w) noexcept
 
-   .. cpp:function:: [[nodiscard]] friend iface_t *iface_ptr(wrap &&w) noexcept
+   .. cpp:function:: [[nodiscard]] friend IFace *iface_ptr(wrap &&w) noexcept
 
    .. cpp:function:: template <typename T, typename... Args> friend void emplace(wrap &w, Args &&...args)
 
@@ -101,8 +101,8 @@ The ``wrap`` class
       This function will first destroy the value in *w* (if *w* is not already in the :ref:`invalid state <invalid_state>`).
       It will then construct in *w* a value of type :cpp:type:`T` using the construction arguments :cpp:type:`Args`.
 
-      This function is enabled only if :cpp:type:`T` is not :cpp:class:`wrap` and if an instance of :cpp:type:`T`
-      can be constructed from :cpp:type:`Args`.
+      This function is enabled only if :cpp:type:`T` is not :cpp:class:`wrap` (that is, it is not possible to emplace
+      a :cpp:class:`wrap` into itself) and if an instance of :cpp:type:`T` can be constructed from :cpp:type:`Args`.
 
       This function is ``noexcept`` if all these conditions are satisfied:
 

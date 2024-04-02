@@ -11,14 +11,16 @@ wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge
 export deps_dir=$HOME/local
 export PATH="$HOME/miniconda/bin:$PATH"
 bash miniconda.sh -b -p $HOME/miniconda
-mamba create -y -q -p $deps_dir 'clangxx=14.*' cmake libboost-devel ninja
+mamba create -y -q -p $deps_dir 'clangxx=18.*' cmake libboost-devel ninja
 source activate $deps_dir
 
 # Create the build dir and cd into it.
 mkdir build
 cd build
 
+export CXXFLAGS="$CXXFLAGS -D_LIBCPP_DISABLE_AVAILABILITY"
 cmake -G Ninja ../ -DCMAKE_PREFIX_PATH=$deps_dir \
+    -DCMAKE_CXX_STANDARD=23 \
     -DCMAKE_CXX_COMPILER=clang++ \
     -DCMAKE_BUILD_TYPE=Debug \
     -DTANUKI_BUILD_TESTS=yes \

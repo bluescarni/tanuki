@@ -45,11 +45,16 @@ neither of which are currently available.
 
 The better news is that tanuki provides a mechanism to deactivate the pointer interface (i.e., operator ``->``)
 and activate a *reference interface* instead (i.e., dot-style access to the member functions). Implementing
-a reference interface will require you to pick your poison: either accept some
-`repetition <https://en.wikipedia.org/wiki/Don%27t_repeat_yourself>`__ or use a macro-based solution.
+a reference interface will require a certain amount of
+`repetition <https://en.wikipedia.org/wiki/Don%27t_repeat_yourself>`__ that can be partially alleviated
+via the use of macros.
 
-Implementing a reference interface
-----------------------------------
+The following sections explain how to implement reference interfaces. Two APIs can be used: the first one
+is always available, the second one is a cleaner and less verbose alternative that however requires
+C++23.
+
+Reference interfaces in C++20
+-----------------------------
 
 Consider the simple interface from the :ref:`previous tutorial <simple_interface>`, its implementation
 and a ``foo_model`` class:
@@ -86,7 +91,7 @@ an equivalent reference interface which does **not** use the :c:macro:`TANUKI_RE
 
 Here is what is going on: tanuki makes the :cpp:class:`wrap` class inherit from ``foo_ref_iface2::impl``,
 so that, via the `curiously recurring template pattern (CRTP) <https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern>`__,
-we can invoke the :cpp:func:`wrap::iface_ptr` function on the :cpp:class:`wrap` object
+we can invoke the :cpp:func:`~wrap::iface_ptr()` function on the :cpp:class:`wrap` object
 to access a pointer to the ``foo_iface`` interface, via which we finally invoke the ``foo()``
 member function. Phew!
 
@@ -100,7 +105,7 @@ stomach macros.
 After the definition of the reference interfaces, we need to configure the :cpp:class:`wrap` class
 to make use of them. This is accomplished by defining custom :cpp:class:`config` instances and using
 them in the :cpp:class:`wrap` class. For instance, for the macro-based reference interface we
-first write:
+first define a custom configuration called ``foo_config1``:
 
 .. literalinclude:: ../tutorial/reference_interface.cpp
    :language: c++
@@ -109,21 +114,21 @@ first write:
 The :cpp:class:`config` class is templated over two types. Ignoring the first one for the time
 being (its meaning will be explained :ref:`later <def_ctor>`), the second parameter is the reference interface, which
 we set to ``foo_ref_iface1`` to select the macro-based reference interface. We also switch off
-the pointer interface in :cpp:class:`wrap` via the ``.pointer_interface = false``
-`designated initializer <https://en.cppreference.com/w/cpp/language/aggregate_initialization>`__ -- this
-will ensure that access to the interface functions via the arrow operator is disabled.
+the pointer interface in :cpp:class:`wrap` by setting to ``false`` the :cpp:var:`~config::pointer_interface`
+:ref:`configuration setting <config_settings>` -- this will ensure that access to the interface
+functions via the arrow operator is disabled.
 
 We can now use the custom configuration instance in the definition of the wrap class:
 
 .. literalinclude:: ../tutorial/reference_interface.cpp
    :language: c++
-   :lines: 49
+   :lines: 69
 
 And we can confirm that indeed we can now invoke the ``foo()`` member function via the dot operator:
 
 .. literalinclude:: ../tutorial/reference_interface.cpp
    :language: c++
-   :lines: 51-52
+   :lines: 71-72
 
 .. code-block:: console
 
@@ -140,15 +145,72 @@ Second, we can use the custom configuration instance to define another wrap type
 
 .. literalinclude:: ../tutorial/reference_interface.cpp
    :language: c++
-   :lines: 54-57
+   :lines: 74-77
 
 .. code-block:: console
 
    foo_iface_impl calling foo()
 
-As a final comment, it should be noted that the reference interface is useful beyond just enabling dot-style
-access to the member functions. For instance, it also allows to define nested types and inline friend functions and operators
+Reference interfaces in C++23
+-----------------------------
+
+An alternative API for the definition of reference interfaces is available if your compiler
+supports C++23 (more specifically, the so-called
+"`deducing this <https://en.cppreference.com/w/cpp/language/member_functions#Explicit_object_member_functions>`__"
+feature). With the alternative API, it is not necessary any more to define a nested ``impl``
+template, and we can define the member function wrappers directly in the body of the
+class instead, like this:
+
+.. literalinclude:: ../tutorial/reference_interface.cpp
+   :language: c++
+   :lines: 49-51
+
+Note that, in the C++23 API, we must use the :c:macro:`TANUKI_REF_IFACE_MEMFUN2` macro, rather
+than :c:macro:`TANUKI_REF_IFACE_MEMFUN`.
+
+If you cannot or do not want to use the :c:macro:`TANUKI_REF_IFACE_MEMFUN2` macro, here is the implementation
+of a C++23 reference interface without macros:
+
+.. literalinclude:: ../tutorial/reference_interface.cpp
+   :language: c++
+   :lines: 53-59
+
+In other words, the "deducing this" C++23 feature allows us to avoid having to perform the CRTP cast
+manually, and we can invoke the :cpp:func:`~wrap::iface_ptr()` function directly on the ``self``/``this`` argument
+instead.
+
+We can then proceed as usual with the definition of the custom configurations using the
+new reference interfaces:
+
+.. literalinclude:: ../tutorial/reference_interface.cpp
+   :language: c++
+   :lines: 61-63
+
+The definition and usage of the :cpp:class:`wrap` instances is identical to the C++20 API:
+
+.. literalinclude:: ../tutorial/reference_interface.cpp
+   :language: c++
+   :lines: 81-89
+
+.. code-block:: console
+
+   foo_iface_impl calling foo()
+   foo_iface_impl calling foo()
+
+Note that the C++20 reference interface API is still available when using C++23 -- tanuki will detect whether
+or not the nested template ``impl`` is present and will auto-select the API accordingly.
+
+Tips & tricks
+-------------
+
+It should be noted that reference interfaces are useful beyond just enabling dot-style
+access to the member functions. For instance, they also allow to define nested types and inline friend functions and operators
 that will be accessible via `ADL <https://en.cppreference.com/w/cpp/language/adl>`__.
+
+On the other hand, it is also possible to design an API around the :cpp:class:`wrap` class which does not
+employ member functions and which thus needs neither a pointer nor a reference interface. In this usage
+mode, the member functions defined in a type-erased interface are used as an implementation detail for free functions,
+rather than being invoked directly.
 
 Full code listing
 -----------------

@@ -76,6 +76,18 @@
 
 #endif
 
+// Detect the presence of C++23's "explicit this" feature.
+// Normally can do this via the standard __cpp_explicit_this_parameter
+// ifdef, except that for some reason MSVC>=19.32 and clang>=18 support the feature but
+// do not set the ifdef.
+#if __cpp_explicit_this_parameter >= 202110L                                                                           \
+    || (__clang_major__ >= 18 && __cplusplus >= 202302L && !defined(__apple_build_version__))                          \
+    || (_MSC_VER >= 1932 && _MSVC_LANG > 202002L)
+
+#define TANUKI_HAVE_EXPLICIT_THIS
+
+#endif
+
 // ABI tag setup.
 #if defined(__GNUC__) || defined(__clang__)
 
@@ -172,6 +184,32 @@ enum class TANUKI_VISIBLE wrap_semantics { value, reference };
 
 namespace detail
 {
+
+#if defined(TANUKI_HAVE_EXPLICIT_THIS)
+
+// Implementation of std::forward_like(), at this time still missing
+// in some compilers. See:
+// https://en.cppreference.com/w/cpp/utility/forward_like
+template <typename T, typename U>
+[[nodiscard]] constexpr auto &&forward_like(U &&x) noexcept
+{
+    constexpr bool is_adding_const = std::is_const_v<std::remove_reference_t<T>>;
+    if constexpr (std::is_lvalue_reference_v<T &&>) {
+        if constexpr (is_adding_const) {
+            return std::as_const(x);
+        } else {
+            return static_cast<U &>(x);
+        }
+    } else {
+        if constexpr (is_adding_const) {
+            return std::move(std::as_const(x));
+        } else {
+            return std::move(x);
+        }
+    }
+}
+
+#endif
 
 // LCOV_EXCL_START
 
@@ -827,11 +865,57 @@ struct TANUKI_VISIBLE composite_ref_iface {
 // Enum to select the explicitness of the generic wrap ctors.
 enum class wrap_ctor { always_explicit, ref_implicit, always_implicit };
 
+namespace detail
+{
+
+// NOTE: the machinery in this section is used to detect if a type
+// defines in its scope a template type/typedef called "impl"
+// which depends on a single parameter. In order to do this, we
+// exploit the fact that if during concept checking a substitution
+// error occurs, then the concept is considered not satisfied.
+
+template <template <typename> typename>
+struct single_tt {
+};
+
+// NOTE: the purpose of this concept is to yield alwas true
+// for any input template-template TT depending on a single parameter.
+// We cannot simply use "concept single_tt_id = true" because of reasons
+// that have to do with constraint normalisation and illustrated partly here:
+//
+// https://stackoverflow.com/questions/69823200/gcc-disagrees-with-clang-and-msvc-when-concept-thats-always-true-is-used-to-imp
+// https://stackoverflow.com/questions/75442605/c20-concepts-constraint-normalization
+//
+// Basically, with "concept single_tt_id = true" during the normalisation phase
+// we would end up with the atomic constraint "true" and an empty parameter mapping.
+// Thus, it does not matter whether or not the "impl" type/typedef exists or not,
+// the concept will always be satisfied because no substitution takes place (due to
+// the parameter mapping being empty).
+template <template <typename> typename TT>
+concept single_tt_id = requires() { typename single_tt<TT>; };
+
+// NOTE: this is where we are checking that T defines an "impl" template
+// in its scope.
+template <typename T>
+concept with_impl_tt = single_tt_id<T::template impl>;
+
+} // namespace detail
+
+// Concept for checking that RefIFace is a valid
+// reference interface. In C++>=23, anything goes,
+// in C++20 we need to make sure the impl typedef exists.
+template <typename RefIFace>
+concept valid_ref_iface = std::is_class_v<RefIFace> && std::same_as<RefIFace, std::remove_cv_t<RefIFace>>
+#if !defined(TANUKI_HAVE_EXPLICIT_THIS)
+                          && detail::with_impl_tt<RefIFace>
+#endif
+    ;
+
 // Configuration settings for the wrap class.
 // NOTE: the DefaultValueType is subject to the constraints
 // for valid value types.
 template <typename DefaultValueType = void, typename RefIFace = no_ref_iface>
-    requires std::same_as<DefaultValueType, void> || valid_value_type<DefaultValueType>
+    requires(std::same_as<DefaultValueType, void> || valid_value_type<DefaultValueType>) && valid_ref_iface<RefIFace>
 struct TANUKI_VISIBLE config final : detail::config_base {
     using default_value_type = DefaultValueType;
 
@@ -863,16 +947,6 @@ namespace detail
 
 template <std::size_t N>
 concept power_of_two = (N > 0u) && ((N & (N - 1u)) == 0u);
-
-// Machinery to infer the reference interface from a config instance.
-template <typename>
-struct cfg_ref_type {
-};
-
-template <typename DefaultValueType, typename RefIFace>
-struct cfg_ref_type<config<DefaultValueType, RefIFace>> {
-    using type = RefIFace;
-};
 
 } // namespace detail
 
@@ -919,6 +993,24 @@ concept valid_config =
     {                                                                                                                  \
         return std::move(*iface_ptr(*static_cast<const Wrap *>(this))).name(std::forward<MemFunArgs>(args)...);        \
     }
+
+#if defined(TANUKI_HAVE_EXPLICIT_THIS)
+
+// NOTE: this is the C++23 version of the macro,
+// leveraging the "explicit this" feature.
+#define TANUKI_REF_IFACE_MEMFUN2(name)                                                                                 \
+    template <typename Wrap, typename... MemFunArgs>                                                                   \
+    auto name(this Wrap &&self, MemFunArgs &&...args) noexcept(                                                        \
+        noexcept(tanuki::detail::forward_like<Wrap>(*iface_ptr(std::forward<Wrap>(self)))                              \
+                     .name(std::forward<MemFunArgs>(args)...)))                                                        \
+        -> decltype(tanuki::detail::forward_like<Wrap>(*iface_ptr(std::forward<Wrap>(self)))                           \
+                        .name(std::forward<MemFunArgs>(args)...))                                                      \
+    {                                                                                                                  \
+        return tanuki::detail::forward_like<Wrap>(*iface_ptr(std::forward<Wrap>(self)))                                \
+            .name(std::forward<MemFunArgs>(args)...);                                                                  \
+    }
+
+#endif
 
 namespace detail
 {
@@ -1002,25 +1094,64 @@ inline constexpr invalid_wrap_t invalid_wrap{};
 template <typename T>
 using unwrap_cvref_t = std::remove_cvref_t<std::unwrap_reference_t<T>>;
 
+namespace detail
+{
+
+// NOTE: this section contains code for fetching the reference interface type
+// for a wrap instance.
+
+template <typename>
+struct cfg_ref_type {
+};
+
+template <typename DefaultValueType, typename RefIFace>
+struct cfg_ref_type<config<DefaultValueType, RefIFace>> {
+    using type = RefIFace;
+};
+
+template <auto Cfg>
+using cfg_ref_t = typename cfg_ref_type<std::remove_const_t<decltype(Cfg)>>::type;
+
+template <typename T, typename Wrap>
+struct get_ref_iface {
+};
+
+template <typename T, typename Wrap>
+    requires with_impl_tt<T>
+struct get_ref_iface<T, Wrap> {
+    using type = typename T::template impl<Wrap>;
+};
+
+#if defined(TANUKI_HAVE_EXPLICIT_THIS)
+
+template <typename T, typename Wrap>
+    requires(!with_impl_tt<T>)
+struct get_ref_iface<T, Wrap> {
+    using type = T;
+};
+
+#endif
+
+template <auto Cfg, typename Wrap>
+using get_ref_iface_t = typename get_ref_iface<cfg_ref_t<Cfg>, Wrap>::type;
+
+} // namespace detail
+
 // The wrap class.
 template <typename IFace, auto Cfg = default_config>
     requires std::is_polymorphic_v<IFace> && std::has_virtual_destructor_v<IFace> && valid_config<Cfg>
-class TANUKI_VISIBLE wrap
-    : private detail::wrap_storage<IFace, Cfg.static_size, Cfg.static_align, Cfg.semantics>,
-      // NOTE: the reference interface is not supposed to hold any data: it will always
-      // be def-inited (even when copying/moving a wrap object), its assignment operators
-      // will never be invoked, it will never be swapped, etc. This needs to be documented.
-      public detail::cfg_ref_type<std::remove_const_t<decltype(Cfg)>>::type::template impl<wrap<IFace, Cfg>>,
-      public detail::wrap_pointer_iface<Cfg.pointer_interface, wrap<IFace, Cfg>, IFace>
+class TANUKI_VISIBLE wrap : private detail::wrap_storage<IFace, Cfg.static_size, Cfg.static_align, Cfg.semantics>,
+                            // NOTE: the reference interface is not supposed to hold any data: it will always
+                            // be def-inited (even when copying/moving a wrap object), its assignment operators
+                            // will never be invoked, it will never be swapped, etc. This needs to be documented.
+                            public detail::get_ref_iface_t<Cfg, wrap<IFace, Cfg>>,
+                            public detail::wrap_pointer_iface<Cfg.pointer_interface, wrap<IFace, Cfg>, IFace>
 {
     // Aliases for the two interfaces.
-    using iface_t = IFace;
-    using value_iface_t = detail::value_iface<iface_t, Cfg.semantics>;
+    using value_iface_t = detail::value_iface<IFace, Cfg.semantics>;
 
     // Alias for the reference interface.
-    using ref_iface_t =
-        // NOTE: clang 14 needs the typename here, hopefully this is not harmful to other compilers.
-        typename detail::cfg_ref_type<std::remove_const_t<decltype(Cfg)>>::type::template impl<wrap<IFace, Cfg>>;
+    using ref_iface_t = detail::get_ref_iface_t<Cfg, wrap<IFace, Cfg>>;
 
     // The default value type.
     using default_value_t = typename decltype(Cfg)::default_value_type;
@@ -1238,7 +1369,7 @@ public:
                 // in the configuration.
                 (!std::same_as<void, default_value_t>) &&
                 // We must be able to construct the holder.
-                detail::holder_constructible_from<default_value_t, iface_t, Cfg.semantics>
+                detail::holder_constructible_from<default_value_t, IFace, Cfg.semantics>
     wrap() noexcept(noexcept(this->ctor_impl<default_value_t>()) && detail::nothrow_default_initializable<ref_iface_t>)
     {
         ctor_impl<default_value_t>();
@@ -1254,7 +1385,7 @@ public:
                  // Must not compete with copy/move.
                  (!std::same_as<std::remove_cvref_t<T>, wrap>) &&
                  // We must be able to construct the holder.
-                 detail::holder_constructible_from<detail::value_t_from_arg<T &&>, iface_t, Cfg.semantics, T &&>
+                 detail::holder_constructible_from<detail::value_t_from_arg<T &&>, IFace, Cfg.semantics, T &&>
     explicit(explicit_ctor < wrap_ctor::always_implicit)
         // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,google-explicit-constructor,hicpp-explicit-conversions)
         wrap(T &&x) noexcept(noexcept(this->ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x)))
@@ -1270,7 +1401,7 @@ public:
     template <typename T>
         requires std::default_initializable<ref_iface_t> &&
                  // We must be able to construct the holder.
-                 detail::holder_constructible_from<std::reference_wrapper<T>, iface_t, Cfg.semantics,
+                 detail::holder_constructible_from<std::reference_wrapper<T>, IFace, Cfg.semantics,
                                                    std::reference_wrapper<T>>
     explicit(explicit_ctor == wrap_ctor::always_explicit)
         // NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
@@ -1289,7 +1420,7 @@ public:
                  // Forbid emplacing a wrap inside a wrap.
                  (!std::same_as<T, wrap>) &&
                  // We must be able to construct the holder.
-                 detail::holder_constructible_from<T, iface_t, Cfg.semantics, U &&...>
+                 detail::holder_constructible_from<T, IFace, Cfg.semantics, U &&...>
     explicit wrap(std::in_place_type_t<T>, U &&...args) noexcept(noexcept(this->ctor_impl<T>(std::forward<U>(args)...))
                                                                  && detail::nothrow_default_initializable<ref_iface_t>)
     {
@@ -1498,7 +1629,7 @@ public:
         // Must not compete with copy/move assignment.
         (!std::same_as<std::remove_cvref_t<T>, wrap>) &&
         // We must be able to construct the holder.
-        detail::holder_constructible_from<detail::value_t_from_arg<T &&>, iface_t, Cfg.semantics, T &&>
+        detail::holder_constructible_from<detail::value_t_from_arg<T &&>, IFace, Cfg.semantics, T &&>
         wrap &operator=(T &&x)
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
@@ -1564,7 +1695,7 @@ public:
         // Forbid emplacing a wrap inside a wrap.
         (!std::same_as<T, wrap>) &&
         // We must be able to construct the holder.
-        detail::holder_constructible_from<T, iface_t, Cfg.semantics, Args &&...>
+        detail::holder_constructible_from<T, IFace, Cfg.semantics, Args &&...>
         friend void emplace(wrap &w, Args &&...args) noexcept(noexcept(w.ctor_impl<T>(std::forward<Args>(args)...)))
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
@@ -1616,7 +1747,7 @@ public:
         return w.m_pv_iface->_tanuki_value_type_index();
     }
 
-    [[nodiscard]] friend const iface_t *iface_ptr(const wrap &w) noexcept
+    [[nodiscard]] friend const IFace *iface_ptr(const wrap &w) noexcept
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
             return w.m_pv_iface;
@@ -1624,7 +1755,23 @@ public:
             return w.m_pv_iface.get();
         }
     }
-    [[nodiscard]] friend iface_t *iface_ptr(wrap &w) noexcept
+    [[nodiscard]] friend const IFace *iface_ptr(const wrap &&w) noexcept
+    {
+        if constexpr (Cfg.semantics == wrap_semantics::value) {
+            return w.m_pv_iface;
+        } else {
+            return w.m_pv_iface.get();
+        }
+    }
+    [[nodiscard]] friend IFace *iface_ptr(wrap &w) noexcept
+    {
+        if constexpr (Cfg.semantics == wrap_semantics::value) {
+            return w.m_pv_iface;
+        } else {
+            return w.m_pv_iface.get();
+        }
+    }
+    [[nodiscard]] friend IFace *iface_ptr(wrap &&w) noexcept
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
             return w.m_pv_iface;

@@ -52,8 +52,23 @@ struct foobar_ref_iface {
     };
 };
 
+struct barbaz {
+};
+
 TEST_CASE("ref_iface basics")
 {
+    REQUIRE(!tanuki::valid_ref_iface<int>);
+    REQUIRE(!tanuki::valid_ref_iface<void>);
+    REQUIRE(!tanuki::valid_ref_iface<foobar_ref_iface &>);
+    REQUIRE(!tanuki::valid_ref_iface<const foobar_ref_iface>);
+    REQUIRE(tanuki::valid_ref_iface<foobar_ref_iface>);
+
+#if !defined(TANUKI_HAVE_EXPLICIT_THIS)
+
+    REQUIRE(!tanuki::valid_ref_iface<barbaz>);
+
+#endif
+
     using wrap1_t = tanuki::wrap<foobar_iface, tanuki::config<void, foobar_ref_iface>{.invalid_default_ctor = true}>;
     using wrap2_t = tanuki::wrap<foobar_iface, tanuki::config<fooer, foobar_ref_iface>{}>;
 
@@ -106,6 +121,47 @@ TEST_CASE("ref_iface noinit")
     REQUIRE(!std::is_copy_constructible_v<wrap1_t>);
     REQUIRE(!std::is_move_constructible_v<wrap1_t>);
 }
+
+#if defined(TANUKI_HAVE_EXPLICIT_THIS)
+
+struct any_ref_iface_explicit_this {
+    TANUKI_REF_IFACE_MEMFUN2(foo)
+    TANUKI_REF_IFACE_MEMFUN2(bar)
+    TANUKI_REF_IFACE_MEMFUN2(fuzz)
+};
+
+template <typename T>
+concept barable = requires(T &&x) { std::forward<T>(x).bar(); };
+
+template <typename T>
+concept fuzzable = requires(T &&x) { std::forward<T>(x).fuzz(); };
+
+TEST_CASE("ref_iface explicit this")
+{
+    REQUIRE(tanuki::valid_ref_iface<any_ref_iface_explicit_this>);
+
+    using wrap1_t = tanuki::wrap<foobar_iface, tanuki::config<void, any_ref_iface_explicit_this>{}>;
+
+    wrap1_t w1{fooer{}};
+    w1.foo();
+    REQUIRE(noexcept(w1.foo()));
+
+    w1.bar();
+    REQUIRE(!noexcept(w1.bar()));
+    REQUIRE(barable<wrap1_t &>);
+    REQUIRE(barable<wrap1_t &&>);
+    REQUIRE(!barable<const wrap1_t &>);
+    REQUIRE(!barable<const wrap1_t &&>);
+
+    std::move(w1).fuzz();
+    REQUIRE(!noexcept(std::move(w1).fuzz()));
+    REQUIRE(!fuzzable<wrap1_t &>);
+    REQUIRE(fuzzable<wrap1_t &&>);
+    REQUIRE(!fuzzable<const wrap1_t &>);
+    REQUIRE(!fuzzable<const wrap1_t &&>);
+}
+
+#endif
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 

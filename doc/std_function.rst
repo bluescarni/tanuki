@@ -124,7 +124,7 @@ will raise an error.
 
 The implementation of the call operator of the reference interface employs, as usual, the
 `CRTP <https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern>`__ to reach
-the pointer to the interface via the :cpp:func:`iface_ptr()` function, which is then used to invoke
+the pointer to the interface via the :cpp:func:`~wrap::iface_ptr()` function, which is then used to invoke
 the interface's call operator. The arguments are perfectly forwarded, and expression SFINAE is used
 (via the trailing ``decltype(...)``) to disable the call operator if it is malformed.
 

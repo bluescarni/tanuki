@@ -88,6 +88,18 @@
 
 #endif
 
+// Detect the presence of C++26 features necessary to implement constexpr support.
+#if __cpp_if_consteval >= 202106L && __cpp_constexpr >= 202306L
+
+#define TANUKI_CONSTEXPR_26 constexpr
+#define TANUKI_HAVE_IF_CONSTEVAL
+
+#else
+
+#define TANUKI_CONSTEXPR_26
+
+#endif
+
 // ABI tag setup.
 #if defined(__GNUC__) || defined(__clang__)
 
@@ -800,6 +812,21 @@ struct TANUKI_VISIBLE wrap_storage {
     static_assert(StaticStorageSize > 0u);
     static_assert(Sem == wrap_semantics::value);
 
+    TANUKI_CONSTEXPR_26 wrap_storage()
+    {
+#if defined(TANUKI_HAVE_IF_CONSTEVAL)
+
+        // NOTE: need to ensure to initialise static
+        // storage in constant expressions.
+        if consteval {
+            for (auto &b : static_storage) {
+                b = static_cast<std::byte>(0);
+            }
+        }
+
+#endif
+    }
+
     // Static storage optimisation enabled.
     // The active storage is dynamic if either m_pv_iface is null (which indicates the
     // invalid state) or if it points somewhere outside static_storage. Otherwise,
@@ -1162,28 +1189,49 @@ class TANUKI_VISIBLE wrap : private detail::wrap_storage<IFace, Cfg.static_size,
 
     // Helper to detect the type of storage in use. Returns true for static
     // storage, false for dynamic storage (including the invalid state).
-    [[nodiscard]] bool stype() const noexcept
+    [[nodiscard]] TANUKI_CONSTEXPR_26 bool stype() const noexcept
         requires(Cfg.semantics == wrap_semantics::value && Cfg.static_size > 0u)
     {
-        const auto *ptr = reinterpret_cast<const std::byte *>(this->m_pv_iface);
+#if defined(TANUKI_HAVE_IF_CONSTEVAL)
 
-        // NOTE: although we are using std::less and friends here (and thus avoiding the use of
-        // builtin comparison operators, which could in principle be optimised out by the compiler),
-        // this is not 100% portable, because in principle static_storage
-        // could be interleaved with another object while at the same time respecting the total
-        // pointer ordering guarantees given by the standard. This could happen for instance on
-        // segmented memory architectures.
-        //
-        // In pratice, this should be ok an all commonly-used platforms.
-        //
-        // NOTE: ptr will be null if the storage type is dynamic, hence another assumption
-        // here is that nullptr is not included in the storage range of static_storage.
-        //
-        // NOTE: it seems like the only truly portable way of implementing this is to compare ptr
-        // to the addresses of all elements in static_storage. Unfortunately, it seems like compilers
-        // are not able to optimise this to a simple pointer comparison.
-        return std::greater_equal<void>{}(ptr, this->static_storage)
-               && std::less<void>{}(ptr, this->static_storage + sizeof(this->static_storage));
+        // NOTE: need alternative implementation in constant expressions
+        // (see below for explanation).
+        if consteval {
+            for (const auto &b : this->static_storage) {
+                if (static_cast<const void *>(this->m_pv_iface) == static_cast<const void *>(&b)) {
+                    return true;
+                }
+            }
+
+            return false;
+        } else {
+
+#endif
+
+            const auto *ptr = reinterpret_cast<const std::byte *>(this->m_pv_iface);
+
+            // NOTE: although we are using std::less and friends here (and thus avoiding the use of
+            // builtin comparison operators, which could in principle be optimised out by the compiler),
+            // this is not 100% portable, because in principle static_storage
+            // could be interleaved with another object while at the same time respecting the total
+            // pointer ordering guarantees given by the standard. This could happen for instance on
+            // segmented memory architectures.
+            //
+            // In pratice, this should be ok an all commonly-used platforms.
+            //
+            // NOTE: ptr will be null if the storage type is dynamic, hence another assumption
+            // here is that nullptr is not included in the storage range of static_storage.
+            //
+            // NOTE: it seems like the only truly portable way of implementing this is to compare ptr
+            // to the addresses of all elements in static_storage (this is what we are doing in the consteval
+            // implementation). Unfortunately, it seems like compilers are not able to optimise this to a
+            // simple pointer comparison.
+            return std::greater_equal<void>{}(ptr, this->static_storage)
+                   && std::less<void>{}(ptr, this->static_storage + sizeof(this->static_storage));
+
+#if defined(TANUKI_HAVE_IF_CONSTEVAL)
+        }
+#endif
     }
 
     // Implementation of generic construction. This will constrcut
@@ -1335,7 +1383,7 @@ class TANUKI_VISIBLE wrap : private detail::wrap_storage<IFace, Cfg.static_size,
 
 public:
     // Explicit initialisation into the invalid state.
-    explicit wrap(invalid_wrap_t) noexcept(detail::nothrow_default_initializable<ref_iface_t>)
+    TANUKI_CONSTEXPR_26 explicit wrap(invalid_wrap_t) noexcept(detail::nothrow_default_initializable<ref_iface_t>)
         requires std::default_initializable<ref_iface_t>
     {
         // NOTE: for reference semantics, the default ctor
@@ -1488,14 +1536,14 @@ public:
     }
 
 private:
-    void destroy() noexcept
+    TANUKI_CONSTEXPR_26 void destroy() noexcept
         requires(Cfg.semantics == wrap_semantics::value)
     {
         if constexpr (Cfg.static_size == 0u) {
             delete this->m_pv_iface;
         } else {
             if (stype()) {
-                this->m_pv_iface->~value_iface_t();
+                std::destroy_at(this->m_pv_iface);
             } else {
                 // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
                 delete this->m_pv_iface;
@@ -1504,7 +1552,7 @@ private:
     }
 
 public:
-    ~wrap()
+    TANUKI_CONSTEXPR_26 ~wrap()
         requires std::destructible<ref_iface_t>
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {

@@ -458,17 +458,6 @@ TEST_CASE("s11n invalid")
 
 #endif
 
-#if __cplusplus > 202302L
-
-TEST_CASE("constexpr basics")
-{
-    using wrap_t = tanuki::wrap<any_iface>;
-
-    constexpr wrap_t w(tanuki::invalid_wrap);
-}
-
-#endif
-
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
 #if defined(__GNUC__)

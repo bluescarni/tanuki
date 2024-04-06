@@ -91,8 +91,8 @@
 // Detect the presence of C++26 features necessary to implement constexpr support.
 #if __cpp_if_consteval >= 202106L && __cpp_constexpr >= 202306L
 
+#define TANUKI_HAVE_CONSTEXPR_26
 #define TANUKI_CONSTEXPR_26 constexpr
-#define TANUKI_HAVE_IF_CONSTEVAL
 
 #else
 
@@ -814,7 +814,7 @@ struct TANUKI_VISIBLE wrap_storage {
 
     TANUKI_CONSTEXPR_26 wrap_storage()
     {
-#if defined(TANUKI_HAVE_IF_CONSTEVAL)
+#if defined(TANUKI_HAVE_CONSTEXPR_26)
 
         // NOTE: need to ensure to initialise static
         // storage in constant expressions.
@@ -1192,7 +1192,7 @@ class TANUKI_VISIBLE wrap : private detail::wrap_storage<IFace, Cfg.static_size,
     [[nodiscard]] TANUKI_CONSTEXPR_26 bool stype() const noexcept
         requires(Cfg.semantics == wrap_semantics::value && Cfg.static_size > 0u)
     {
-#if defined(TANUKI_HAVE_IF_CONSTEVAL)
+#if defined(TANUKI_HAVE_CONSTEXPR_26)
 
         // NOTE: need alternative implementation in constant expressions
         // (see below for explanation).
@@ -1229,7 +1229,7 @@ class TANUKI_VISIBLE wrap : private detail::wrap_storage<IFace, Cfg.static_size,
             return std::greater_equal<void>{}(ptr, this->static_storage)
                    && std::less<void>{}(ptr, this->static_storage + sizeof(this->static_storage));
 
-#if defined(TANUKI_HAVE_IF_CONSTEVAL)
+#if defined(TANUKI_HAVE_CONSTEXPR_26)
         }
 #endif
     }

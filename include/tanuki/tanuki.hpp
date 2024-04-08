@@ -1300,7 +1300,12 @@ class TANUKI_VISIBLE wrap : private detail::wrap_storage<IFace, Cfg.static_size,
                     // Inform the archive of the new address of the value, so that the address tracking
                     // machinery keeps on working. See:
                     // https://www.boost.org/doc/libs/1_82_0/libs/serialization/doc/special.html#objecttracking
-                    ar.reset_object_address(this->m_pv_iface->_tanuki_value_ptr(), pv_iface->_tanuki_value_ptr());
+                    //
+                    // NOTE: wrap this into a noexcept lambda so that we ensure we cannot end up
+                    // with a wrap in an intermediate invalid state.
+                    [&]() noexcept {
+                        ar.reset_object_address(this->m_pv_iface->_tanuki_value_ptr(), pv_iface->_tanuki_value_ptr());
+                    }();
 
                     // Clean up pv_iface.
                     // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)

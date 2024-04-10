@@ -1426,8 +1426,6 @@ public:
     // are provided. This must be documented well.
     template <typename T, typename... U>
         requires std::default_initializable<ref_iface_t> &&
-                 // Forbid emplacing a wrap inside a wrap.
-                 (!std::same_as<T, wrap>) &&
                  // We must be able to construct the holder.
                  detail::holder_constructible_from<T, IFace, Cfg.semantics, U &&...>
     explicit wrap(std::in_place_type_t<T>, U &&...args) noexcept(noexcept(this->ctor_impl<T>(std::forward<U>(args)...))
@@ -1710,11 +1708,9 @@ public:
     // Emplacement.
     template <typename T, typename... Args>
         requires
-        // Forbid emplacing a wrap inside a wrap.
-        (!std::same_as<T, wrap>) &&
         // We must be able to construct the holder.
         detail::holder_constructible_from<T, IFace, Cfg.semantics, Args &&...>
-        friend void emplace(wrap &w, Args &&...args) noexcept(noexcept(w.ctor_impl<T>(std::forward<Args>(args)...)))
+    friend void emplace(wrap &w, Args &&...args) noexcept(noexcept(w.ctor_impl<T>(std::forward<Args>(args)...)))
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
             // Destroy the value in w if necessary.

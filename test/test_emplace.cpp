@@ -58,7 +58,8 @@ TEST_CASE("emplace")
 
     REQUIRE(emplaceable<wrap_t, int, int>);
     REQUIRE(!emplaceable<wrap_t, std::string>);
-    REQUIRE(!emplaceable<wrap_t, wrap_t, int>);
+    REQUIRE(emplaceable<wrap_t, wrap_t, int>);
+    REQUIRE(emplaceable<wrap_t, wrap_t, wrap_t>);
 
     emplace<int>(w1, 43);
 
@@ -98,6 +99,15 @@ TEST_CASE("emplace")
     REQUIRE(noexcept(emplace<int>(w1, 43)));
     REQUIRE(!noexcept(emplace<large>(w1)));
     REQUIRE(!noexcept(emplace<thrower>(w1, 33)));
+
+    // Nested emplacement.
+    // TODO: what about self-emplacement with move?
+    emplace<wrap_t>(w1, 12);
+    REQUIRE(value_isa<wrap_t>(w1));
+    REQUIRE(value_ref<int>(value_ref<wrap_t>(w1)) == 12);
+    emplace<wrap_t>(w1, w1);
+    REQUIRE(value_isa<wrap_t>(w1));
+    REQUIRE(value_ref<int>(value_ref<wrap_t>(value_ref<wrap_t>(w1))) == 12);
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

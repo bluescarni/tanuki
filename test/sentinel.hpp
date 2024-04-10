@@ -63,7 +63,7 @@ concept with_ptrdiff_t_difference = requires(const T &a, const U &b) { static_ca
 // wrapped into an any_ref).
 template <typename S, typename It>
 struct sentinel_box {
-    S m_sentinel;
+    TANUKI_NO_UNIQUE_ADDRESS S m_sentinel;
 
     [[nodiscard]] bool at_end(const any_ref &r_it) const
     {
@@ -91,7 +91,9 @@ struct sentinel_box {
 // NOTE: this is needed only for sized sentinels.
 template <typename T>
 concept has_distance_to_iter = requires(const T &x, const any_ref &ar) {
-    { x.distance_to_iter(ar) } -> std::same_as<std::ptrdiff_t>;
+    {
+        x.distance_to_iter(ar)
+    } -> std::same_as<std::ptrdiff_t>;
 };
 
 // Detect instances of sentinel_box.

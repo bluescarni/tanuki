@@ -1436,6 +1436,7 @@ public:
         ctor_impl<T>(std::forward<U>(args)...);
     }
 
+    // Nested wrap constructor.
     template <typename T>
         requires std::default_initializable<ref_iface_t> && std::same_as<wrap, std::remove_cvref_t<T>>
                  && detail::holder_constructible_from<detail::value_t_from_arg<T &&>, IFace, Cfg.semantics, T &&>
@@ -2152,7 +2153,6 @@ struct tracking_level<tanuki::detail::value_iface<IFace, tanuki::wrap_semantics:
 #endif
 
 #undef TANUKI_ABI_TAG_ATTR
-#undef TANUKI_NO_UNIQUE_ADDRESS
 #undef TANUKI_VISIBLE
 
 #endif

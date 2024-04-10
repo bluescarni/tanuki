@@ -1439,7 +1439,9 @@ public:
     template <typename T>
         requires std::default_initializable<ref_iface_t> && std::same_as<wrap, std::remove_cvref_t<T>>
                  && detail::holder_constructible_from<detail::value_t_from_arg<T &&>, IFace, Cfg.semantics, T &&>
-    explicit wrap(nested_wrap_t, T &&w)
+    explicit wrap(nested_wrap_t,
+                  T &&w) noexcept(noexcept(this->ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(w)))
+                                  && detail::nothrow_default_initializable<ref_iface_t>)
     {
         ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(w));
     }

@@ -1620,9 +1620,8 @@ public:
     wrap &operator=(invalid_wrap_t) noexcept
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
-            // Don't do anything if this is already
-            // in the invalid state.
-            if (!is_invalid(*this)) {
+            // Do something only if this is in a valid state.
+            if (is_valid(*this)) {
                 // Destroy the contained value.
                 destroy();
 
@@ -1720,7 +1719,7 @@ public:
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
             // Destroy the value in w if necessary.
-            if (!is_invalid(w)) {
+            if (is_valid(w)) {
                 w.destroy();
             }
 
@@ -1981,6 +1980,12 @@ template <typename Holder, typename U>
     } else {
         return val;
     }
+}
+
+template <typename IFace, auto Cfg>
+bool is_valid(const wrap<IFace, Cfg> &w) noexcept
+{
+    return !is_invalid(w);
 }
 
 template <typename IFace, auto Cfg>

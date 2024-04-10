@@ -1707,24 +1707,15 @@ public:
 #endif
 
     // Emplacement.
+    // NOTE: need to document that self-emplacement results in undefined
+    // behaviour because the first step taken by this function is self
+    // destruction.
     template <typename T, typename... Args>
         requires
         // We must be able to construct the holder.
         detail::holder_constructible_from<T, IFace, Cfg.semantics, Args &&...>
     friend void emplace(wrap &w, Args &&...args) noexcept(noexcept(w.ctor_impl<T>(std::forward<Args>(args)...)))
     {
-        // Handle the special case in which we are attempting to emplace a wrap into itself.
-        // That is, the emplace type is exactly "wrap", and there is a single construction argument
-        // also of type exactly "wrap" (after removal of cv/ref). In this case, check that we are
-        // not self-emplacing.
-        if constexpr (sizeof...(Args) == 1u) {
-            if constexpr (std::same_as<wrap, T> && (std::same_as<wrap, std::remove_cvref_t<Args>> && ...)) {
-                if (((std::addressof(w) == std::addressof(args)) && ...)) [[unlikely]] {
-                    throw std::invalid_argument("Cannot emplace a wrap into itself");
-                }
-            }
-        }
-
         if constexpr (Cfg.semantics == wrap_semantics::value) {
             // Destroy the value in w if necessary.
             if (!is_invalid(w)) {

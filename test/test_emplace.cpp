@@ -118,16 +118,6 @@ TEST_CASE("emplace")
     auto w4 = wrap_t(12);
     emplace<wrap_t>(w4, tanuki::invalid_wrap);
     REQUIRE(is_invalid(value_ref<wrap_t>(w4)));
-
-    // Cannot emplace a wrap into itself.
-    REQUIRE_THROWS_MATCHES(emplace<wrap_t>(w1, w1), std::invalid_argument,
-                           Message("Cannot emplace a wrap into itself"));
-    REQUIRE_THROWS_MATCHES(emplace<wrap_t>(w1, std::move(w1)), std::invalid_argument,
-                           Message("Cannot emplace a wrap into itself"));
-    REQUIRE_THROWS_MATCHES(emplace<wrap_t>(w1, std::as_const(w1)), std::invalid_argument,
-                           Message("Cannot emplace a wrap into itself"));
-    REQUIRE_THROWS_MATCHES(emplace<wrap_t>(w1, static_cast<const wrap_t &&>(w1)), std::invalid_argument,
-                           Message("Cannot emplace a wrap into itself"));
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

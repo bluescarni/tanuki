@@ -101,13 +101,11 @@ TEST_CASE("emplace")
     REQUIRE(!noexcept(emplace<thrower>(w1, 33)));
 
     // Nested emplacement.
-    // TODO: what about self-emplacement with move?
+    // TODO: what about self-emplacement with copy/move?
+    // Probably needs to be prevented.
     emplace<wrap_t>(w1, 12);
     REQUIRE(value_isa<wrap_t>(w1));
     REQUIRE(value_ref<int>(value_ref<wrap_t>(w1)) == 12);
-    emplace<wrap_t>(w1, w1);
-    REQUIRE(value_isa<wrap_t>(w1));
-    REQUIRE(value_ref<int>(value_ref<wrap_t>(value_ref<wrap_t>(w1))) == 12);
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

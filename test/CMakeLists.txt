@@ -63,6 +63,7 @@ ADD_TANUKI_TESTCASE(forward_range)
 ADD_TANUKI_TESTCASE(bidirectional_range)
 ADD_TANUKI_TESTCASE(random_access_range)
 ADD_TANUKI_TESTCASE(time_series)
+ADD_TANUKI_TESTCASE(test_subrange)
 
 if(TANUKI_WITH_BOOST_S11N)
   add_library(fooable SHARED fooable.cpp)

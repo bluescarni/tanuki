@@ -389,8 +389,7 @@ concept any_wrap = detail::is_any_wrap_v<T>;
 
 // Concept checking for value types. Must be non-cv qualified destructible objects.
 template <typename T>
-concept valid_value_type
-    = std::is_object_v<T> && (!std::is_const_v<T>) && (!std::is_volatile_v<T>) && std::destructible<T>;
+concept valid_value_type = std::is_object_v<T> && (!std::is_const_v<T>)&&(!std::is_volatile_v<T>)&&std::destructible<T>;
 
 namespace detail
 {
@@ -966,15 +965,15 @@ concept valid_config =
 #define TANUKI_REF_IFACE_MEMFUN(name)                                                                                  \
     template <typename JustWrap = Wrap, typename... MemFunArgs>                                                        \
     auto name(MemFunArgs &&...args) & noexcept(                                                                        \
-        noexcept(iface_ptr(*static_cast<JustWrap *>(this)) -> name(std::forward<MemFunArgs>(args)...)))                \
-        ->decltype(iface_ptr(*static_cast<JustWrap *>(this))->name(std::forward<MemFunArgs>(args)...))                 \
+        noexcept(iface_ptr(*static_cast<JustWrap *>(this))->name(std::forward<MemFunArgs>(args)...)))                  \
+        -> decltype(iface_ptr(*static_cast<JustWrap *>(this))->name(std::forward<MemFunArgs>(args)...))                \
     {                                                                                                                  \
         return iface_ptr(*static_cast<Wrap *>(this))->name(std::forward<MemFunArgs>(args)...);                         \
     }                                                                                                                  \
     template <typename JustWrap = Wrap, typename... MemFunArgs>                                                        \
     auto name(MemFunArgs &&...args) const & noexcept(                                                                  \
-        noexcept(iface_ptr(*static_cast<const JustWrap *>(this)) -> name(std::forward<MemFunArgs>(args)...)))          \
-        ->decltype(iface_ptr(*static_cast<const JustWrap *>(this))->name(std::forward<MemFunArgs>(args)...))           \
+        noexcept(iface_ptr(*static_cast<const JustWrap *>(this))->name(std::forward<MemFunArgs>(args)...)))            \
+        -> decltype(iface_ptr(*static_cast<const JustWrap *>(this))->name(std::forward<MemFunArgs>(args)...))          \
     {                                                                                                                  \
         return iface_ptr(*static_cast<const Wrap *>(this))->name(std::forward<MemFunArgs>(args)...);                   \
     }                                                                                                                  \
@@ -1088,6 +1087,11 @@ struct invalid_wrap_t {
 };
 
 inline constexpr invalid_wrap_t invalid_wrap{};
+
+struct nested_wrap_t {
+};
+
+inline constexpr nested_wrap_t nested_wrap{};
 
 // Helper to unwrap a std::reference_wrapper and remove reference
 // and cv qualifiers from the result.
@@ -1430,6 +1434,14 @@ public:
                                                                  && detail::nothrow_default_initializable<ref_iface_t>)
     {
         ctor_impl<T>(std::forward<U>(args)...);
+    }
+
+    template <typename T>
+        requires std::default_initializable<ref_iface_t> && std::same_as<wrap, std::remove_cvref_t<T>>
+                 && detail::holder_constructible_from<detail::value_t_from_arg<T &&>, IFace, Cfg.semantics, T &&>
+    explicit wrap(nested_wrap_t, T &&w)
+    {
+        ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(w));
     }
 
     wrap(const wrap &other) noexcept(Cfg.semantics == wrap_semantics::reference)

@@ -101,11 +101,33 @@ TEST_CASE("emplace")
     REQUIRE(!noexcept(emplace<thrower>(w1, 33)));
 
     // Nested emplacement.
-    // TODO: what about self-emplacement with copy/move?
-    // Probably needs to be prevented.
     emplace<wrap_t>(w1, 12);
     REQUIRE(value_isa<wrap_t>(w1));
     REQUIRE(value_ref<int>(value_ref<wrap_t>(w1)) == 12);
+
+    auto w2 = wrap_t(tanuki::invalid_wrap);
+    emplace<wrap_t>(w2, w1);
+    REQUIRE(value_isa<wrap_t>(w2));
+    REQUIRE(value_ref<int>(value_ref<wrap_t>(value_ref<wrap_t>(w2))) == 12);
+
+    auto w3 = wrap_t(tanuki::invalid_wrap);
+    emplace<wrap_t>(w3, 123.);
+    REQUIRE(value_isa<wrap_t>(w3));
+    REQUIRE(value_ref<double>(value_ref<wrap_t>(w3)) == 123.);
+
+    auto w4 = wrap_t(12);
+    emplace<wrap_t>(w4, tanuki::invalid_wrap);
+    REQUIRE(is_invalid(value_ref<wrap_t>(w4)));
+
+    // Cannot emplace a wrap into itself.
+    REQUIRE_THROWS_MATCHES(emplace<wrap_t>(w1, w1), std::invalid_argument,
+                           Message("Cannot emplace a wrap into itself"));
+    REQUIRE_THROWS_MATCHES(emplace<wrap_t>(w1, std::move(w1)), std::invalid_argument,
+                           Message("Cannot emplace a wrap into itself"));
+    REQUIRE_THROWS_MATCHES(emplace<wrap_t>(w1, std::as_const(w1)), std::invalid_argument,
+                           Message("Cannot emplace a wrap into itself"));
+    REQUIRE_THROWS_MATCHES(emplace<wrap_t>(w1, static_cast<const wrap_t &&>(w1)), std::invalid_argument,
+                           Message("Cannot emplace a wrap into itself"));
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

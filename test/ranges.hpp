@@ -158,9 +158,7 @@ auto e(T &x)
 template <typename T, typename V, typename R, typename RR, typename CR, typename CRR,
           template <typename, typename, typename> typename It>
 concept is_generic_range = requires(T &x) {
-    {
-        make_generic_iterator<It>{}(begin_end_impl::b(x))
-    } -> std::same_as<It<V, R, RR>>;
+    { make_generic_iterator<It>{}(begin_end_impl::b(x)) } -> std::same_as<It<V, R, RR>>;
     // NOTE: these two are the minimal requirements for the sentinel type,
     // and the conceptual requirements for the S and It types of sentinel_box.
     requires std::copyable<decltype(begin_end_impl::e(x))>;
@@ -171,9 +169,7 @@ concept is_generic_range = requires(T &x) {
                 || with_ptrdiff_t_difference<decltype(begin_end_impl::b(x)), decltype(begin_end_impl::e(x))>;
 
     // Const counterparts.
-    {
-        make_generic_iterator<It>{}(begin_end_impl::b(std::as_const(x)))
-    } -> std::same_as<It<V, CR, CRR>>;
+    { make_generic_iterator<It>{}(begin_end_impl::b(std::as_const(x))) } -> std::same_as<It<V, CR, CRR>>;
     requires std::copyable<decltype(begin_end_impl::e(std::as_const(x)))>;
     requires minimal_eq_comparable<decltype(begin_end_impl::b(std::as_const(x))),
                                    decltype(begin_end_impl::e(std::as_const(x)))>;

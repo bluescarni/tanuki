@@ -197,7 +197,7 @@ struct generic_range_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, It> : public
         // functions contains a user-defined iterator of type ud_iter_t (and that will not be
         // the case, leading to a runtime exception).
         if constexpr (std::same_as<ud_iter_t, It<V, R, RR>>) {
-            return It<V, R, RR>(tanuki::nested_wrap, begin_end_impl::b(getval<Holder>(this)));
+            return It<V, R, RR>(std::in_place_type<It<V, R, RR>>, begin_end_impl::b(getval<Holder>(this)));
         } else {
             return make_generic_iterator<It>{}(begin_end_impl::b(getval<Holder>(this)));
         }
@@ -214,7 +214,7 @@ struct generic_range_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, It> : public
         using ud_iter_t = decltype(begin_end_impl::b(getval<Holder>(this)));
 
         if constexpr (std::same_as<ud_iter_t, It<V, CR, CRR>>) {
-            return It<V, CR, CRR>(tanuki::nested_wrap, begin_end_impl::b(getval<Holder>(this)));
+            return It<V, CR, CRR>(std::in_place_type<It<V, CR, CRR>>, begin_end_impl::b(getval<Holder>(this)));
         } else {
             return make_generic_iterator<It>{}(begin_end_impl::b(getval<Holder>(this)));
         }

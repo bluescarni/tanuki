@@ -1089,11 +1089,6 @@ struct invalid_wrap_t {
 
 inline constexpr invalid_wrap_t invalid_wrap{};
 
-struct nested_wrap_t {
-};
-
-inline constexpr nested_wrap_t nested_wrap{};
-
 // Helper to unwrap a std::reference_wrapper and remove reference
 // and cv qualifiers from the result.
 template <typename T>
@@ -1435,17 +1430,6 @@ public:
         ctor_impl<T>(std::forward<U>(args)...);
     }
 
-    // Nested wrap constructor.
-    template <typename T>
-        requires std::default_initializable<ref_iface_t> && std::same_as<wrap, std::remove_cvref_t<T>>
-                 && detail::holder_constructible_from<detail::value_t_from_arg<T &&>, IFace, Cfg.semantics, T &&>
-    explicit wrap(nested_wrap_t,
-                  T &&w) noexcept(noexcept(this->ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(w)))
-                                  && detail::nothrow_default_initializable<ref_iface_t>)
-    {
-        ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(w));
-    }
-
     wrap(const wrap &other) noexcept(Cfg.semantics == wrap_semantics::reference)
         requires(Cfg.copyable || Cfg.semantics == wrap_semantics::reference) && std::default_initializable<ref_iface_t>
     {
@@ -1708,9 +1692,6 @@ public:
 #endif
 
     // Emplacement.
-    // NOTE: need to document that self-emplacement results in undefined
-    // behaviour because the first step taken by this function is self
-    // destruction.
     template <typename T, typename... Args>
         requires
         // We must be able to construct the holder.
@@ -1751,7 +1732,7 @@ public:
     // The invalid state can also be explicitly set by constructing/assigning
     // from invalid_wrap_t.
     // The only valid operations on an invalid object are:
-    // - invocation of is_invalid(),
+    // - invocation of is_invalid()/is_valid(),
     // - destruction,
     // - copy/move assignment from, and swapping with, a valid wrap,
     // - generic assignment,
@@ -1983,7 +1964,7 @@ template <typename Holder, typename U>
 }
 
 template <typename IFace, auto Cfg>
-bool is_valid(const wrap<IFace, Cfg> &w) noexcept
+[[nodiscard]] bool is_valid(const wrap<IFace, Cfg> &w) noexcept
 {
     return !is_invalid(w);
 }

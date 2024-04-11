@@ -1422,8 +1422,6 @@ public:
     // are provided. This must be documented well.
     template <typename T, typename... U>
         requires std::default_initializable<ref_iface_t> &&
-                 // Forbid emplacing a wrap inside a wrap.
-                 (!std::same_as<T, wrap>) &&
                  // We must be able to construct the holder.
                  detail::holder_constructible_from<T, IFace, Cfg.semantics, U &&...>
     explicit wrap(std::in_place_type_t<T>, U &&...args) noexcept(noexcept(this->ctor_impl<T>(std::forward<U>(args)...))
@@ -1606,9 +1604,8 @@ public:
     wrap &operator=(invalid_wrap_t) noexcept
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
-            // Don't do anything if this is already
-            // in the invalid state.
-            if (!is_invalid(*this)) {
+            // Do something only if this is in a valid state.
+            if (is_valid(*this)) {
                 // Destroy the contained value.
                 destroy();
 
@@ -1697,15 +1694,13 @@ public:
     // Emplacement.
     template <typename T, typename... Args>
         requires
-        // Forbid emplacing a wrap inside a wrap.
-        (!std::same_as<T, wrap>) &&
         // We must be able to construct the holder.
         detail::holder_constructible_from<T, IFace, Cfg.semantics, Args &&...>
-        friend void emplace(wrap &w, Args &&...args) noexcept(noexcept(w.ctor_impl<T>(std::forward<Args>(args)...)))
+    friend void emplace(wrap &w, Args &&...args) noexcept(noexcept(w.ctor_impl<T>(std::forward<Args>(args)...)))
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
             // Destroy the value in w if necessary.
-            if (!is_invalid(w)) {
+            if (is_valid(w)) {
                 w.destroy();
             }
 
@@ -1737,7 +1732,7 @@ public:
     // The invalid state can also be explicitly set by constructing/assigning
     // from invalid_wrap_t.
     // The only valid operations on an invalid object are:
-    // - invocation of is_invalid(),
+    // - invocation of is_invalid()/is_valid(),
     // - destruction,
     // - copy/move assignment from, and swapping with, a valid wrap,
     // - generic assignment,
@@ -1969,6 +1964,12 @@ template <typename Holder, typename U>
 }
 
 template <typename IFace, auto Cfg>
+[[nodiscard]] bool is_valid(const wrap<IFace, Cfg> &w) noexcept
+{
+    return !is_invalid(w);
+}
+
+template <typename IFace, auto Cfg>
 bool has_dynamic_storage(const wrap<IFace, Cfg> &w) noexcept
 {
     return !has_static_storage(w);
@@ -2140,7 +2141,6 @@ struct tracking_level<tanuki::detail::value_iface<IFace, tanuki::wrap_semantics:
 #endif
 
 #undef TANUKI_ABI_TAG_ATTR
-#undef TANUKI_NO_UNIQUE_ADDRESS
 #undef TANUKI_VISIBLE
 
 #endif

@@ -186,25 +186,45 @@ template <typename Base, typename Holder, typename T, typename V, typename R, ty
 struct generic_range_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, It> : public Base {
     It<V, R, RR> begin() final
     {
-        return make_generic_iterator<It>{}(begin_end_impl::b(getval<Holder>(this)));
+        using ud_iter_t = decltype(begin_end_impl::b(getval<Holder>(this)));
+
+        // NOTE: here we want to detect the case in which ud_iter_t is equal to It<V, R, RR>
+        // (that is, it is already a type-erased iterator of exactly the correct type).
+        // In that case, make_generic_iterator() would just perform a copy of the
+        // user-defined iterator instead of type-erasing
+        // it, and this would cause issues with the logic in the sentinel class which will
+        // assume that the type-erased iterator passed to the at_end() and distance_to_iter()
+        // functions contains a user-defined iterator of type ud_iter_t (and that will not be
+        // the case, leading to a runtime exception).
+        if constexpr (std::same_as<ud_iter_t, It<V, R, RR>>) {
+            return It<V, R, RR>(std::in_place_type<It<V, R, RR>>, begin_end_impl::b(getval<Holder>(this)));
+        } else {
+            return make_generic_iterator<It>{}(begin_end_impl::b(getval<Holder>(this)));
+        }
     }
     sentinel end() final
     {
-        using iter_t = decltype(begin_end_impl::b(getval<Holder>(this)));
-        using sentinel_t = decltype(begin_end_impl::e(getval<Holder>(this)));
+        using ud_iter_t = decltype(begin_end_impl::b(getval<Holder>(this)));
+        using ud_sentinel_t = decltype(begin_end_impl::e(getval<Holder>(this)));
 
-        return sentinel(sentinel_box<sentinel_t, iter_t>{begin_end_impl::e(getval<Holder>(this))});
+        return sentinel(sentinel_box<ud_sentinel_t, ud_iter_t>{begin_end_impl::e(getval<Holder>(this))});
     }
     It<V, CR, CRR> begin() const final
     {
-        return make_generic_iterator<It>{}(begin_end_impl::b(getval<Holder>(this)));
+        using ud_iter_t = decltype(begin_end_impl::b(getval<Holder>(this)));
+
+        if constexpr (std::same_as<ud_iter_t, It<V, CR, CRR>>) {
+            return It<V, CR, CRR>(std::in_place_type<It<V, CR, CRR>>, begin_end_impl::b(getval<Holder>(this)));
+        } else {
+            return make_generic_iterator<It>{}(begin_end_impl::b(getval<Holder>(this)));
+        }
     }
     [[nodiscard]] sentinel end() const final
     {
-        using iter_t = decltype(begin_end_impl::b(getval<Holder>(this)));
-        using sentinel_t = decltype(begin_end_impl::e(getval<Holder>(this)));
+        using ud_iter_t = decltype(begin_end_impl::b(getval<Holder>(this)));
+        using ud_sentinel_t = decltype(begin_end_impl::e(getval<Holder>(this)));
 
-        return sentinel(sentinel_box<sentinel_t, iter_t>{begin_end_impl::e(getval<Holder>(this))});
+        return sentinel(sentinel_box<ud_sentinel_t, ud_iter_t>{begin_end_impl::e(getval<Holder>(this))});
     }
 };
 

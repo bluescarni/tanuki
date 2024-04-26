@@ -6,7 +6,7 @@ Type-erasure for references
 ===========================
 
 In all the examples we have seen so far, :cpp:class:`wrap` objects were constructed
-by copying/moving values. It is however also possible
+by copying/moving values into a :cpp:class:`wrap`. It is however also possible
 to construct :cpp:class:`wrap` objects that contain references to existing values,
 rather than copies of the values. References are stored in a :cpp:class:`wrap` via
 `std::reference_wrapper <https://en.cppreference.com/w/cpp/utility/functional/reference_wrapper>`__, and,
@@ -38,7 +38,7 @@ We then provide an empty default interface implementation:
    :language: c++
    :lines: 6-8
 
-And here is the implementation for values *or references* providing ``foo()`` and ``bar()`` member functions:
+And here is the implementation of the interface for values *or references* providing ``foo()`` and ``bar()`` member functions:
 
 .. literalinclude:: ../tutorial/wrap_reference.cpp
    :language: c++

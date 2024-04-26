@@ -6,10 +6,8 @@ Composing interfaces
 ====================
 
 tanuki offers the possibility of combining multiple (potentially unrelated) interfaces
-into a single one. This can be done in (at least) two ways:
-
-- either via the easy-to-use :cpp:class:`composite_iface` class, or
-- by manually composing interfaces via inheritance.
+into a single one. This can be done in (at least) two ways: either via the easy-to-use :cpp:class:`composite_iface` class, or
+by manually composing interfaces via inheritance.
 
 Automatic composition via :cpp:class:`composite_iface`
 ------------------------------------------------------

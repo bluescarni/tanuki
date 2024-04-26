@@ -1963,6 +1963,13 @@ template <typename Holder, typename U>
     }
 }
 
+template <typename Holder, typename U>
+    requires any_holder<Holder> && std::derived_from<Holder, U>
+[[nodiscard]] auto &getval(U &h) noexcept(noexcept(getval<Holder>(&h)))
+{
+    return getval<Holder>(&h);
+}
+
 template <typename IFace, auto Cfg>
 [[nodiscard]] bool is_valid(const wrap<IFace, Cfg> &w) noexcept
 {

@@ -10,6 +10,7 @@
 #define FACADE_RANGES_HPP
 
 #include <concepts>
+#include <functional>
 #include <iterator>
 #include <type_traits>
 #include <utility>
@@ -155,9 +156,8 @@ auto e(T &x)
 
 } // namespace begin_end_impl
 
-template <typename T, typename V, typename R, typename RR, typename CR, typename CRR,
-          template <typename, typename, typename> typename It>
-concept is_generic_range = requires(T &x) {
+template <typename T, typename V, typename R, typename RR, template <typename, typename, typename> typename It>
+concept is_generic_range_impl = requires(T &x) {
     { make_generic_iterator<It>{}(begin_end_impl::b(x)) } -> std::same_as<It<V, R, RR>>;
     // NOTE: these two are the minimal requirements for the sentinel type,
     // and the conceptual requirements for the S and It types of sentinel_box.
@@ -167,18 +167,46 @@ concept is_generic_range = requires(T &x) {
     // between the iterator and the sentinel.
     requires(!std::random_access_iterator<It<V, R, RR>>)
                 || with_ptrdiff_t_difference<decltype(begin_end_impl::b(x)), decltype(begin_end_impl::e(x))>;
-
-    // Const counterparts.
-    { make_generic_iterator<It>{}(begin_end_impl::b(std::as_const(x))) } -> std::same_as<It<V, CR, CRR>>;
-    requires std::copyable<decltype(begin_end_impl::e(std::as_const(x)))>;
-    requires minimal_eq_comparable<decltype(begin_end_impl::b(std::as_const(x))),
-                                   decltype(begin_end_impl::e(std::as_const(x)))>;
-    requires(!std::random_access_iterator<It<V, CR, CRR>>)
-                || with_ptrdiff_t_difference<decltype(begin_end_impl::b(std::as_const(x))),
-                                             decltype(begin_end_impl::e(std::as_const(x)))>;
 };
 
-// Implementation of the interface.
+template <typename T, typename V, typename R, typename RR, typename CR, typename CRR,
+          template <typename, typename, typename> typename It>
+concept is_generic_range =
+    // NOTE: run the is_generic_range_impl checks on both the mutable and const variants of T.
+    is_generic_range_impl<T, V, R, RR, It> && is_generic_range_impl<std::add_const_t<T>, V, CR, CRR, It>;
+
+// begin()/end() implementations for the range interface implementations. Defined
+// outside the class in order to avoid repetitions.
+template <typename Holder, typename V, typename R, typename RR, template <typename, typename, typename> typename It>
+auto range_begin_impl(auto *self)
+{
+    using ud_iter_t = decltype(begin_end_impl::b(getval<Holder>(self)));
+
+    // NOTE: here we want to detect the case in which ud_iter_t is equal to It<V, R, RR>
+    // (that is, ud_iter_t is already a type-erased iterator of exactly the correct type).
+    // In that case, make_generic_iterator() would just perform a copy of the
+    // user-defined iterator instead of type-erasing
+    // it, and this would cause issues with the logic in the sentinel class which will
+    // assume that the type-erased iterator passed to the at_end() and distance_to_iter()
+    // functions contains a user-defined iterator of type ud_iter_t (and that will not be
+    // the case, leading to a runtime exception).
+    if constexpr (std::same_as<ud_iter_t, It<V, R, RR>>) {
+        return It<V, R, RR>(std::in_place_type<It<V, R, RR>>, begin_end_impl::b(getval<Holder>(self)));
+    } else {
+        return make_generic_iterator<It>{}(begin_end_impl::b(getval<Holder>(self)));
+    }
+}
+
+template <typename Holder>
+auto range_end_impl(auto *self)
+{
+    using ud_iter_t = decltype(begin_end_impl::b(getval<Holder>(self)));
+    using ud_sentinel_t = decltype(begin_end_impl::e(getval<Holder>(self)));
+
+    return sentinel(sentinel_box<ud_sentinel_t, ud_iter_t>{begin_end_impl::e(getval<Holder>(self))});
+}
+
+// Default implementation of the interface.
 template <typename Base, typename Holder, typename T, typename V, typename R, typename RR, typename CR, typename CRR,
           template <typename, typename, typename> typename It>
     requires std::derived_from<Base, generic_range_iface<V, R, RR, CR, CRR, It>>
@@ -186,45 +214,48 @@ template <typename Base, typename Holder, typename T, typename V, typename R, ty
 struct generic_range_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, It> : public Base {
     It<V, R, RR> begin() final
     {
-        using ud_iter_t = decltype(begin_end_impl::b(getval<Holder>(this)));
-
-        // NOTE: here we want to detect the case in which ud_iter_t is equal to It<V, R, RR>
-        // (that is, it is already a type-erased iterator of exactly the correct type).
-        // In that case, make_generic_iterator() would just perform a copy of the
-        // user-defined iterator instead of type-erasing
-        // it, and this would cause issues with the logic in the sentinel class which will
-        // assume that the type-erased iterator passed to the at_end() and distance_to_iter()
-        // functions contains a user-defined iterator of type ud_iter_t (and that will not be
-        // the case, leading to a runtime exception).
-        if constexpr (std::same_as<ud_iter_t, It<V, R, RR>>) {
-            return It<V, R, RR>(std::in_place_type<It<V, R, RR>>, begin_end_impl::b(getval<Holder>(this)));
-        } else {
-            return make_generic_iterator<It>{}(begin_end_impl::b(getval<Holder>(this)));
-        }
+        return range_begin_impl<Holder, V, R, RR, It>(this);
     }
     sentinel end() final
     {
-        using ud_iter_t = decltype(begin_end_impl::b(getval<Holder>(this)));
-        using ud_sentinel_t = decltype(begin_end_impl::e(getval<Holder>(this)));
-
-        return sentinel(sentinel_box<ud_sentinel_t, ud_iter_t>{begin_end_impl::e(getval<Holder>(this))});
+        return range_end_impl<Holder>(this);
     }
     It<V, CR, CRR> begin() const final
     {
-        using ud_iter_t = decltype(begin_end_impl::b(getval<Holder>(this)));
-
-        if constexpr (std::same_as<ud_iter_t, It<V, CR, CRR>>) {
-            return It<V, CR, CRR>(std::in_place_type<It<V, CR, CRR>>, begin_end_impl::b(getval<Holder>(this)));
-        } else {
-            return make_generic_iterator<It>{}(begin_end_impl::b(getval<Holder>(this)));
-        }
+        return range_begin_impl<Holder, V, CR, CRR, It>(this);
     }
     [[nodiscard]] sentinel end() const final
     {
-        using ud_iter_t = decltype(begin_end_impl::b(getval<Holder>(this)));
-        using ud_sentinel_t = decltype(begin_end_impl::e(getval<Holder>(this)));
+        return range_end_impl<Holder>(this);
+    }
+};
 
-        return sentinel(sentinel_box<ud_sentinel_t, ud_iter_t>{begin_end_impl::e(getval<Holder>(this))});
+// Implementation of the interface when wrapping a const reference.
+// In this specific case, we want to always return the const versions of the iterators,
+// even when invoking the non-const versions of begin()/end(). This is necessary in order
+// to avoid accessing a const range via a non-const access path (which would result
+// in std::runtime_error) when building nested type-erased ranges wrapping const
+// references.
+template <typename Base, typename Holder, typename T, typename V, typename CR, typename CRR,
+          template <typename, typename, typename> typename It>
+    requires std::derived_from<Base, generic_range_iface<V, CR, CRR, CR, CRR, It>>
+             && is_generic_range<const T, V, CR, CRR, CR, CRR, It>
+struct generic_range_iface_impl<Base, Holder, std::reference_wrapper<const T>, V, CR, CRR, CR, CRR, It> : public Base {
+    It<V, CR, CRR> begin() const final
+    {
+        return range_begin_impl<Holder, V, CR, CRR, It>(this);
+    }
+    [[nodiscard]] sentinel end() const final
+    {
+        return range_end_impl<Holder>(this);
+    }
+    It<V, CR, CRR> begin() final
+    {
+        return std::as_const(*this).begin();
+    }
+    [[nodiscard]] sentinel end() final
+    {
+        return std::as_const(*this).end();
     }
 };
 
@@ -289,21 +320,57 @@ template <typename V, typename R, typename RR, typename CR, typename CRR,
 using generic_range = tanuki::wrap<detail::generic_range_iface<V, R, RR, CR, CRR, It>,
                                    detail::generic_range_config<V, R, RR, CR, CRR, It>>;
 
+// Detection of const reference wrappers.
 template <typename T>
-using unwrap_cvref2_t = tanuki::unwrap_cvref_t<std::remove_cvref_t<T>>;
+inline constexpr bool is_const_ref_wrapper = false;
+
+template <typename T>
+inline constexpr bool is_const_ref_wrapper<std::reference_wrapper<const T>> = true;
+
+// Implementation of a type-trait that deduces from the user-defined range
+// T (which may be cv/ref qualified) the type that will be used in the type-erased
+// wrapper to access the range functions. Specifically:
+// - if T is *not* a std::reference_wrapper, the deduction produces
+//   T without cv/ref qualifiers;
+// - if T, after cvref removal, is a std::reference_wrapper, the deduction produces
+//   the referred-to type (which may be const-qualified).
+template <typename T>
+struct deduce_range_impl {
+    using type = tanuki::unwrap_cvref_t<std::remove_cvref_t<T>>;
+};
+
+// NOTE: need to handle specially the const reference case, since we want
+// to keep the constness of the referred-to type.
+template <typename T>
+    requires is_const_ref_wrapper<std::remove_cvref_t<T>>
+struct deduce_range_impl<T> {
+    using type = std::remove_reference_t<std::unwrap_reference_t<std::remove_cvref_t<T>>>;
+};
+
+template <typename T>
+using deduce_range_t = typename deduce_range_impl<T>::type;
 
 template <typename T, template <typename, typename, typename, typename, typename> typename R>
 concept generic_ud_input_range = requires() {
-    typename deduce_iter_value_t<iter_t<unwrap_cvref2_t<T>>>;
-    typename std::iter_reference_t<iter_t<unwrap_cvref2_t<T>>>;
-    typename std::iter_rvalue_reference_t<iter_t<unwrap_cvref2_t<T>>>;
-    typename std::iter_reference_t<iter_t<const unwrap_cvref2_t<T>>>;
-    typename std::iter_rvalue_reference_t<iter_t<const unwrap_cvref2_t<T>>>;
+    // We must be able to deduce a value type for both versions
+    // of the iterators, and they must be the same type.
+    typename deduce_iter_value_t<iter_t<deduce_range_t<T>>>;
+    typename deduce_iter_value_t<iter_t<std::add_const_t<deduce_range_t<T>>>>;
+    requires std::same_as<deduce_iter_value_t<iter_t<deduce_range_t<T>>>,
+                          deduce_iter_value_t<iter_t<std::add_const_t<deduce_range_t<T>>>>>;
+
+    // Both versions of the iterators must have valid reference types.
+    typename std::iter_reference_t<iter_t<deduce_range_t<T>>>;
+    typename std::iter_rvalue_reference_t<iter_t<deduce_range_t<T>>>;
+    typename std::iter_reference_t<iter_t<std::add_const_t<deduce_range_t<T>>>>;
+    typename std::iter_rvalue_reference_t<iter_t<std::add_const_t<deduce_range_t<T>>>>;
+
+    // We must be able to construct the type-erased range from the user-defined range.
     requires std::constructible_from<
-        R<deduce_iter_value_t<iter_t<unwrap_cvref2_t<T>>>, std::iter_reference_t<iter_t<unwrap_cvref2_t<T>>>,
-          std::iter_rvalue_reference_t<iter_t<unwrap_cvref2_t<T>>>,
-          typename std::iter_reference_t<iter_t<const unwrap_cvref2_t<T>>>,
-          typename std::iter_rvalue_reference_t<iter_t<const unwrap_cvref2_t<T>>>>,
+        R<deduce_iter_value_t<iter_t<deduce_range_t<T>>>, std::iter_reference_t<iter_t<deduce_range_t<T>>>,
+          std::iter_rvalue_reference_t<iter_t<deduce_range_t<T>>>,
+          std::iter_reference_t<iter_t<std::add_const_t<deduce_range_t<T>>>>,
+          std::iter_rvalue_reference_t<iter_t<std::add_const_t<deduce_range_t<T>>>>>,
         T>;
 };
 
@@ -339,11 +406,11 @@ concept ud_random_access_range = detail::generic_ud_input_range<T, random_access
         requires(ud_##tp##_range<T>)                                                                                   \
     auto make_##tp##_range(T &&x)                                                                                      \
     {                                                                                                                  \
-        return tp##_range<detail::deduce_iter_value_t<detail::iter_t<detail::unwrap_cvref2_t<T>>>,                     \
-                          std::iter_reference_t<detail::iter_t<detail::unwrap_cvref2_t<T>>>,                           \
-                          std::iter_rvalue_reference_t<detail::iter_t<detail::unwrap_cvref2_t<T>>>,                    \
-                          std::iter_reference_t<detail::iter_t<const detail::unwrap_cvref2_t<T>>>,                     \
-                          std::iter_rvalue_reference_t<detail::iter_t<const detail::unwrap_cvref2_t<T>>>>(             \
+        return tp##_range<detail::deduce_iter_value_t<detail::iter_t<detail::deduce_range_t<T>>>,                      \
+                          std::iter_reference_t<detail::iter_t<detail::deduce_range_t<T>>>,                            \
+                          std::iter_rvalue_reference_t<detail::iter_t<detail::deduce_range_t<T>>>,                     \
+                          std::iter_reference_t<detail::iter_t<std::add_const_t<detail::deduce_range_t<T>>>>,          \
+                          std::iter_rvalue_reference_t<detail::iter_t<std::add_const_t<detail::deduce_range_t<T>>>>>(  \
             std::forward<T>(x));                                                                                       \
     }
 

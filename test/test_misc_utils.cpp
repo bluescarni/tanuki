@@ -31,7 +31,7 @@ template <typename Base, typename Holder, typename>
 struct foo_iface_impl : Base {
     void foo() const final
     {
-        getval<Holder>(this).foo();
+        getval<Holder>(*this).foo();
     }
 };
 
@@ -48,7 +48,7 @@ template <typename Base, typename Holder, typename>
 struct bar_iface_impl : Base {
     void bar() final
     {
-        getval<Holder>(this).bar();
+        getval<Holder>(*this).bar();
     }
 };
 

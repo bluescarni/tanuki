@@ -105,8 +105,9 @@ TEST_CASE("basic random_access")
         const auto r4 = facade::make_random_access_range(std::cref(vec2));
         REQUIRE(has_static_storage(r4));
         REQUIRE(std::ranges::random_access_range<decltype(r4)>);
-        REQUIRE(std::same_as<decltype(r4),
-                             const facade::random_access_range<int, int &, int &&, const int &, const int &&>>);
+        REQUIRE(
+            std::same_as<decltype(r4),
+                         const facade::random_access_range<int, const int &, const int &&, const int &, const int &&>>);
         REQUIRE(&*r4.begin() == vec2.data());
 
         std::vector vec3 = {1, 2, 3};
@@ -133,8 +134,9 @@ TEST_CASE("basic random_access")
 
         const auto r2 = facade::make_random_access_range(std::cref(vec));
         REQUIRE(std::ranges::random_access_range<decltype(r2)>);
-        REQUIRE(std::same_as<decltype(r2),
-                             const facade::random_access_range<int, int &, int &&, const int &, const int &&>>);
+        REQUIRE(
+            std::same_as<decltype(r2),
+                         const facade::random_access_range<int, const int &, const int &&, const int &, const int &&>>);
 
         REQUIRE(std::ranges::equal(r1, r2));
     }
@@ -144,13 +146,15 @@ TEST_CASE("basic random_access")
 
         const auto r1 = facade::make_random_access_range(std::ref(vec));
         REQUIRE(std::ranges::random_access_range<decltype(r1)>);
-        REQUIRE(std::same_as<decltype(r1),
-                             const facade::random_access_range<int, int &, int &&, const int &, const int &&>>);
+        REQUIRE(
+            std::same_as<decltype(r1),
+                         const facade::random_access_range<int, const int &, const int &&, const int &, const int &&>>);
 
         const auto r2 = facade::make_random_access_range(std::cref(vec));
         REQUIRE(std::ranges::random_access_range<decltype(r2)>);
-        REQUIRE(std::same_as<decltype(r2),
-                             const facade::random_access_range<int, int &, int &&, const int &, const int &&>>);
+        REQUIRE(
+            std::same_as<decltype(r2),
+                         const facade::random_access_range<int, const int &, const int &&, const int &, const int &&>>);
 
         REQUIRE(std::ranges::equal(r1, r2));
     }
@@ -174,8 +178,9 @@ TEST_CASE("basic random_access")
         REQUIRE(!std::ranges::range<min_ra_range>);
         const auto r1 = facade::make_random_access_range(std::ref(vec));
         REQUIRE(std::ranges::random_access_range<decltype(r1)>);
-        REQUIRE(std::same_as<decltype(r1),
-                             const facade::random_access_range<int, int &, int &&, const int &, const int &&>>);
+        REQUIRE(
+            std::same_as<decltype(r1),
+                         const facade::random_access_range<int, const int &, const int &&, const int &, const int &&>>);
         REQUIRE(has_static_storage(r1));
         REQUIRE(&*std::ranges::begin(r1) == vec.vec.data());
         REQUIRE(std::ranges::equal(vec.vec, r1));
@@ -192,8 +197,9 @@ TEST_CASE("basic random_access")
 
         const auto r2 = facade::make_random_access_range(std::cref(vec));
         REQUIRE(std::ranges::random_access_range<decltype(r2)>);
-        REQUIRE(std::same_as<decltype(r2),
-                             const facade::random_access_range<int, int &, int &&, const int &, const int &&>>);
+        REQUIRE(
+            std::same_as<decltype(r2),
+                         const facade::random_access_range<int, const int &, const int &&, const int &, const int &&>>);
 
         REQUIRE(std::ranges::equal(r1, r2));
     }
@@ -203,13 +209,15 @@ TEST_CASE("basic random_access")
 
         const auto r1 = facade::make_random_access_range(std::ref(vec));
         REQUIRE(std::ranges::random_access_range<decltype(r1)>);
-        REQUIRE(std::same_as<decltype(r1),
-                             const facade::random_access_range<int, int &, int &&, const int &, const int &&>>);
+        REQUIRE(
+            std::same_as<decltype(r1),
+                         const facade::random_access_range<int, const int &, const int &&, const int &, const int &&>>);
 
         const auto r2 = facade::make_random_access_range(std::cref(vec));
         REQUIRE(std::ranges::random_access_range<decltype(r2)>);
-        REQUIRE(std::same_as<decltype(r2),
-                             const facade::random_access_range<int, int &, int &&, const int &, const int &&>>);
+        REQUIRE(
+            std::same_as<decltype(r2),
+                         const facade::random_access_range<int, const int &, const int &&, const int &, const int &&>>);
 
         REQUIRE(std::ranges::equal(r1, r2));
     }
@@ -219,9 +227,24 @@ TEST_CASE("nested type erasure")
 {
     const std::vector vec = {1, 2, 3};
 
-    auto tmp = facade::make_random_access_range(vec);
-    auto r1 = facade::make_random_access_range(tmp | std::views::transform(std::identity{}));
-    REQUIRE(*std::ranges::lower_bound(r1, 1) == 1);
+    // This test checks that type-erasing a range which already returns
+    // type-erased iterators works as expected (i.e., the type-erased iterators
+    // are re-type-erased intead of being copied).
+    {
+        auto tmp = facade::make_random_access_range(vec);
+        auto r1 = facade::make_random_access_range(tmp | std::views::transform(std::identity{}));
+        REQUIRE(*std::ranges::lower_bound(r1, 1) == 1);
+    }
+
+    // This test checks that type-erasing a type-erased range containing
+    // a const reference works as expected (specifically, type-erasing
+    // a const reference results in a range which returns const iterators
+    // for both overloads of begin()).
+    {
+        auto tmp = facade::make_random_access_range(std::ref(vec));
+        auto r1 = facade::make_random_access_range(tmp | std::views::transform(std::identity{}));
+        REQUIRE(*std::ranges::lower_bound(r1, 1) == 1);
+    }
 }
 
 TEST_CASE("counted iterator")

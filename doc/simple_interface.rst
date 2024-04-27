@@ -85,7 +85,7 @@ type-erased value.
 
 Note that :cpp:func:`getval()` does a bit more than providing access to the type-erased value, as it will be explained
 in a :ref:`later tutorial <wrap_reference>`. In any case, from now on, all interface implementations
-shown in these tutorials will make use of :cpp:func:`getval()` to reduce typing.
+shown in these tutorials will make use of :cpp:func:`getval()` in order to reduce typing.
 
 Let us see the new interface implementation in action:
 

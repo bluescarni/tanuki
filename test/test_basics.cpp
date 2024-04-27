@@ -207,6 +207,15 @@ TEST_CASE("basics")
 
     // Same on holder_align.
     REQUIRE(!with_holder_align<nonwrappable, any_iface>);
+
+    // In-place nested construction.
+    wrap_t w4(4.), w5(std::in_place_type<wrap_t>, w4);
+    REQUIRE(!noexcept(wrap_t(std::in_place_type<wrap_t>, w4)));
+    REQUIRE(value_ref<double>(value_ref<wrap_t>(w5)) == 4.);
+
+    wrap_t w8(large{.str = "foobar"}), w9(std::in_place_type<wrap_t>, std::move(w8));
+    REQUIRE(value_ref<large>(value_ref<wrap_t>(w9)).str == "foobar");
+    REQUIRE(is_invalid(w8));
 }
 
 TEST_CASE("assignment")

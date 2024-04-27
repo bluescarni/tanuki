@@ -36,7 +36,7 @@ The invalid state
 
 A :cpp:class:`wrap` object is in the *invalid* state when it is empty, that is, it does not contain
 any value. The validity of a :cpp:class:`wrap` can be checked via the :cpp:func:`~wrap::is_invalid()`
-function.
+and :cpp:func:`is_valid()` functions.
 
 A :cpp:class:`wrap` object can become invalid in a variety of circumstances:
 
@@ -51,7 +51,7 @@ A :cpp:class:`wrap` object can become invalid in a variety of circumstances:
 The only allowed operations on an invalid :cpp:class:`wrap` are:
 
 - destruction,
-- the invocation of :cpp:func:`~wrap::is_invalid()`,
+- the invocation of :cpp:func:`~wrap::is_invalid()` and :cpp:func:`is_valid()`,
 - copy/move assignment from, and swapping with, a valid :cpp:class:`wrap`,
 - :ref:`emplacement <emplacement>`,
 - generic assignment.

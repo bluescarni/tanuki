@@ -101,8 +101,10 @@ The ``wrap`` class
       This function will first destroy the value in *w* (if *w* is not already in the :ref:`invalid state <invalid_state>`).
       It will then construct in *w* a value of type :cpp:type:`T` using the construction arguments :cpp:type:`Args`.
 
-      This function is enabled only if :cpp:type:`T` is not :cpp:class:`wrap` (that is, it is not possible to emplace
-      a :cpp:class:`wrap` into itself) and if an instance of :cpp:type:`T` can be constructed from :cpp:type:`Args`.
+      This function is enabled only if an instance of :cpp:type:`T` can be constructed from :cpp:type:`Args`.
+
+      Passing *w* as an argument in *args* (e.g., attempting to emplace *w* into itself) will lead to
+      undefined behaviour.
 
       This function is ``noexcept`` if all these conditions are satisfied:
 
@@ -125,6 +127,15 @@ The ``wrap`` class
       :param w: the input :cpp:class:`wrap`.
 
       :return: ``true`` if *w* is currently employing static storage, ``false`` otherwise.
+
+.. cpp:function:: [[nodiscard]] friend bool is_valid(const wrap &w) noexcept
+
+   This function will return ``false`` if *w* is in the :ref:`invalid state <invalid_state>`,
+   ``true`` otherwise.
+
+   :param w: the input argument.
+
+   :return: the validity status for *w*.
 
 .. cpp:function:: template <typename IFace, auto Cfg> bool has_dynamic_storage(const wrap<IFace, Cfg> &w) noexcept
 

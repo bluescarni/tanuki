@@ -27,8 +27,8 @@ Utilities
    `curiously recurring template pattern (CRTP) <https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern>`__
    to cast *h* to :cpp:type:`Holder` and fetch the type-erased value stored within.
 
-   If the type-erased value stored in *h* is a ``std::reference_wrapper``, these getters will return a
-   reference to the referenced-to value.
+   If the type-erased value stored in *h* is a ``std::reference_wrapper``, these getters will unwrap the reference
+   (i.e., they will return a reference to the referenced-to value).
 
    :param h: a pointer or reference to a :cpp:class:`holder`, cast to its base type :cpp:type:`T`.
 

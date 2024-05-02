@@ -23,7 +23,7 @@ The other option is to specify a custom (i.e., non-``void``) :cpp:type:`~config:
 as first template argument in :cpp:struct:`config`, in which case the default constructor of
 :cpp:class:`wrap` will value-initialise an interal value of type :cpp:type:`~config::DefaultValueType`.
 Note that a custom :cpp:type:`~config::DefaultValueType` must satisfy the requirements
-of the :cpp:class:`wrap` interface.
+of the interface being wrapped by :cpp:class:`wrap`.
 
 If both the :cpp:var:`config::invalid_default_ctor` option is activated and
 a custom :cpp:type:`~config::DefaultValueType` is specified, then the :cpp:var:`config::invalid_default_ctor` option

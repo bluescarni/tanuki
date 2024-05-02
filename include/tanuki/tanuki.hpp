@@ -287,7 +287,7 @@ struct TANUKI_VISIBLE value_iface : public IFace, value_iface_base {
         assert(false);
         return typeid(void);
     }
-    [[nodiscard]] virtual bool _tanuki_is_reference() const noexcept
+    [[nodiscard]] virtual bool _tanuki_value_is_reference() const noexcept
     {
         unreachable();
         assert(false);
@@ -295,13 +295,13 @@ struct TANUKI_VISIBLE value_iface : public IFace, value_iface_base {
     }
 
     // Methods to implement virtual copy/move primitives for the holder class.
-    [[nodiscard]] virtual value_iface *_tanuki_clone() const
+    [[nodiscard]] virtual value_iface *_tanuki_clone_holder() const
     {
         unreachable();
         assert(false);
         return {};
     }
-    [[nodiscard]] virtual std::shared_ptr<value_iface> _tanuki_shared_clone() const
+    [[nodiscard]] virtual std::shared_ptr<value_iface> _tanuki_shared_clone_holder() const
     {
         unreachable();
         assert(false);
@@ -626,13 +626,13 @@ private:
         return std::addressof(m_value);
     }
 
-    [[nodiscard]] bool _tanuki_is_reference() const noexcept final
+    [[nodiscard]] bool _tanuki_value_is_reference() const noexcept final
     {
         return detail::is_reference_wrapper_v<T>;
     }
 
     // Clone this, and cast the result to the value interface.
-    [[nodiscard]] detail::value_iface<IFace, Sem> *_tanuki_clone() const final
+    [[nodiscard]] detail::value_iface<IFace, Sem> *_tanuki_clone_holder() const final
     {
         if constexpr (std::copy_constructible<T>) {
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
@@ -642,7 +642,7 @@ private:
         }
     }
     // Same as above, but return a shared ptr.
-    [[nodiscard]] std::shared_ptr<detail::value_iface<IFace, Sem>> _tanuki_shared_clone() const final
+    [[nodiscard]] std::shared_ptr<detail::value_iface<IFace, Sem>> _tanuki_shared_clone_holder() const final
     {
         if constexpr (std::copy_constructible<T>) {
             return std::make_shared<holder>(m_value);
@@ -650,7 +650,7 @@ private:
             throw std::invalid_argument("Attempting to clone a non-copyable value type");
         }
     }
-    // Copy-init a new holder into the storage beginning at ptr.
+    // Copy-init a new holder from this into the storage beginning at ptr.
     // Then cast the result to the value interface and return.
     [[nodiscard]] detail::value_iface<IFace, Sem> *_tanuki_copy_init_holder(void *ptr) const final
     {
@@ -665,7 +665,7 @@ private:
             throw std::invalid_argument("Attempting to copy-construct a non-copyable value type");
         }
     }
-    // Move-init a new holder into the storage beginning at ptr.
+    // Move-init a new holder from this into the storage beginning at ptr.
     // Then cast the result to the value interface and return.
     [[nodiscard]] detail::value_iface<IFace, Sem> *
     // NOLINTNEXTLINE(bugprone-exception-escape)
@@ -1436,14 +1436,14 @@ public:
         if constexpr (Cfg.semantics == wrap_semantics::value) {
             if constexpr (Cfg.static_size == 0u) {
                 // Static storage disabled.
-                this->m_pv_iface = other.m_pv_iface->_tanuki_clone();
+                this->m_pv_iface = other.m_pv_iface->_tanuki_clone_holder();
             } else {
                 if (other.stype()) {
                     // Other has static storage.
                     this->m_pv_iface = other.m_pv_iface->_tanuki_copy_init_holder(this->static_storage);
                 } else {
                     // Other has dynamic storage.
-                    this->m_pv_iface = other.m_pv_iface->_tanuki_clone();
+                    this->m_pv_iface = other.m_pv_iface->_tanuki_clone_holder();
                 }
             }
         } else {
@@ -1864,7 +1864,7 @@ public:
 
     [[nodiscard]] friend bool contains_reference(const wrap &w) noexcept
     {
-        return w.m_pv_iface->_tanuki_is_reference();
+        return w.m_pv_iface->_tanuki_value_is_reference();
     }
 
     // Specific functions for reference semantics.
@@ -1874,7 +1874,7 @@ public:
         requires(Cfg.semantics == wrap_semantics::reference)
     {
         wrap retval(invalid_wrap);
-        retval.m_pv_iface = w.m_pv_iface->_tanuki_shared_clone();
+        retval.m_pv_iface = w.m_pv_iface->_tanuki_shared_clone_holder();
         return retval;
     }
 

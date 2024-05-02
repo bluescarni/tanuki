@@ -14,15 +14,15 @@ The ``wrap`` class
       - the configuration option :cpp:var:`~config::invalid_default_ctor` in :cpp:var:`Cfg` is set to
         ``true``. In this case, the default constructor initialises into the
         :ref:`invalid state <invalid_state>`. Otherwise,
-      - a non-``void`` default-initialisable :cpp:type:`~config::DefaultValueType` with a valid interface implementation
-        for :cpp:type:`IFace` has been specified as first template argument in :cpp:var:`Cfg`. In this case,
-        the default constructor value-initialises an instance of :cpp:type:`~config::DefaultValueType` as
-        the internal type-erased type.
+      - a non-``void`` default-initialisable :cpp:type:`~config::DefaultValueType` with a valid, default-initialisable
+        interface implementation for :cpp:type:`IFace` has been specified as first template argument in :cpp:var:`Cfg`.
+        In this case, the default constructor value-initialises an instance of :cpp:type:`~config::DefaultValueType` as
+        the internal type-erased value.
 
-      In both cases, :cpp:type:`IFace`, its implementation and the :ref:`reference interface <ref_interface>` must
-      all be default-initialisable in order for this constructor to be available.
+      In both cases, the :ref:`reference interface <ref_interface>` must
+      be default-initialisable in order for this constructor to be available.
 
-      :throws: any exception thrown by the default constructor of :cpp:type:`IFace`, its implementation, or
+      :throws: any exception thrown by the default constructor of the interface implementation or of
         the :ref:`reference interface <ref_interface>`, by the value-initialisation of a
         non-``void`` :cpp:type:`~config::DefaultValueType` or by memory allocation errors
         if the non-``void`` :cpp:type:`~config::DefaultValueType` does not fit in static storage. If it can be
@@ -71,7 +71,7 @@ The ``wrap`` class
 
       Otherwise, the constructor is implicit.
 
-      :throws: any exception thrown by the default constructor of :cpp:type:`IFace`, its implementation, or
+      :throws: any exception thrown by the default constructor of the interface implementation or of
         the :ref:`reference interface <ref_interface>`, by the construction of the value type or by memory allocation errors
         if the value type does not fit in static storage. If it can be
         determined at compile time that none of these conditions can occurr, then this constructor
@@ -87,12 +87,19 @@ The ``wrap`` class
       :return: the validity status for *w*.
 
    .. cpp:function:: [[nodiscard]] friend const IFace *iface_ptr(const wrap &w) noexcept
+                     [[nodiscard]] friend const IFace *iface_ptr(const wrap &&w) noexcept
+                     [[nodiscard]] friend IFace *iface_ptr(wrap &w) noexcept
+                     [[nodiscard]] friend IFace *iface_ptr(wrap &&w) noexcept
 
-   .. cpp:function:: [[nodiscard]] friend const IFace *iface_ptr(const wrap &&w) noexcept
+      Fetch a pointer to the interface.
 
-   .. cpp:function:: [[nodiscard]] friend IFace *iface_ptr(wrap &w) noexcept
+      These functions will return a pointer to the instance of the interface :cpp:type:`IFace` stored
+      within a :cpp:class:`wrap`.
+      If *w* is in the :ref:`invalid state <invalid_state>`, then ``nullptr`` will be returned.
 
-   .. cpp:function:: [[nodiscard]] friend IFace *iface_ptr(wrap &&w) noexcept
+      :param w: the input argument.
+
+      :return: a pointer to the interface.
 
    .. cpp:function:: template <typename T, typename... Args> friend void emplace(wrap &w, Args &&...args)
 
@@ -101,7 +108,9 @@ The ``wrap`` class
       This function will first destroy the value in *w* (if *w* is not already in the :ref:`invalid state <invalid_state>`).
       It will then construct in *w* a value of type :cpp:type:`T` using the construction arguments :cpp:type:`Args`.
 
-      This function is enabled only if an instance of :cpp:type:`T` can be constructed from :cpp:type:`Args`.
+      This function is enabled only if an instance of :cpp:type:`T` can be constructed from :cpp:type:`Args`
+      and if the interface :cpp:type:`IFace` has a valid, default-initialisable implementation for the value type :cpp:type:`T`
+      (see the :cpp:concept:`iface_with_impl` concept).
 
       Passing *w* as an argument in *args* (e.g., attempting to emplace *w* into itself) will lead to
       undefined behaviour.

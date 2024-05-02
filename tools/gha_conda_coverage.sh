@@ -14,7 +14,7 @@ wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge
 export deps_dir=$HOME/local
 export PATH="$HOME/miniconda/bin:$PATH"
 bash miniconda.sh -b -p $HOME/miniconda
-mamba create -y -q -p $deps_dir cxx-compiler cmake libboost-devel ninja lcov
+mamba create -y -p $deps_dir cxx-compiler cmake libboost-devel ninja lcov
 source activate $deps_dir
 
 # Create the build dir and cd into it.
@@ -32,13 +32,10 @@ cmake -G Ninja ../ -DCMAKE_PREFIX_PATH=$deps_dir \
 ninja
 ctest -V -j4
 
-# Create lcov report
+# Create lcov report.
+# NOTE: this is apparently picked up automatically
+# by the codecov action.
 lcov --capture --directory . --output-file coverage.info
-
-# Upload coverage data.
-curl -Os https://uploader.codecov.io/latest/linux/codecov
-chmod +x codecov
-./codecov -f coverage.info -g --gx $deps_dir/bin/gcov
 
 set +e
 set +x

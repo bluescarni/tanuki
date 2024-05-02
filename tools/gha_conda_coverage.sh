@@ -32,13 +32,10 @@ cmake -G Ninja ../ -DCMAKE_PREFIX_PATH=$deps_dir \
 ninja
 ctest -V -j4
 
-# Create lcov report
+# Create lcov report.
+# NOTE: this is apparently picked up automatically
+# by the codecov action.
 lcov --capture --directory . --output-file coverage.info
-
-# Upload coverage data.
-curl -Os https://uploader.codecov.io/latest/linux/codecov
-chmod +x codecov
-./codecov -f coverage.info -g --gx $deps_dir/bin/gcov
 
 set +e
 set +x

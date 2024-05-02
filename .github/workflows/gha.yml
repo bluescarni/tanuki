@@ -102,6 +102,5 @@ jobs:
       - uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: true # optional (default = false)
-          files: ./build/converage.info
           token: ${{ secrets.CODECOV_TOKEN }} # required
           verbose: true # optional (default = false)

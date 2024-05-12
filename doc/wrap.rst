@@ -137,7 +137,7 @@ The ``wrap`` class
 
       :return: ``true`` if *w* is currently employing static storage, ``false`` otherwise.
 
-.. cpp:function:: [[nodiscard]] friend bool is_valid(const wrap &w) noexcept
+.. cpp:function:: [[nodiscard]] bool is_valid(const wrap &w) noexcept
 
    This function will return ``false`` if *w* is in the :ref:`invalid state <invalid_state>`,
    ``true`` otherwise.

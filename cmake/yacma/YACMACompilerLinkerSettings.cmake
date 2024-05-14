@@ -131,7 +131,10 @@ if(NOT _YACMACompilerLinkerSettingsRun)
     if(YACMA_COMPILER_IS_CLANGXX OR YACMA_COMPILER_IS_INTELXX OR YACMA_COMPILER_IS_GNUCXX)
         _YACMA_CHECK_ENABLE_DEBUG_CXX_FLAG(-Wall)
         _YACMA_CHECK_ENABLE_DEBUG_CXX_FLAG(-Wextra)
-        _YACMA_CHECK_ENABLE_DEBUG_CXX_FLAG(-Wnon-virtual-dtor)
+        # NOTE: this flag has been superseded by "-Wdelete-non-virtual-dtor"
+        # (enabled by "-Wall"). See:
+        # https://gcc.gnu.org/pipermail/gcc-cvs/2022-November/374730.html
+        # _YACMA_CHECK_ENABLE_DEBUG_CXX_FLAG(-Wnon-virtual-dtor)
         # NOTE: this flag is a bit too chatty, let's disable it for the moment.
         #_YACMA_CHECK_ENABLE_DEBUG_CXX_FLAG(-Wnoexcept)
         _YACMA_CHECK_ENABLE_DEBUG_CXX_FLAG(-Wlogical-op)

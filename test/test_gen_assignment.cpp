@@ -23,8 +23,6 @@ struct any_iface_impl : Base {
 
 // NOLINTNEXTLINE
 struct any_iface {
-    virtual ~any_iface() = default;
-
     template <typename Base, typename Holder, typename T>
     using impl = any_iface_impl<Base, Holder, T>;
 };
@@ -63,7 +61,7 @@ struct cm_throw {
 struct copythrow {
     copythrow() = default;
     // NOLINTNEXTLINE
-    copythrow(const copythrow &){};
+    copythrow(const copythrow &) {};
     copythrow(copythrow &&) noexcept = delete;
     copythrow &operator=(const copythrow &) = delete;
     copythrow &operator=(copythrow &&) noexcept = delete;

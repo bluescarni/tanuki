@@ -75,7 +75,6 @@ struct io_iterator_iface_impl : public Base {
 template <typename R>
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions,hicpp-special-member-functions)
 struct io_iterator_iface {
-    virtual ~io_iterator_iface() = default;
     virtual void operator++() = 0;
     virtual R deref() = 0;
     [[nodiscard]] virtual bool equal_to_sentinel(const sentinel &) const = 0;

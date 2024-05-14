@@ -40,8 +40,6 @@ struct any_iface_impl {
 
 // NOLINTNEXTLINE
 struct any_iface {
-    virtual ~any_iface() = default;
-
     template <typename Base, typename Holder, typename T>
     using impl = any_iface_impl<Base, Holder, T>;
 };
@@ -100,7 +98,7 @@ TANUKI_S11N_WRAP_EXPORT2(small2, "small2", any_iface)
 struct copythrow {
     copythrow() = default;
     // NOLINTNEXTLINE
-    copythrow(const copythrow &){};
+    copythrow(const copythrow &) {};
     copythrow(copythrow &&) noexcept = delete;
     copythrow &operator=(const copythrow &) = delete;
     copythrow &operator=(copythrow &&) noexcept = delete;

@@ -37,7 +37,6 @@ struct foo_iface_impl<Base, Holder, T> : Base {
 
 // NOLINTNEXTLINE
 struct foo_iface {
-    virtual ~foo_iface() = default;
     virtual void foo() = 0;
 
     template <typename Base, typename Holder, typename T>

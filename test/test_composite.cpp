@@ -27,7 +27,6 @@ struct foo_iface_impl {
 
 // NOLINTNEXTLINE
 struct foo_iface {
-    virtual ~foo_iface() = default;
     virtual void foo() const = 0;
 
     template <typename Base, typename Holder, typename T>
@@ -56,7 +55,6 @@ struct bar_iface_impl {
 
 // NOLINTNEXTLINE
 struct bar_iface {
-    virtual ~bar_iface() = default;
     virtual void bar() const = 0;
 
     template <typename Base, typename Holder, typename T>
@@ -163,7 +161,6 @@ struct fooT_iface_impl {
 template <typename U>
 // NOLINTNEXTLINE
 struct fooT_iface {
-    virtual ~fooT_iface() = default;
     virtual void foo() const = 0;
 
     template <typename Base, typename Holder, typename T>
@@ -189,7 +186,6 @@ struct barT_iface_impl {
 template <typename U>
 // NOLINTNEXTLINE
 struct barT_iface {
-    virtual ~barT_iface() = default;
     virtual void bar() const = 0;
 
     template <typename Base, typename Holder, typename T>

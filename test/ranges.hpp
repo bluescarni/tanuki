@@ -40,8 +40,6 @@ template <typename V, typename R, typename RR, typename CR, typename CRR,
           template <typename, typename, typename> typename It>
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions,hicpp-special-member-functions)
 struct generic_range_iface {
-    virtual ~generic_range_iface() = default;
-
     virtual It<V, R, RR> begin() = 0;
     virtual sentinel end() = 0;
     virtual It<V, CR, CRR> begin() const = 0;

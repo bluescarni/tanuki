@@ -27,8 +27,6 @@ struct any_iface_impl<Base, Holder, std::string> {
 
 // NOLINTNEXTLINE
 struct any_iface {
-    virtual ~any_iface() = default;
-
     template <typename Base, typename Holder, typename T>
     using impl = any_iface_impl<Base, Holder, T>;
 };

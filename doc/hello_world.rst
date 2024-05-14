@@ -72,6 +72,14 @@ Second, we add to the ``any_iface`` definition an ``impl`` template alias to ind
    :emphasize-lines: 4-5
    :lines: 11-16
 
+.. note::
+
+   tanuki interfaces do not need to have a ``virtual`` destructor, because tanuki
+   never deletes through pointers to the interfaces. In this initial example, we leave
+   the ``virtual`` in order to highlight that it is possible to adapt existing OO interfaces
+   to work with tanuki, but in the following tutorials we will never declare ``virtual``
+   destructors.
+
 Note that this is an *intrusive* way of specifying the implementation of an interface.
 A non-intrusive alternative is also available, so that it is possible to provide
 implementations for existing interfaces without modifying them.

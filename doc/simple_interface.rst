@@ -17,10 +17,9 @@ Here is the first version of our interface:
 
 .. literalinclude:: ../tutorial/simple_interface.cpp
    :language: c++
-   :lines: 14-20
+   :lines: 14-19
 
-In addition to the destructor, we now have the pure virtual member function
-``void foo() const``. Here is the declaration of a tanuki implementation for this interface:
+Here is the declaration of a tanuki implementation for this interface:
 
 .. literalinclude:: ../tutorial/simple_interface.cpp
    :language: c++
@@ -46,13 +45,13 @@ We can now proceed to define a class providing such a ``foo()`` member function:
 
 .. literalinclude:: ../tutorial/simple_interface.cpp
    :language: c++
-   :lines: 22-27
+   :lines: 21-26
 
 We are now ready to define and use a type-erased wrapper:
 
 .. literalinclude:: ../tutorial/simple_interface.cpp
    :language: c++
-   :lines: 99-102
+   :lines: 95-98
 
 This code will produce the following output:
 
@@ -77,7 +76,7 @@ in action with a second version of the interface implementation:
 
 .. literalinclude:: ../tutorial/simple_interface.cpp
    :language: c++
-   :lines: 29-36
+   :lines: 28-35
 
 Here we have replaced the explicit ``static_cast`` with an invocation of :cpp:func:`getval()`,
 which, behind the scenes, performs the CRTP downcast and returns a (const) reference to the
@@ -91,7 +90,7 @@ Let us see the new interface implementation in action:
 
 .. literalinclude:: ../tutorial/simple_interface.cpp
    :language: c++
-   :lines: 104-107
+   :lines: 100-103
 
 .. code-block:: console
 
@@ -124,7 +123,7 @@ provide a ``foo()`` member function. In order to do this, we first introduce a `
 
 .. literalinclude:: ../tutorial/simple_interface.cpp
    :language: c++
-   :lines: 46-47
+   :lines: 44-45
 
 This concept will be satisfied by all types which provide a const ``foo()`` member function.
 We then constrain the interface implementation to ``fooable`` types via the ``requires``
@@ -132,7 +131,7 @@ keyword:
 
 .. literalinclude:: ../tutorial/simple_interface.cpp
    :language: c++
-   :lines: 49-57
+   :lines: 47-55
 
 That is, the third template parameter ``T`` in a tanuki interface implementation represents the type of the
 value stored in the ``Holder`` class, and we can thus use it to specialise and/or constrain interface implementations.
@@ -140,7 +139,7 @@ Here is the new interface implementation in action:
 
 .. literalinclude:: ../tutorial/simple_interface.cpp
    :language: c++
-   :lines: 109-112
+   :lines: 105-108
 
 .. code-block:: console
 
@@ -169,7 +168,7 @@ by checking the ``std::is_constructible`` type trait:
 
 .. literalinclude:: ../tutorial/simple_interface.cpp
    :language: c++
-   :lines: 114-115
+   :lines: 110-111
 
 .. code-block:: console
 
@@ -178,11 +177,14 @@ by checking the ``std::is_constructible`` type trait:
 This is all fine and dandy, but what if we wanted to provide an implementation of our interface also for ``int``? We can do this
 with yet another (and final) variation on the theme.
 
+Take 4: Empty implementations
+-----------------------------
+
 First off, we begin with an **empty** interface implementation:
 
 .. literalinclude:: ../tutorial/simple_interface.cpp
    :language: c++
-   :lines: 67-69
+   :lines: 64-66
 
 This is an **invalid** implementation because it does not derive from ``Base``.
 Second, we add a constrained specialisation of the interface implementation
@@ -190,13 +192,13 @@ for ``fooable`` types (that is, types providing a const ``foo()`` member functio
 
 .. literalinclude:: ../tutorial/simple_interface.cpp
    :language: c++
-   :lines: 71-79
+   :lines: 68-76
 
 Finally, we add a specialisation of ``foo4_iface_impl`` for ``int``:
 
 .. literalinclude:: ../tutorial/simple_interface.cpp
    :language: c++
-   :lines: 81-87
+   :lines: 78-84
 
 This implementation will just print to screen the value of the integer
 when the ``foo()`` function is invoked.
@@ -205,7 +207,7 @@ Let use see the new interface implementation in action:
 
 .. literalinclude:: ../tutorial/simple_interface.cpp
    :language: c++
-   :lines: 117-122
+   :lines: 113-118
 
 .. code-block:: console
 
@@ -222,7 +224,7 @@ the constructability of ``foo4_wrap`` from a ``float`` (which is neither
 
 .. literalinclude:: ../tutorial/simple_interface.cpp
    :language: c++
-   :lines: 124
+   :lines: 120
 
 .. code-block:: console
 

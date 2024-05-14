@@ -3,7 +3,7 @@
 The ``wrap`` class
 ==================
 
-.. cpp:class:: template <typename IFace, auto Cfg = default_config> requires std::is_polymorphic_v<IFace> && std::has_virtual_destructor_v<IFace> && valid_config<Cfg> wrap
+.. cpp:class:: template <typename IFace, auto Cfg = default_config> requires valid_config<Cfg> wrap
 
    .. cpp:function:: wrap()
 

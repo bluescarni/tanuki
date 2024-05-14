@@ -40,6 +40,7 @@ and :cpp:func:`is_valid()` functions.
 
 A :cpp:class:`wrap` object can become invalid in a variety of circumstances:
 
+- it is default-constructed when the :cpp:var:`config::invalid_default_ctor` option is activated,
 - it is created (or assigned) from an instance of :cpp:struct:`invalid_wrap_t`,
 - it has been moved-from,
 - it has been swapped with an invalid :cpp:class:`wrap`,

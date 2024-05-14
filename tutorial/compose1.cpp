@@ -40,11 +40,11 @@ struct foobar_model {
     void foo() const
     {
         std::cout << "Invoking foobar_model::foo()" << '\n';
-    };
+    }
     void bar() const
     {
         std::cout << "Invoking foobar_model::bar()" << '\n';
-    };
+    }
 };
 
 int main()

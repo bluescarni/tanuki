@@ -133,6 +133,7 @@ TEST_CASE("gen assignment")
     }
     {
         wrap_t w1(std::in_place_type<copythrow>);
+        auto w2 = w1;
         copythrow ct;
         REQUIRE_THROWS_MATCHES(w1 = std::as_const(ct), std::invalid_argument,
                                Message("Attempting to copy-assign a non-copyable value type"));
@@ -143,11 +144,13 @@ TEST_CASE("gen assignment")
         wrap_t w1(my_func1);
         w1 = my_func2;
         REQUIRE(value_ref<void (*)(int)>(w1) == &my_func2);
+        (*value_ref<void (*)(int)>(w1))(3);
     }
     {
         wrap_t w1(&my_func1);
         w1 = &my_func2;
         REQUIRE(value_ref<void (*)(int)>(w1) == &my_func2);
+        (*value_ref<void (*)(int)>(w1))(4);
     }
 }
 

@@ -634,7 +634,9 @@ private:
     // Clone this, and cast the result to the value interface.
     [[nodiscard]] detail::value_iface<IFace, Sem> *_tanuki_clone_holder() const final
     {
-        if constexpr (std::copy_constructible<T>) {
+        // NOTE: don't use std::copy_constructible as that requires
+        // the ability to move-construct.
+        if constexpr (std::is_copy_constructible_v<T>) {
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
             return new holder(m_value);
         } else {
@@ -644,7 +646,7 @@ private:
     // Same as above, but return a shared ptr.
     [[nodiscard]] std::shared_ptr<detail::value_iface<IFace, Sem>> _tanuki_shared_clone_holder() const final
     {
-        if constexpr (std::copy_constructible<T>) {
+        if constexpr (std::is_copy_constructible_v<T>) {
             return std::make_shared<holder>(m_value);
         } else {
             throw std::invalid_argument("Attempting to clone a non-copyable value type");
@@ -654,7 +656,7 @@ private:
     // Then cast the result to the value interface and return.
     [[nodiscard]] detail::value_iface<IFace, Sem> *_tanuki_copy_init_holder(void *ptr) const final
     {
-        if constexpr (std::copy_constructible<T>) {
+        if constexpr (std::is_copy_constructible_v<T>) {
 #if defined(TANUKI_WITH_BOOST_S11N)
             assert(boost::alignment::is_aligned(ptr, alignof(T)));
 #endif
@@ -671,7 +673,7 @@ private:
     // NOLINTNEXTLINE(bugprone-exception-escape)
     _tanuki_move_init_holder(void *ptr) && noexcept final
     {
-        if constexpr (std::move_constructible<T>) {
+        if constexpr (std::is_move_constructible_v<T>) {
 #if defined(TANUKI_WITH_BOOST_S11N)
             assert(boost::alignment::is_aligned(ptr, alignof(T)));
 #endif

@@ -26,7 +26,6 @@ struct callable_iface_impl {
 
 template <typename R, typename... Args>
 struct callable_iface {
-    virtual ~callable_iface() = default;
     virtual R operator()(Args... args) const = 0;
     virtual explicit operator bool() const noexcept = 0;
 

@@ -3,7 +3,7 @@
 The ``wrap`` class
 ==================
 
-.. cpp:class:: template <typename IFace, auto Cfg = default_config> requires std::is_polymorphic_v<IFace> && std::has_virtual_destructor_v<IFace> && valid_config<Cfg> wrap
+.. cpp:class:: template <typename IFace, auto Cfg = default_config> requires valid_config<Cfg> wrap
 
    .. cpp:function:: wrap()
 
@@ -137,7 +137,7 @@ The ``wrap`` class
 
       :return: ``true`` if *w* is currently employing static storage, ``false`` otherwise.
 
-.. cpp:function:: [[nodiscard]] friend bool is_valid(const wrap &w) noexcept
+.. cpp:function:: [[nodiscard]] bool is_valid(const wrap &w) noexcept
 
    This function will return ``false`` if *w* is in the :ref:`invalid state <invalid_state>`,
    ``true`` otherwise.

@@ -29,7 +29,6 @@ struct foobar_iface_impl<Base, Holder, T> : public Base {
 };
 
 struct foobar_iface {
-    virtual ~foobar_iface() = default;
     virtual void foo() const = 0;
     virtual void bar() = 0;
 

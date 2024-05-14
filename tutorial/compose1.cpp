@@ -12,7 +12,6 @@ struct foo_iface_impl : public Base {
 
 // The foo() interface.
 struct foo_iface {
-    virtual ~foo_iface() = default;
     virtual void foo() const = 0;
 
     template <typename Base, typename Holder, typename T>
@@ -29,7 +28,6 @@ struct bar_iface_impl : public Base {
 
 // The bar() interface.
 struct bar_iface {
-    virtual ~bar_iface() = default;
     virtual void bar() const = 0;
 
     template <typename Base, typename Holder, typename T>
@@ -40,11 +38,11 @@ struct foobar_model {
     void foo() const
     {
         std::cout << "Invoking foobar_model::foo()" << '\n';
-    };
+    }
     void bar() const
     {
         std::cout << "Invoking foobar_model::bar()" << '\n';
-    };
+    }
 };
 
 int main()

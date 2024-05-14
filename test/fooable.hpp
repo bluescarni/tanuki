@@ -64,7 +64,6 @@ struct FOOABLE_DLL_PUBLIC_INLINE_CLASS foo_iface_impl : public Base {
 template <typename U>
 // NOLINTNEXTLINE
 struct FOOABLE_DLL_PUBLIC_INLINE_CLASS foo_iface {
-    virtual ~foo_iface() = default;
     virtual void foo() const = 0;
 
     template <typename Base, typename Holder, typename T>

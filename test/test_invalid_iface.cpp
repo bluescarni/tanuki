@@ -34,7 +34,6 @@ struct print_iface_impl<Base, Holder, int> : Base {
 
 // NOLINTNEXTLINE
 struct print_iface {
-    virtual ~print_iface() = default;
     virtual void print() const = 0;
 
     template <typename Base, typename Holder, typename T>

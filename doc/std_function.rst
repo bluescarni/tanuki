@@ -21,7 +21,7 @@ Let us begin by taking a look at the interface:
 
 .. literalinclude:: ../tutorial/std_function.cpp
    :language: c++
-   :lines: 27-35
+   :lines: 27-34
 
 Note that this interface depends on one or more template parameters:
 the return type ``R`` and the argument type(s) ``Args``.
@@ -45,7 +45,7 @@ a bit at a time, beginning with the declaration:
 
 .. literalinclude:: ../tutorial/std_function.cpp
    :language: c++
-   :lines: 37-39
+   :lines: 36-38
 
 We can see that the ``requires`` clause enables this implementation for all
 value (or :ref:`reference <wrap_reference>`) types which are
@@ -60,7 +60,7 @@ Next, we see how the call operator is implemented:
 
 .. literalinclude:: ../tutorial/std_function.cpp
    :language: c++
-   :lines: 40-56
+   :lines: 39-55
 
 The call operator will ultimately invoke (via `std::invoke <https://en.cppreference.com/w/cpp/utility/functional/invoke>`__)
 the type-erased value with the supplied arguments ``args`` (possibly going through a cast to ``void`` in order
@@ -73,7 +73,7 @@ Let us take a look at the ``bool`` conversion operator now:
 
 .. literalinclude:: ../tutorial/std_function.cpp
    :language: c++
-   :lines: 58-69
+   :lines: 57-68
 
 This operator must detect if the internal type-erased value is in an empty state - in which
 case the operator will return ``false``. What an "empty state" is depends on
@@ -104,7 +104,7 @@ Let us examine it a bit at a time:
 
 .. literalinclude:: ../tutorial/std_function.cpp
    :language: c++
-   :lines: 72-77
+   :lines: 71-76
 
 The first thing we do is to provide a ``result_type`` alias for the return type ``R``. We do this in order
 to emulate the behaviour of ``std::function`` (which also provides such an alias) and to show that the reference
@@ -115,7 +115,7 @@ Next, we take a look at the call operator:
 
 .. literalinclude:: ../tutorial/std_function.cpp
    :language: c++
-   :lines: 79-89
+   :lines: 78-88
 
 There is quite a bit going on here visually, but the basic gist is this: before invoking the call operator of the interface,
 we need to ensure that the ``callable`` object is not in the :ref:`invalid state <invalid_state>` (this could
@@ -132,7 +132,7 @@ Next, we take a look at the ``bool`` conversion operator:
 
 .. literalinclude:: ../tutorial/std_function.cpp
    :language: c++
-   :lines: 91-99
+   :lines: 90-98
 
 The idea here is the same: if the ``callable`` object is in the :ref:`invalid state <invalid_state>`, then
 the ``bool`` conversion operator will return ``false``. Otherwise, the ``bool`` conversion operator of
@@ -149,7 +149,7 @@ Let us move on now to the configuration of the ``callable`` wrap:
 
 .. literalinclude:: ../tutorial/std_function.cpp
    :language: c++
-   :lines: 103-109
+   :lines: 102-108
 
 The configuration object includes the following custom settings:
 
@@ -168,13 +168,13 @@ We are now ready to define our ``callable`` wrap:
 
 .. literalinclude:: ../tutorial/std_function.cpp
    :language: c++
-   :lines: 111-113
+   :lines: 110-112
 
 Finally, we provide some syntactic sugar:
 
 .. literalinclude:: ../tutorial/std_function.cpp
    :language: c++
-   :lines: 120-132
+   :lines: 119-131
 
 We will now be able to take our ``callable`` out for a spin.
 
@@ -185,7 +185,7 @@ Let us begin with a few ``callable`` instances constructed into the empty state:
 
 .. literalinclude:: ../tutorial/std_function.cpp
    :language: c++
-   :lines: 141-144
+   :lines: 140-143
 
 We can see that in all these cases the ``bool`` conversion operator of ``callable``
 returns ``false``, as all these objects are constructed into the empty state either
@@ -195,14 +195,14 @@ Next, let us see an example with a lambda:
 
 .. literalinclude:: ../tutorial/std_function.cpp
    :language: c++
-   :lines: 146-148
+   :lines: 145-147
 
 Here, a copy of ``lambda_double`` is stored in ``c0``. Let us see an example storing a reference
 to ``lambda_double`` instead:
 
 .. literalinclude:: ../tutorial/std_function.cpp
    :language: c++
-   :lines: 150-152
+   :lines: 149-151
 
 The second ``assert()`` confirms that a reference to ``lambda_double`` (rather than a copy) has been
 captured in ``c0_ref``.
@@ -212,17 +212,17 @@ from a mutable lambda:
 
 .. literalinclude:: ../tutorial/std_function.cpp
    :language: c++
-   :lines: 154-158
+   :lines: 153-157
 
 Finally, an example with a plain old function:
 
 .. literalinclude:: ../tutorial/std_function.cpp
    :language: c++
-   :lines: 134-137
+   :lines: 133-136
 
 .. literalinclude:: ../tutorial/std_function.cpp
    :language: c++
-   :lines: 160-161
+   :lines: 159-160
 
 Thie example shows how :cpp:class:`wrap` supports construction directly from a function type,
 without requiring conversion to a function pointer.

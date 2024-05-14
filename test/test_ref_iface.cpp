@@ -27,7 +27,6 @@ struct foobar_iface_impl : Base {
 
 // NOLINTNEXTLINE
 struct foobar_iface {
-    virtual ~foobar_iface() = default;
     virtual void foo() const noexcept = 0;
     virtual void bar() = 0;
     virtual void fuzz() && = 0;
@@ -91,8 +90,6 @@ struct any_iface_impl {
 
 // NOLINTNEXTLINE
 struct any_iface {
-    virtual ~any_iface() = default;
-
     template <typename Base, typename Holder, typename T>
     using impl = any_iface_impl<Base, Holder, T>;
 };

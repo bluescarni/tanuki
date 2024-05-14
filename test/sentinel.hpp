@@ -41,8 +41,6 @@ struct any_ref_iface_impl : public Base {
 
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions,hicpp-special-member-functions)
 struct any_ref_iface {
-    virtual ~any_ref_iface() = default;
-
     template <typename Base, typename Holder, typename T>
     using impl = any_ref_iface_impl<Base, Holder, T>;
 };
@@ -125,7 +123,6 @@ struct sentinel_iface_impl : public Base {
 // Definition of the interface.
 // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions,hicpp-special-member-functions)
 struct sentinel_iface {
-    virtual ~sentinel_iface() = default;
     [[nodiscard]] virtual bool at_end(const any_ref &) const = 0;
     [[nodiscard]] virtual std::ptrdiff_t distance_to_iter(const any_ref &) const = 0;
 

@@ -26,7 +26,6 @@ struct summary_iface_impl : Base {
 // Trait definition.
 // NOLINTNEXTLINE
 struct summary_iface {
-    virtual ~summary_iface() = default;
     [[nodiscard]] virtual std::string summarize() const
     {
         return "(Read more...)";
@@ -111,7 +110,6 @@ struct fooable_iface_impl : Base {
 
 // NOLINTNEXTLINE
 struct fooable_iface {
-    virtual ~fooable_iface() = default;
     [[nodiscard]] virtual std::string foo() const
     {
         return "default foo!";

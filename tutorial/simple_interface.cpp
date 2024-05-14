@@ -12,7 +12,6 @@ struct foo1_iface_impl : public Base {
 };
 
 struct foo1_iface {
-    virtual ~foo1_iface() = default;
     virtual void foo() const = 0;
 
     template <typename Base, typename Holder, typename T>
@@ -36,7 +35,6 @@ struct foo2_iface_impl : public Base {
 };
 
 struct foo2_iface {
-    virtual ~foo2_iface() = default;
     virtual void foo() const = 0;
 
     template <typename Base, typename Holder, typename T>
@@ -57,7 +55,6 @@ struct foo3_iface_impl : public Base {
 };
 
 struct foo3_iface {
-    virtual ~foo3_iface() = default;
     virtual void foo() const = 0;
 
     template <typename Base, typename Holder, typename T>
@@ -87,7 +84,6 @@ struct foo4_iface_impl<Base, Holder, int> : public Base {
 };
 
 struct foo4_iface {
-    virtual ~foo4_iface() = default;
     virtual void foo() const = 0;
 
     template <typename Base, typename Holder, typename T>

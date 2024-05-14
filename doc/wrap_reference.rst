@@ -10,14 +10,14 @@ by copying/moving values into a :cpp:class:`wrap`. It is however also possible
 to construct :cpp:class:`wrap` objects that contain references to existing values,
 rather than copies of the values. References are stored in a :cpp:class:`wrap` via
 `std::reference_wrapper <https://en.cppreference.com/w/cpp/utility/functional/reference_wrapper>`__, and,
-with a small additional effort, it is possible
+with small additional effort, it is possible
 to write interface implementations which work seamlessly with both values and references.
 
 Consider the following interface:
 
 .. literalinclude:: ../tutorial/wrap_reference.cpp
    :language: c++
-   :lines: 31-38
+   :lines: 31-37
 
 This is similar to the interface considered in an :ref:`earlier tutorial <simple_interface>`.
 We introduce two concepts to check the presence of the ``foo()`` and ``bar()`` member functions:
@@ -30,7 +30,7 @@ And a ``foobar_model`` class implementing the ``foo()`` and ``bar()`` member fun
 
 .. literalinclude:: ../tutorial/wrap_reference.cpp
    :language: c++
-   :lines: 40-49
+   :lines: 39-48
 
 We then provide an empty default interface implementation:
 
@@ -59,7 +59,7 @@ stored in the ``Holder``. Let us see a usage example:
 
 .. literalinclude:: ../tutorial/wrap_reference.cpp
    :language: c++
-   :lines: 53-62
+   :lines: 52-61
 
 .. code-block:: console
 
@@ -74,7 +74,7 @@ to the address of the object contained in ``w2``:
 
 .. literalinclude:: ../tutorial/wrap_reference.cpp
    :language: c++
-   :lines: 64-66
+   :lines: 63-65
 
 .. code-block:: console
 
@@ -95,14 +95,14 @@ containing a const reference, then a ``std::runtime_error`` exception will be th
 
 .. literalinclude:: ../tutorial/wrap_reference.cpp
    :language: c++
-   :lines: 68-71
+   :lines: 67-70
 
 In order to prevent runtime errors, you should ensure that a :cpp:class:`wrap` containing a const
 reference is itself declared as ``const``:
 
 .. literalinclude:: ../tutorial/wrap_reference.cpp
    :language: c++
-   :lines: 73-76
+   :lines: 72-75
 
 This way, the error will happen at compile time rather than at runtime.
 

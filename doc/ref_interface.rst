@@ -61,13 +61,13 @@ and a ``foo_model`` class:
 
 .. literalinclude:: ../tutorial/reference_interface.cpp
    :language: c++
-   :lines: 5-24
+   :lines: 5-23
 
 Let us see first a macro-based implementation of a reference interface:
 
 .. literalinclude:: ../tutorial/reference_interface.cpp
    :language: c++
-   :lines: 26-31
+   :lines: 25-30
 
 A reference interface must be a class which defines in its scope an ``impl`` class
 template depending exactly on one parameter, conventionally named ``Wrap``.
@@ -87,7 +87,7 @@ an equivalent reference interface which does **not** use the :c:macro:`TANUKI_RE
 
 .. literalinclude:: ../tutorial/reference_interface.cpp
    :language: c++
-   :lines: 33-41
+   :lines: 32-40
 
 Here is what is going on: tanuki makes the :cpp:class:`wrap` class inherit from ``foo_ref_iface2::impl``,
 so that, via the `curiously recurring template pattern (CRTP) <https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern>`__,
@@ -109,7 +109,7 @@ first define a custom configuration called ``foo_config1``:
 
 .. literalinclude:: ../tutorial/reference_interface.cpp
    :language: c++
-   :lines: 43
+   :lines: 42
 
 The :cpp:class:`config` class is templated over two types. Ignoring the first one for the time
 being (its meaning will be explained :ref:`later <def_ctor>`), the second parameter is the reference interface, which
@@ -122,13 +122,13 @@ We can now use the custom configuration instance in the definition of the wrap c
 
 .. literalinclude:: ../tutorial/reference_interface.cpp
    :language: c++
-   :lines: 69
+   :lines: 68
 
 And we can confirm that indeed we can now invoke the ``foo()`` member function via the dot operator:
 
 .. literalinclude:: ../tutorial/reference_interface.cpp
    :language: c++
-   :lines: 71-72
+   :lines: 70-71
 
 .. code-block:: console
 
@@ -139,13 +139,13 @@ First, we define a custom configuration instance:
 
 .. literalinclude:: ../tutorial/reference_interface.cpp
    :language: c++
-   :lines: 45
+   :lines: 44
 
 Second, we can use the custom configuration instance to define another wrap type:
 
 .. literalinclude:: ../tutorial/reference_interface.cpp
    :language: c++
-   :lines: 74-77
+   :lines: 73-76
 
 .. code-block:: console
 
@@ -163,7 +163,7 @@ class instead, like this:
 
 .. literalinclude:: ../tutorial/reference_interface.cpp
    :language: c++
-   :lines: 49-51
+   :lines: 48-50
 
 Note that, in the C++23 API, we must use the :c:macro:`TANUKI_REF_IFACE_MEMFUN2` macro, rather
 than :c:macro:`TANUKI_REF_IFACE_MEMFUN`.
@@ -173,7 +173,7 @@ of a C++23 reference interface without macros:
 
 .. literalinclude:: ../tutorial/reference_interface.cpp
    :language: c++
-   :lines: 53-59
+   :lines: 52-58
 
 In other words, the "deducing this" C++23 feature allows us to avoid having to perform the CRTP cast
 manually, and we can invoke the :cpp:func:`~wrap::iface_ptr()` function directly on the ``self``/``this`` argument
@@ -184,13 +184,13 @@ new reference interfaces:
 
 .. literalinclude:: ../tutorial/reference_interface.cpp
    :language: c++
-   :lines: 61-63
+   :lines: 60-62
 
 The definition and usage of the :cpp:class:`wrap` instances is identical to the C++20 API:
 
 .. literalinclude:: ../tutorial/reference_interface.cpp
    :language: c++
-   :lines: 81-89
+   :lines: 80-88
 
 .. code-block:: console
 

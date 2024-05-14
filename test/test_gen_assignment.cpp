@@ -23,8 +23,6 @@ struct any_iface_impl : Base {
 
 // NOLINTNEXTLINE
 struct any_iface {
-    virtual ~any_iface() = default;
-
     template <typename Base, typename Holder, typename T>
     using impl = any_iface_impl<Base, Holder, T>;
 };
@@ -63,7 +61,7 @@ struct cm_throw {
 struct copythrow {
     copythrow() = default;
     // NOLINTNEXTLINE
-    copythrow(const copythrow &){};
+    copythrow(const copythrow &) {};
     copythrow(copythrow &&) noexcept = delete;
     copythrow &operator=(const copythrow &) = delete;
     copythrow &operator=(copythrow &&) noexcept = delete;
@@ -135,6 +133,7 @@ TEST_CASE("gen assignment")
     }
     {
         wrap_t w1(std::in_place_type<copythrow>);
+        auto w2 = w1;
         copythrow ct;
         REQUIRE_THROWS_MATCHES(w1 = std::as_const(ct), std::invalid_argument,
                                Message("Attempting to copy-assign a non-copyable value type"));
@@ -145,11 +144,13 @@ TEST_CASE("gen assignment")
         wrap_t w1(my_func1);
         w1 = my_func2;
         REQUIRE(value_ref<void (*)(int)>(w1) == &my_func2);
+        (*value_ref<void (*)(int)>(w1))(3);
     }
     {
         wrap_t w1(&my_func1);
         w1 = &my_func2;
         REQUIRE(value_ref<void (*)(int)>(w1) == &my_func2);
+        (*value_ref<void (*)(int)>(w1))(4);
     }
 }
 

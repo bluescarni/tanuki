@@ -22,7 +22,6 @@ struct summary_iface_impl : Base {
 
 // NOLINTNEXTLINE
 struct summary_iface {
-    virtual ~summary_iface() = default;
     [[nodiscard]] virtual std::string summarize() const
     {
         return "(Read more...)";

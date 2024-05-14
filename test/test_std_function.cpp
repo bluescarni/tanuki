@@ -32,7 +32,6 @@ struct func_iface_impl {
 template <typename R, typename... Args>
 // NOLINTNEXTLINE
 struct func_iface {
-    virtual ~func_iface() = default;
     virtual R operator()(Args... args) const = 0;
     virtual explicit operator bool() const noexcept = 0;
 

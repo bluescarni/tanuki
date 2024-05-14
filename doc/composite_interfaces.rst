@@ -16,7 +16,7 @@ Consider the following two simple interfaces and their implementations:
 
 .. literalinclude:: ../tutorial/compose1.cpp
    :language: c++
-   :lines: 5-37
+   :lines: 5-35
 
 The two interfaces contain the ``foo()`` and ``bar()`` member functions respectively.
 Their implementations will invoke the ``foo()`` and ``bar()`` member functions
@@ -27,25 +27,25 @@ We can combine ``foo_iface`` and ``bar_iface`` into a single ``foobar_iface`` in
 
 .. literalinclude:: ../tutorial/compose1.cpp
    :language: c++
-   :lines: 52-53
+   :lines: 50-51
 
 Next, we define a type-erased wrapper for the composite interface:
 
 .. literalinclude:: ../tutorial/compose1.cpp
    :language: c++
-   :lines: 55-56
+   :lines: 53-54
 
 We can then introduce a type that satisfies both interfaces:
 
 .. literalinclude:: ../tutorial/compose1.cpp
    :language: c++
-   :lines: 39-48
+   :lines: 37-46
 
 And finally wrap it:
 
 .. literalinclude:: ../tutorial/compose1.cpp
    :language: c++
-   :lines: 58-63
+   :lines: 56-61
 
 .. code-block:: console
 
@@ -79,13 +79,13 @@ We begin with a ``foo_iface`` interface (and its implementation) identical to th
 
 .. literalinclude:: ../tutorial/compose2.cpp
    :language: c++
-   :lines: 5-20
+   :lines: 5-19
 
 The ``bar_iface`` interface and its implementation, however, are now different:
 
 .. literalinclude:: ../tutorial/compose2.cpp
    :language: c++
-   :lines: 22-36
+   :lines: 21-35
 
 ``bar_iface`` and its implementation now inherit from ``foo_iface`` and its implementation respectively.
 In other words, ``bar_iface`` now plays the role of a composite interface. Let us wrap it and show
@@ -93,7 +93,7 @@ its usage with the ``foobar_model`` class from the previous example:
 
 .. literalinclude:: ../tutorial/compose2.cpp
    :language: c++
-   :lines: 38-60
+   :lines: 37-59
 
 .. code-block:: console
 

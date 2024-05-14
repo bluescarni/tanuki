@@ -83,13 +83,13 @@ and its implementation:
 
 .. literalinclude:: ../tutorial/emplace.cpp
    :language: c++
-   :lines: 6-15
+   :lines: 6-13
 
 We can emplace-construct a :cpp:class:`wrap` containing a ``std::mutex``:
 
 .. literalinclude:: ../tutorial/emplace.cpp
    :language: c++
-   :lines: 19-22
+   :lines: 17-20
 
 Note that in this specific case the variadic pack is empty (as the constructor of
 ``std::mutex`` takes no arguments) and thus only the ``std::in_place_type_t`` argument
@@ -101,7 +101,7 @@ is a simple example:
 
 .. literalinclude:: ../tutorial/emplace.cpp
    :language: c++
-   :lines: 24-28
+   :lines: 22-26
 
 Customising :cpp:class:`wrap`'s constructors
 --------------------------------------------

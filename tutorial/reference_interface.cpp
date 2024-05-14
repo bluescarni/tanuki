@@ -12,7 +12,6 @@ struct foo_iface_impl : public Base {
 };
 
 struct foo_iface {
-    virtual ~foo_iface() = default;
     virtual void foo() const = 0;
 
     template <typename Base, typename Holder, typename T>

@@ -35,7 +35,7 @@ We have our usual super-basic interface and its implementation:
 
 .. literalinclude:: ../tutorial/custom_storage.cpp
    :language: c++
-   :lines: 5-14
+   :lines: 5-12
 
 Let us say that we want to ensure that we can store in static storage objects which are up
 to the size of a pointer. We can define a custom :cpp:class:`config` instance in which we
@@ -43,7 +43,7 @@ set the :cpp:var:`config::static_size` parameter to ``holder_size<void *, any_if
 
 .. literalinclude:: ../tutorial/custom_storage.cpp
    :language: c++
-   :lines: 16
+   :lines: 14
 
 This will ensure that value types whose size is up to ``sizeof(void *)`` can be stored
 in static storage.
@@ -54,7 +54,7 @@ using the :cpp:func:`~wrap::has_static_storage()` function:
 
 .. literalinclude:: ../tutorial/custom_storage.cpp
    :language: c++
-   :lines: 20-25
+   :lines: 18-23
 
 .. code-block:: console
 
@@ -65,7 +65,7 @@ On the other hand, if we try to store 2 pointers instead of 1, we can verify tha
 
 .. literalinclude:: ../tutorial/custom_storage.cpp
    :language: c++
-   :lines: 27-34
+   :lines: 25-32
 
 .. code-block:: console
 
@@ -108,14 +108,14 @@ both a custom static size **and** a custom alignment:
 
 .. literalinclude:: ../tutorial/custom_storage.cpp
    :language: c++
-   :lines: 36-37
+   :lines: 34-35
 
 We can then define a new wrap type using the ``custom_config2``
 settings, and verify that it can store pointers in static storage:
 
 .. literalinclude:: ../tutorial/custom_storage.cpp
    :language: c++
-   :lines: 39-43
+   :lines: 37-41
 
 .. code-block:: console
 
@@ -126,7 +126,7 @@ memory footprint of the :cpp:class:`wrap` class:
 
 .. literalinclude:: ../tutorial/custom_storage.cpp
    :language: c++
-   :lines: 45
+   :lines: 43
 
 .. code-block:: console
 

@@ -81,7 +81,7 @@ Second, we add to the ``any_iface`` definition an ``impl`` template alias to ind
    destructors.
 
 Note that this is an *intrusive* way of specifying the implementation of an interface.
-A non-intrusive alternative is also available, so that it is possible to provide
+A :ref:`non-intrusive alternative <nonintrusive>` is also available, so that it is possible to provide
 implementations for existing interfaces without modifying them.
 
 And we are done! We can now use ``any_iface`` in the definition of a type-erased

@@ -1,6 +1,5 @@
 #include <functional>
 #include <stdexcept>
-#include <type_traits>
 
 #include <tanuki/tanuki.hpp>
 

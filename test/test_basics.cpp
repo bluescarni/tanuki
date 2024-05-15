@@ -38,7 +38,6 @@ template <typename, typename, typename>
 struct any_iface_impl {
 };
 
-// NOLINTNEXTLINE
 struct any_iface {
     template <typename Base, typename Holder, typename T>
     using impl = any_iface_impl<Base, Holder, T>;
@@ -47,6 +46,12 @@ struct any_iface {
 template <typename Base, typename Holder, typename T>
     requires(!std::same_as<T, nonwrappable>)
 struct any_iface_impl<Base, Holder, T> : Base {
+};
+
+struct any_iface2 {
+    template <typename Base, typename, typename>
+    struct impl : Base {
+    };
 };
 
 template <typename T, typename IFace>
@@ -214,6 +219,11 @@ TEST_CASE("basics")
     wrap_t w8(large{.str = "foobar"}), w9(std::in_place_type<wrap_t>, std::move(w8));
     REQUIRE(value_ref<large>(value_ref<wrap_t>(w9)).str == "foobar");
     REQUIRE(is_invalid(w8));
+
+    // Try with inline implementation as well.
+    using wrap2_t = wrap<any_iface2>;
+    wrap2_t w2inl{std::string{"foo"}};
+    REQUIRE(value_ref<std::string>(w2inl) == "foo");
 }
 
 TEST_CASE("assignment")

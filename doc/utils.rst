@@ -46,3 +46,13 @@ Utilities
    This concept detects if :cpp:type:`T` is a type that can be type-erased by a :cpp:class:`wrap`.
 
    :cpp:type:`T` must be a non-cv qualified destructible object.
+
+.. cpp:struct:: template <typename IFace, typename Base, typename Holder, typename T> iface_impl
+
+   Non-intrusive interface implementation.
+
+   This class can be partially specialised to specify a non-intrusive implementation for the interface :cpp:type:`IFace`.
+   See the :ref:`tutorial <nonintrusive>` for an example.
+
+   The unspecialised version of this class is an empty trivial structure which disables non-intrusive implementations
+   for the interface :cpp:type:`IFace`.

@@ -11,3 +11,4 @@ Tutorials
    wrap_reference.rst
    custom_construct.rst
    composite_interfaces.rst
+   nonintrusive.rst

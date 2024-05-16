@@ -25,9 +25,9 @@ The ``wrap`` class
       :throws: any exception thrown by the default constructor of the interface implementation or of
         the :ref:`reference interface <ref_interface>`, by the value-initialisation of a
         non-``void`` :cpp:type:`~config::DefaultValueType` or by memory allocation errors
-        if the non-``void`` :cpp:type:`~config::DefaultValueType` does not fit in static storage. If it can be
-        determined at compile time that none of these conditions can occurr, then this constructor
-        is marked ``noexcept``.
+        if the non-``void`` :cpp:type:`~config::DefaultValueType` does not fit in static storage
+        or if reference semantics is being used. If it can be determined at compile time that none
+        of these conditions can occurr, then this constructor is marked ``noexcept``.
 
    .. cpp:function:: explicit wrap(invalid_wrap_t)
 
@@ -73,7 +73,49 @@ The ``wrap`` class
 
       :throws: any exception thrown by the default constructor of the interface implementation or of
         the :ref:`reference interface <ref_interface>`, by the construction of the value type or by memory allocation errors
-        if the value type does not fit in static storage. If it can be
+        if the value type does not fit in static storage or if reference semantics is being used. If it can be
+        determined at compile time that none of these conditions can occurr, then this constructor
+        is marked ``noexcept``.
+
+   .. cpp:function:: template <typename T, typename... U> explicit wrap(std::in_place_type_t<T>, U &&...args)
+
+      Generic in-place constructor.
+
+      This constructor will create a :cpp:class:`wrap` containing a type-erased value of type :cpp:type:`T`
+      constructed from the input argument(s) :cpp:type:`U`. If no input arguments are provided, the internal
+      value will be value-initialised.
+
+      This constructor is enabled only if *all* the following conditions are satisfied:
+
+      - :cpp:type:`T` is an object type without cv qualifications.
+      - the :ref:`reference interface <ref_interface>` is default-initialisable;
+      - the interface :cpp:type:`IFace` has a valid, default-initialisable implementation for the value type :cpp:type:`T`
+        (see the :cpp:concept:`iface_with_impl` concept);
+      - *args* can be perfectly-forwarded to construct an instance of the value type :cpp:type:`T`.
+
+      :throws: any exception thrown by the default constructor of the interface implementation or of
+        the :ref:`reference interface <ref_interface>`, by the construction of the value type or by memory allocation errors
+        if the value type does not fit in static storage or if reference semantics is being used. If it can be
+        determined at compile time that none of these conditions can occurr, then this constructor
+        is marked ``noexcept``.
+
+   .. cpp:function:: wrap(const wrap &other)
+
+      Copy constructor.
+
+      When employing value semantics, the copy constructor will copy-construct the type-erased value from *other*.
+      Otherwise, a :cpp:class:`wrap` sharing ownership of the type-erased value with *other* will be constructed.
+
+      This constructor is enabled only if *all* the following conditions are satisfied:
+
+      - the :ref:`reference interface <ref_interface>` is default-initialisable;
+      - when employing value semantics, the :cpp:var:`~config::copyable` option in :cpp:var:`Cfg`
+        is activated.
+
+      :throws std\:\:invalid_argument: if the type-erased value is not copy-constructible and value semantics is being used.
+      :throws: any exception thrown by the default constructor of the interface implementation or of
+        the :ref:`reference interface <ref_interface>`, by the copy-construction of the value type or by memory allocation errors
+        if the value type does not fit in static storage or if value semantics is being used. If it can be
         determined at compile time that none of these conditions can occurr, then this constructor
         is marked ``noexcept``.
 

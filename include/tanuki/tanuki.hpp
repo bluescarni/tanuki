@@ -1423,16 +1423,20 @@ public:
     // NOTE: this will *value-init* if no args
     // are provided. This must be documented well.
     template <typename T, typename... U>
-        requires std::default_initializable<ref_iface_t> &&
-                 // We must be able to construct the holder.
-                 detail::holder_constructible_from<T, IFace, Cfg.semantics, U &&...>
-    explicit wrap(std::in_place_type_t<T>, U &&...args) noexcept(noexcept(this->ctor_impl<T>(std::forward<U>(args)...))
-                                                                 && detail::nothrow_default_initializable<ref_iface_t>)
+        requires
+        // T must be an a non-cv-qualified object.
+        std::is_object_v<T> && std::same_as<T, std::remove_cv_t<T>> && std::default_initializable<ref_iface_t> &&
+        // We must be able to construct the holder.
+        detail::holder_constructible_from<T, IFace, Cfg.semantics, U &&...>
+        explicit wrap(std::in_place_type_t<T>,
+                      U &&...args) noexcept(noexcept(this->ctor_impl<T>(std::forward<U>(args)...))
+                                            && detail::nothrow_default_initializable<ref_iface_t>)
     {
         ctor_impl<T>(std::forward<U>(args)...);
     }
 
-    wrap(const wrap &other) noexcept(Cfg.semantics == wrap_semantics::reference)
+    wrap(const wrap &other) noexcept(Cfg.semantics == wrap_semantics::reference
+                                     && detail::nothrow_default_initializable<ref_iface_t>)
         requires(Cfg.copyable || Cfg.semantics == wrap_semantics::reference) && std::default_initializable<ref_iface_t>
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {

@@ -44,7 +44,7 @@ The ``wrap`` class
 
       Generic constructor.
 
-      This constructor will create a :cpp:class:`wrap` from the input value *x*.
+      This constructor will create a :cpp:class:`wrap` from the input value :cpp:var:`x`.
 
       This constructor is enabled only if *all* the following conditions are satisfied:
 
@@ -60,7 +60,7 @@ The ``wrap`` class
 
       - the interface :cpp:type:`IFace` has a valid, default-initialisable implementation for the value type :cpp:type:`T`
         (see the :cpp:concept:`iface_with_impl` concept);
-      - *x* can be perfectly-forwarded to construct an instance of the value type.
+      - :cpp:var:`x` can be perfectly-forwarded to construct an instance of the value type.
 
       This constructor is marked ``explicit`` if either:
 
@@ -70,6 +70,8 @@ The ``wrap`` class
         is less than :cpp:enumerator:`wrap_ctor::always_implicit`.
 
       Otherwise, the constructor is implicit.
+
+      :param x: the input value.
 
       :throws: any exception thrown by the default constructor of the interface implementation or of
         the :ref:`reference interface <ref_interface>`, by the construction of the value type or by memory allocation errors
@@ -82,7 +84,7 @@ The ``wrap`` class
       Generic in-place constructor.
 
       This constructor will create a :cpp:class:`wrap` containing a type-erased value of type :cpp:type:`T`
-      constructed from the input argument(s) :cpp:type:`U`. If no input arguments are provided, the internal
+      constructed from the input argument(s) :cpp:var:`args`. If no input arguments are provided, the internal
       value will be value-initialised.
 
       This constructor is enabled only if *all* the following conditions are satisfied:
@@ -91,7 +93,9 @@ The ``wrap`` class
       - the :ref:`reference interface <ref_interface>` is default-initialisable;
       - the interface :cpp:type:`IFace` has a valid, default-initialisable implementation for the value type :cpp:type:`T`
         (see the :cpp:concept:`iface_with_impl` concept);
-      - *args* can be perfectly-forwarded to construct an instance of the value type :cpp:type:`T`.
+      - :cpp:var:`args` can be perfectly-forwarded to construct an instance of the value type :cpp:type:`T`.
+
+      :param args: the input construction arguments.
 
       :throws: any exception thrown by the default constructor of the interface implementation or of
         the :ref:`reference interface <ref_interface>`, by the construction of the value type or by memory allocation errors
@@ -103,30 +107,32 @@ The ``wrap`` class
 
       Copy constructor.
 
-      When employing value semantics, the copy constructor will copy-construct the type-erased value from *other*.
-      Otherwise, a :cpp:class:`wrap` sharing ownership of the type-erased value with *other* will be constructed.
+      When employing value semantics, the copy constructor will copy-construct the type-erased value from :cpp:var:`other`.
+      Otherwise, a :cpp:class:`wrap` sharing ownership of the type-erased value with :cpp:var:`other` will be constructed.
 
-      This constructor is enabled only if *all* the following conditions are satisfied:
+      This constructor is enabled only if the following conditions are satisfied:
 
       - the :ref:`reference interface <ref_interface>` is default-initialisable;
       - when employing value semantics, the :cpp:var:`~config::copyable` option in :cpp:var:`Cfg`
         is activated.
 
+      :param other: the :cpp:class:`wrap` to be copied.
+
       :throws std\:\:invalid_argument: if the type-erased value is not copy-constructible and value semantics is being used.
       :throws: any exception thrown by the default constructor of the interface implementation or of
         the :ref:`reference interface <ref_interface>`, by the copy-construction of the value type or by memory allocation errors
-        if the value type does not fit in static storage or if value semantics is being used. If it can be
-        determined at compile time that none of these conditions can occurr, then this constructor
-        is marked ``noexcept``.
+        if the value type does not fit in static storage or if value semantics is being used. This constructor
+        is marked ``noexcept`` when using reference semantics and if the :ref:`reference interface <ref_interface>`'s
+        default constructor is marked ``noexcept``.
 
    .. cpp:function:: [[nodiscard]] friend bool is_invalid(const wrap &w) noexcept
 
-      This function will return ``true`` if *w* is in the :ref:`invalid state <invalid_state>`,
+      This function will return ``true`` if :cpp:var:`w` is in the :ref:`invalid state <invalid_state>`,
       ``false`` otherwise.
 
       :param w: the input argument.
 
-      :return: the validity status for *w*.
+      :return: the validity status for :cpp:var:`w`.
 
    .. cpp:function:: [[nodiscard]] friend const IFace *iface_ptr(const wrap &w) noexcept
                      [[nodiscard]] friend const IFace *iface_ptr(const wrap &&w) noexcept
@@ -137,7 +143,7 @@ The ``wrap`` class
 
       These functions will return a pointer to the instance of the interface :cpp:type:`IFace` stored
       within a :cpp:class:`wrap`.
-      If *w* is in the :ref:`invalid state <invalid_state>`, then ``nullptr`` will be returned.
+      If :cpp:var:`w` is in the :ref:`invalid state <invalid_state>`, then ``nullptr`` will be returned.
 
       :param w: the input argument.
 
@@ -147,23 +153,23 @@ The ``wrap`` class
 
       Emplace a value into a :cpp:class:`wrap`.
 
-      This function will first destroy the value in *w* (if *w* is not already in the :ref:`invalid state <invalid_state>`).
-      It will then construct in *w* a value of type :cpp:type:`T` using the construction arguments :cpp:type:`Args`.
+      This function will first destroy the value in :cpp:var:`w` (if :cpp:var:`w` is not already in the :ref:`invalid state <invalid_state>`).
+      It will then construct in :cpp:var:`w` a value of type :cpp:type:`T` using the construction arguments :cpp:type:`Args`.
 
       This function is enabled only if an instance of :cpp:type:`T` can be constructed from :cpp:type:`Args`
       and if the interface :cpp:type:`IFace` has a valid, default-initialisable implementation for the value type :cpp:type:`T`
       (see the :cpp:concept:`iface_with_impl` concept).
 
-      Passing *w* as an argument in *args* (e.g., attempting to emplace *w* into itself) will lead to
+      Passing :cpp:var:`w` as an argument in :cpp:var:`args` (e.g., attempting to emplace :cpp:var:`w` into itself) will lead to
       undefined behaviour.
 
       This function is ``noexcept`` if all these conditions are satisfied:
 
-      - *w* is using value semantics,
-      - the static size and alignment of *w* are :ref:`large enough <custom_storage>` to store an instance of :cpp:type:`T`,
+      - :cpp:var:`w` is using value semantics,
+      - the static size and alignment of :cpp:var:`w` are :ref:`large enough <custom_storage>` to store an instance of :cpp:type:`T`,
       - the invoked constructor of :cpp:type:`T` does not throw.
 
-      If an exception is thrown, *w* may be left in the :ref:`invalid state <invalid_state>`.
+      If an exception is thrown, :cpp:var:`w` may be left in the :ref:`invalid state <invalid_state>`.
 
       :param w: the target :cpp:class:`wrap`.
       :param args: the construction arguments.
@@ -177,16 +183,16 @@ The ``wrap`` class
 
       :param w: the input :cpp:class:`wrap`.
 
-      :return: ``true`` if *w* is currently employing static storage, ``false`` otherwise.
+      :return: ``true`` if :cpp:var:`w` is currently employing static storage, ``false`` otherwise.
 
 .. cpp:function:: [[nodiscard]] bool is_valid(const wrap &w) noexcept
 
-   This function will return ``false`` if *w* is in the :ref:`invalid state <invalid_state>`,
+   This function will return ``false`` if :cpp:var:`w` is in the :ref:`invalid state <invalid_state>`,
    ``true`` otherwise.
 
    :param w: the input argument.
 
-   :return: the validity status for *w*.
+   :return: the validity status for :cpp:var:`w`.
 
 .. cpp:function:: template <typename IFace, auto Cfg> bool has_dynamic_storage(const wrap<IFace, Cfg> &w) noexcept
 
@@ -194,7 +200,7 @@ The ``wrap`` class
 
    :param w: the input :cpp:class:`wrap`.
 
-   :return: ``true`` if *w* is currently employing dynamic storage, ``false`` otherwise.
+   :return: ``true`` if :cpp:var:`w` is currently employing dynamic storage, ``false`` otherwise.
 
 .. cpp:struct:: invalid_wrap_t
 

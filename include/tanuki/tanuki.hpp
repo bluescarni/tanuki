@@ -270,7 +270,7 @@ struct TANUKI_VISIBLE value_iface : public IFace, value_iface_base {
     virtual ~value_iface() = default;
 
     // NOTE: don't make these pure virtual as this prevents us from asserting
-    // default-constructability of the implementation interface when doing concept
+    // default-constructibility of the implementation interface when doing concept
     // checking.
 
     // LCOV_EXCL_START
@@ -631,11 +631,16 @@ private:
         return detail::is_reference_wrapper_v<T>;
     }
 
+    // Copy/move construction primitives.
+
     // Clone this, and cast the result to the value interface.
     [[nodiscard]] detail::value_iface<IFace, Sem> *_tanuki_clone_holder() const final
     {
-        // NOTE: don't use std::copy_constructible as that requires
+        // NOTE: don't use std::copy_constructible, as that requires
         // the ability to move-construct.
+        // NOTE: we don't need to check the constructibility of the holder
+        // object: since the holder object already exists, we already know that
+        // there is a default-constructible interface implementation.
         if constexpr (std::is_copy_constructible_v<T>) {
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
             return new holder(m_value);
@@ -684,6 +689,9 @@ private:
             throw std::invalid_argument("Attempting to move-construct a non-movable value type"); // LCOV_EXCL_LINE
         }
     }
+
+    // Copy/move assignment and swap primitives.
+
     // Copy-assign m_value into the m_value of v_iface.
     void _tanuki_copy_assign_value_to(detail::value_iface<IFace, Sem> *v_iface) const final
     {

@@ -176,7 +176,7 @@ TEST_CASE("basics")
     // NOLINTEND
 
     // Emplace test with class which is not copyable/movable/swappable.
-    wrap<any_iface, tanuki::config{.copyable = false, .movable = false, .swappable = false}> w_mut(
+    wrap<any_iface, tanuki::config<>{.copyable = false, .movable = false, .swappable = false}> w_mut(
         std::in_place_type<std::mutex>);
     REQUIRE(noexcept(wrap_t(std::in_place_type<int>)));
 

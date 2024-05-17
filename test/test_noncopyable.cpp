@@ -1,9 +1,8 @@
-#include <stdexcept>
+#include <concepts>
 
 #include <tanuki/tanuki.hpp>
 
 #include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_exception.hpp>
 
 #if defined(__GNUC__)
 
@@ -38,22 +37,10 @@ struct noncopyable {
 
 TEST_CASE("noncopyable")
 {
-    using Catch::Matchers::Message;
-
     using wrap_t = tanuki::wrap<any_iface>;
 
-    wrap_t w(noncopyable<1>{});
-
-    REQUIRE_THROWS_MATCHES(wrap_t(w), std::invalid_argument,
-                           Message("Attempting to copy-construct a non-copyable value type"));
-
-    w = wrap_t(noncopyable<100>{});
-
-    REQUIRE_THROWS_MATCHES(wrap_t(w), std::invalid_argument, Message("Attempting to clone a non-copyable value type"));
-
-    wrap_t w2(noncopyable<100>{});
-    REQUIRE_THROWS_MATCHES(w2 = w, std::invalid_argument,
-                           Message("Attempting to copy-assign a non-copyable value type"));
+    REQUIRE(!std::constructible_from<wrap_t, noncopyable<1>>);
+    REQUIRE(!std::constructible_from<wrap_t, noncopyable<100>>);
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

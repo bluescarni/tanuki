@@ -348,6 +348,18 @@ struct TANUKI_VISIBLE value_iface : public IFace, value_iface_base {
 
 #if defined(TANUKI_WITH_BOOST_S11N)
 
+    // NOTE: these are used to check that a value type is serialisable.
+    [[nodiscard]] virtual bool _tanuki_value_is_default_initializable() const noexcept
+    {
+        unreachable();
+        assert(false);
+    }
+    [[nodiscard]] virtual bool _tanuki_value_is_move_constructible() const noexcept
+    {
+        unreachable();
+        assert(false);
+    }
+
 private:
     // Serialization.
     friend class boost::serialization::access;
@@ -636,17 +648,18 @@ private:
     // Clone this, and cast the result to the value interface.
     [[nodiscard]] detail::value_iface<IFace, Sem> *_tanuki_clone_holder() const final
     {
-        // NOTE: don't use std::copy_constructible, as that requires
-        // the ability to move-construct.
         // NOTE: we don't need to check the constructibility of the holder
         // object: since the holder object already exists, we already know that
         // there is a default-constructible interface implementation.
         if constexpr (std::is_copy_constructible_v<T>) {
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
             return new holder(m_value);
-        } else {
-            throw std::invalid_argument("Attempting to clone a non-copyable value type");
         }
+
+        // NOTE: we should never reach this point as we are using this function
+        // only with value semantics and we are forbidding
+        // the creation of a copyable value semantics wrap from a non-copyable value.
+        detail::unreachable(); // LCOV_EXCL_LINE
     }
     // Same as above, but return a shared ptr.
     [[nodiscard]] std::shared_ptr<detail::value_iface<IFace, Sem>> _tanuki_shared_clone_holder() const final
@@ -654,6 +667,12 @@ private:
         if constexpr (std::is_copy_constructible_v<T>) {
             return std::make_shared<holder>(m_value);
         } else {
+            // NOTE: this is the one case in which we might end up here at runtime. This function
+            // is used only in the implementation of the copy() function to force deep copy
+            // behaviour when employing reference semantics. But, when reference semantics is active,
+            // we are always allowing the construction of a wrap regardless of the copyability
+            // of the value type. Hence, we might end up attempting to deep-copy a wrap containing
+            // a non-copyable value.
             throw std::invalid_argument("Attempting to clone a non-copyable value type");
         }
     }
@@ -668,15 +687,16 @@ private:
 
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory,clang-analyzer-cplusplus.PlacementNew)
             return ::new (ptr) holder(m_value);
-        } else {
-            throw std::invalid_argument("Attempting to copy-construct a non-copyable value type");
         }
+
+        // NOTE: we should never reach this point as we are using this function
+        // only with value semantics and we are forbidding
+        // the creation of a copyable value semantics wrap from a non-copyable value.
+        detail::unreachable(); // LCOV_EXCL_LINE
     }
     // Move-init a new holder from this into the storage beginning at ptr.
     // Then cast the result to the value interface and return.
-    [[nodiscard]] detail::value_iface<IFace, Sem> *
-    // NOLINTNEXTLINE(bugprone-exception-escape)
-    _tanuki_move_init_holder(void *ptr) && noexcept final
+    [[nodiscard]] detail::value_iface<IFace, Sem> *_tanuki_move_init_holder(void *ptr) && noexcept final
     {
         if constexpr (std::is_move_constructible_v<T>) {
 #if defined(TANUKI_WITH_BOOST_S11N)
@@ -685,9 +705,12 @@ private:
 
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory,clang-analyzer-cplusplus.PlacementNew)
             return ::new (ptr) holder(std::move(m_value));
-        } else {
-            throw std::invalid_argument("Attempting to move-construct a non-movable value type"); // LCOV_EXCL_LINE
         }
+
+        // NOTE: we should never reach this point as we are using this function
+        // only with value semantics and we are forbidding
+        // the creation of a movable value semantics wrap from a non-movable value.
+        detail::unreachable(); // LCOV_EXCL_LINE
     }
 
     // Copy/move assignment and swap primitives.
@@ -703,41 +726,54 @@ private:
             // does not require laundering.
             assert(typeid(T) == v_iface->_tanuki_value_type_index());
             *static_cast<T *>(v_iface->_tanuki_value_ptr()) = m_value;
-        } else {
-            throw std::invalid_argument("Attempting to copy-assign a non-copyable value type");
+            return;
         }
+
+        // NOTE: we should never reach this point as we are using this function
+        // only with value semantics and we are forbidding
+        // the creation of a copyable value semantics wrap from a non-copyable value.
+        detail::unreachable(); // LCOV_EXCL_LINE
     }
     // Move-assign m_value into the m_value of v_iface.
-    // NOLINTNEXTLINE(bugprone-exception-escape)
     void _tanuki_move_assign_value_to(detail::value_iface<IFace, Sem> *v_iface) && noexcept final
     {
         if constexpr (std::is_move_assignable_v<T>) {
             assert(typeid(T) == v_iface->_tanuki_value_type_index());
             *static_cast<T *>(v_iface->_tanuki_value_ptr()) = std::move(m_value);
-        } else {
-            throw std::invalid_argument("Attempting to move-assign a non-movable value type"); // LCOV_EXCL_LINE
+            return;
         }
+
+        // NOTE: we should never reach this point as we are using this function
+        // only with value semantics and we are forbidding
+        // the creation of a movable value semantics wrap from a non-movable value.
+        detail::unreachable(); // LCOV_EXCL_LINE
     }
     // Copy-assign the object of type T assumed to be stored in ptr into m_value.
     void _tanuki_copy_assign_value_from(const void *ptr) final
     {
         if constexpr (std::is_copy_assignable_v<T>) {
             m_value = *static_cast<const T *>(ptr);
-        } else {
-            throw std::invalid_argument("Attempting to copy-assign a non-copyable value type");
+            return;
         }
+
+        // NOTE: we should never reach this point as we are using this function
+        // only with value semantics and we are forbidding
+        // the creation of a copyable value semantics wrap from a non-copyable value.
+        detail::unreachable(); // LCOV_EXCL_LINE
     }
-    // NOLINTNEXTLINE(bugprone-exception-escape)
     void _tanuki_move_assign_value_from(void *ptr) noexcept final
     {
         if constexpr (std::is_move_assignable_v<T>) {
             m_value = std::move(*static_cast<T *>(ptr));
-        } else {
-            throw std::invalid_argument("Attempting to move-assign a non-movable value type"); // LCOV_EXCL_LINE
+            return;
         }
+
+        // NOTE: we should never reach this point as we are using this function
+        // only with value semantics and we are forbidding
+        // the creation of a movable value semantics wrap from a non-movable value.
+        detail::unreachable(); // LCOV_EXCL_LINE
     }
     // Swap m_value with the m_value of v_iface.
-    // NOLINTNEXTLINE(bugprone-exception-escape)
     void _tanuki_swap_value(detail::value_iface<IFace, Sem> *v_iface) noexcept final
     {
         if constexpr (std::swappable<T>) {
@@ -745,12 +781,26 @@ private:
 
             using std::swap;
             swap(m_value, *static_cast<T *>(v_iface->_tanuki_value_ptr()));
-        } else {
-            throw std::invalid_argument("Attempting to swap a non-swappable value type"); // LCOV_EXCL_LINE
+
+            return;
         }
+
+        // NOTE: we should never reach this point as we are using this function
+        // only with value semantics and we are forbidding
+        // the creation of a swappable value semantics wrap from a non-swappable value.
+        detail::unreachable(); // LCOV_EXCL_LINE
     }
 
 #if defined(TANUKI_WITH_BOOST_S11N)
+
+    [[nodiscard]] bool _tanuki_value_is_default_initializable() const noexcept final
+    {
+        return std::default_initializable<T>;
+    }
+    [[nodiscard]] bool _tanuki_value_is_move_constructible() const noexcept final
+    {
+        return std::move_constructible<T>;
+    }
 
     // Serialization.
     friend class boost::serialization::access;
@@ -970,7 +1020,11 @@ concept valid_config =
     // Cfg.explicit_ctor must be set to one of the valid enumerators.
     (Cfg.explicit_ctor >= wrap_ctor::always_explicit && Cfg.explicit_ctor <= wrap_ctor::always_implicit) &&
     // Cfg.semantics must be one of the two valid enumerators.
-    (Cfg.semantics == wrap_semantics::value || Cfg.semantics == wrap_semantics::reference);
+    (Cfg.semantics == wrap_semantics::value || Cfg.semantics == wrap_semantics::reference) &&
+    // If the wrap is to be copyable, then it must also be movable.
+    (!Cfg.copyable || Cfg.movable) &&
+    // If the wrap is to be movable, then it must also be swappable.
+    (!Cfg.movable || Cfg.swappable);
 
 // Helpers to ease the definition of a reference interface.
 #define TANUKI_REF_IFACE_MEMFUN(name)                                                                                  \
@@ -1145,6 +1199,15 @@ struct get_ref_iface<T, Wrap> {
 template <auto Cfg, typename Wrap>
 using get_ref_iface_t = typename get_ref_iface<cfg_ref_t<Cfg>, Wrap>::type;
 
+// Concept to check that a value type T
+// is consistent with the wrap settings in Cfg:
+// if the wrap is using value semantics and it is
+// copyable/movable/swappable, so must be the value type.
+template <typename T, auto Cfg>
+concept copy_move_swap_consistent = (Cfg.semantics == wrap_semantics::reference)
+                                    || ((!Cfg.copyable || std::copyable<T>) && (!Cfg.movable || std::movable<T>)
+                                        && (!Cfg.swappable || std::swappable<T>));
+
 } // namespace detail
 
 // The wrap class.
@@ -1248,6 +1311,20 @@ class TANUKI_VISIBLE wrap : private detail::wrap_storage<IFace, Cfg.static_size,
     friend class boost::serialization::access;
     void save(boost::archive::binary_oarchive &ar, unsigned) const
     {
+        if (this->m_pv_iface != nullptr && !this->m_pv_iface->_tanuki_value_is_default_initializable()) [[unlikely]] {
+            throw std::invalid_argument("Cannot serialise a wrap containing a value of type '"
+                                        + demangle(this->m_pv_iface->_tanuki_value_type_index().name())
+                                        + "': the type is not default-initializable");
+        }
+
+        if constexpr (Cfg.semantics == wrap_semantics::value) {
+            if (this->m_pv_iface != nullptr && !this->m_pv_iface->_tanuki_value_is_move_constructible()) [[unlikely]] {
+                throw std::invalid_argument("Cannot serialise a wrap containing a value of type '"
+                                            + demangle(this->m_pv_iface->_tanuki_value_type_index().name())
+                                            + "': the type is not move-constructible");
+            }
+        }
+
         if constexpr (Cfg.semantics == wrap_semantics::value && Cfg.static_size > 0u) {
             // Store the storage type.
             ar << stype();
@@ -1384,7 +1461,9 @@ public:
                 // in the configuration.
                 (!std::same_as<void, default_value_t>) &&
                 // We must be able to construct the holder.
-                detail::holder_constructible_from<default_value_t, IFace, Cfg.semantics>
+                detail::holder_constructible_from<default_value_t, IFace, Cfg.semantics> &&
+                // Check copy/move/swap consistency.
+                detail::copy_move_swap_consistent<default_value_t, Cfg>
     wrap() noexcept(noexcept(this->ctor_impl<default_value_t>()) && detail::nothrow_default_initializable<ref_iface_t>)
     {
         ctor_impl<default_value_t>();
@@ -1400,7 +1479,9 @@ public:
                  // Must not compete with copy/move.
                  (!std::same_as<std::remove_cvref_t<T>, wrap>) &&
                  // We must be able to construct the holder.
-                 detail::holder_constructible_from<detail::value_t_from_arg<T &&>, IFace, Cfg.semantics, T &&>
+                 detail::holder_constructible_from<detail::value_t_from_arg<T &&>, IFace, Cfg.semantics, T &&> &&
+                 // Check copy/move/swap consistency.
+                 detail::copy_move_swap_consistent<detail::value_t_from_arg<T &&>, Cfg>
     explicit(explicit_ctor < wrap_ctor::always_implicit)
         // NOLINTNEXTLINE(bugprone-forwarding-reference-overload,google-explicit-constructor,hicpp-explicit-conversions)
         wrap(T &&x) noexcept(noexcept(this->ctor_impl<detail::value_t_from_arg<T &&>>(std::forward<T>(x)))
@@ -1413,6 +1494,8 @@ public:
     // NOTE: this is implemented separately from the generic ctor
     // only in order to work around compiler bugs when the explicit()
     // clause contains complex expressions.
+    // NOTE: no need to check for copy_move_swap_consistent here as
+    // reference wrappers are always copyable/movable/swappable.
     template <typename T>
         requires std::default_initializable<ref_iface_t> &&
                  // We must be able to construct the holder.
@@ -1435,7 +1518,9 @@ public:
         // T must be an a non-cv-qualified object.
         std::is_object_v<T> && std::same_as<T, std::remove_cv_t<T>> && std::default_initializable<ref_iface_t> &&
         // We must be able to construct the holder.
-        detail::holder_constructible_from<T, IFace, Cfg.semantics, U &&...>
+        detail::holder_constructible_from<T, IFace, Cfg.semantics, U &&...> &&
+        // Check copy/move consistency.
+        detail::copy_move_swap_consistent<T, Cfg>
         explicit wrap(std::in_place_type_t<T>,
                       U &&...args) noexcept(noexcept(this->ctor_impl<T>(std::forward<U>(args)...))
                                             && detail::nothrow_default_initializable<ref_iface_t>)
@@ -1636,16 +1721,14 @@ public:
     // Generic assignment.
     template <typename T>
         requires
-        // NOTE: not 100% sure about this, but it seems consistent
-        // for generic assignment to be enabled only if copy/move
-        // assignment are as well.
-        ((Cfg.copyable && Cfg.movable) || Cfg.semantics == wrap_semantics::reference) &&
         // Make extra sure this does not compete with the invalid assignment operator.
         (!std::same_as<invalid_wrap_t, std::remove_cvref_t<T>>) &&
         // Must not compete with copy/move assignment.
         (!std::same_as<std::remove_cvref_t<T>, wrap>) &&
         // We must be able to construct the holder.
-        detail::holder_constructible_from<detail::value_t_from_arg<T &&>, IFace, Cfg.semantics, T &&>
+        detail::holder_constructible_from<detail::value_t_from_arg<T &&>, IFace, Cfg.semantics, T &&> &&
+        // Check copy/move consistency.
+        detail::copy_move_swap_consistent<detail::value_t_from_arg<T &&>, Cfg>
         wrap &operator=(T &&x)
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
@@ -1708,9 +1791,13 @@ public:
     // Emplacement.
     template <typename T, typename... Args>
         requires
+        // T must be an a non-cv-qualified object.
+        std::is_object_v<T> && std::same_as<T, std::remove_cv_t<T>> &&
         // We must be able to construct the holder.
-        detail::holder_constructible_from<T, IFace, Cfg.semantics, Args &&...>
-    friend void emplace(wrap &w, Args &&...args) noexcept(noexcept(w.ctor_impl<T>(std::forward<Args>(args)...)))
+        detail::holder_constructible_from<T, IFace, Cfg.semantics, Args &&...> &&
+        // Check copy/move consistency.
+        detail::copy_move_swap_consistent<T, Cfg>
+        friend void emplace(wrap &w, Args &&...args) noexcept(noexcept(w.ctor_impl<T>(std::forward<Args>(args)...)))
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
             // Destroy the value in w if necessary.

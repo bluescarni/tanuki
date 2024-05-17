@@ -58,16 +58,6 @@ struct cm_throw {
     }
 };
 
-struct copythrow {
-    copythrow() = default;
-    // NOLINTNEXTLINE
-    copythrow(const copythrow &) {};
-    copythrow(copythrow &&) noexcept = delete;
-    copythrow &operator=(const copythrow &) = delete;
-    copythrow &operator=(copythrow &&) noexcept = delete;
-    ~copythrow() = default;
-};
-
 void my_func1(int) {}
 void my_func2(int) {}
 
@@ -130,13 +120,6 @@ TEST_CASE("gen assignment")
         wrap_t w1(std::in_place_type<cm_throw>);
         cm_throw cmt;
         REQUIRE_THROWS_MATCHES(w1 = cmt, std::invalid_argument, Message("copy assignment"));
-    }
-    {
-        wrap_t w1(std::in_place_type<copythrow>);
-        auto w2 = w1;
-        copythrow ct;
-        REQUIRE_THROWS_MATCHES(w1 = std::as_const(ct), std::invalid_argument,
-                               Message("Attempting to copy-assign a non-copyable value type"));
     }
 
     // Special handling for function types.

@@ -27,6 +27,10 @@ a partial specialisation of the :cpp:struct:`iface_impl` struct for ``my_iface``
    :language: c++
    :lines: 17-29
 
+That is, the :cpp:struct:`iface_impl` struct template depends on four parameters: the first one is the
+the interface for which we are providing an implementation, while the remaining three are the
+customary ``Base``, ``Holder`` and ``T`` arguments whose meaning has been explained in previous tutorials.
+
 Here we are specifying an implementation for all value types ``T``, but, as explained
 in previous tutorials, we could also easily provide a partially-specialised implementation,
 constrain the implementation only for value types modelling

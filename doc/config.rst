@@ -114,4 +114,8 @@ Configuration options
    - :cpp:var:`Cfg` is an instance of the primary :cpp:class:`config` template,
    - :cpp:var:`config::static_align` is a power of two,
    - :cpp:var:`config::explicit_ctor` is one of the enumerators defined in :cpp:enum:`wrap_ctor`,
-   - :cpp:var:`config::semantics` is one of the enumerators defined in :cpp:enum:`wrap_semantics`.
+   - :cpp:var:`config::semantics` is one of the enumerators defined in :cpp:enum:`wrap_semantics`,
+   - if :cpp:var:`config::copyable` is set to ``true``, so is :cpp:var:`config::movable` (that is,
+     a copyable :cpp:class:`wrap` must also be movable),
+   - if :cpp:var:`config::movable` is set to ``true``, so is :cpp:var:`config::swappable` (that is,
+     a movable :cpp:class:`wrap` must also be swappable).

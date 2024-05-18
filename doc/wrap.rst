@@ -17,7 +17,9 @@ The ``wrap`` class
       - a non-``void`` default-initialisable :cpp:type:`~config::DefaultValueType` with a valid, default-initialisable
         interface implementation for :cpp:type:`IFace` has been specified as first template argument in :cpp:var:`Cfg`.
         In this case, the default constructor value-initialises an instance of :cpp:type:`~config::DefaultValueType` as
-        the internal type-erased value.
+        the internal type-erased value. Note that the copyability, movability and swappability of
+        :cpp:type:`~config::DefaultValueType` must be consistent with the corresponding settings
+        in :cpp:var:`Cfg` in order for this constructor to be enabled.
 
       In both cases, the :ref:`reference interface <ref_interface>` must
       be default-initialisable in order for this constructor to be available.

@@ -3,16 +3,13 @@
 Implementing a ``std::function`` look-alike
 ===========================================
 
-In this case study, we will be implementing (an approximation of)
+In this case study, we will be implementing an approximation of
 ``std::function`` with tanuki. This will not be a full drop-in
-replacement for ``std::function``, because there is a (small) part of the ``std::function`` API which cannot
-currently be implemented with tanuki, and because we aim to write an implementation which, contrary to ``std::function``
+replacement for ``std::function``, because we aim to write an implementation which, contrary to ``std::function``
 and similarly to `std::move_only_function <https://en.cppreference.com/w/cpp/utility/functional/move_only_function>`__,
-correctly respects const-correctness.
-
-As a bonus though, our polymorphic function wrapper (which we will be naming ``callable``) will also
-support wrapping references (thus mimicking
-`std::function_ref <https://en.cppreference.com/w/cpp/utility/functional/function_ref>`__ in some sense).
+correctly respects const-correctness. Additionally, our polymorphic function wrapper (which we will be naming ``callable``)
+will also support wrapping references (thus providing functionality similar to
+`std::function_ref <https://en.cppreference.com/w/cpp/utility/functional/function_ref>`__).
 
 The interface and its implementation
 ------------------------------------

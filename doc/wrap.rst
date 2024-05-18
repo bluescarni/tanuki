@@ -62,7 +62,9 @@ The ``wrap`` class
 
       - the interface :cpp:type:`IFace` has a valid, default-initialisable implementation for the value type :cpp:type:`T`
         (see the :cpp:concept:`iface_with_impl` concept);
-      - :cpp:var:`x` can be perfectly-forwarded to construct an instance of the value type.
+      - :cpp:var:`x` can be perfectly-forwarded to construct an instance of the value type;
+      - when employing value semantics, the copyability, movability and swappability of the value type
+        are consistent with the corresponding settings in :cpp:var:`Cfg`.
 
       This constructor is marked ``explicit`` if either:
 
@@ -91,11 +93,13 @@ The ``wrap`` class
 
       This constructor is enabled only if *all* the following conditions are satisfied:
 
-      - :cpp:type:`T` is an object type without cv qualifications.
+      - :cpp:type:`T` is an object type without cv qualifications;
       - the :ref:`reference interface <ref_interface>` is default-initialisable;
       - the interface :cpp:type:`IFace` has a valid, default-initialisable implementation for the value type :cpp:type:`T`
         (see the :cpp:concept:`iface_with_impl` concept);
-      - :cpp:var:`args` can be perfectly-forwarded to construct an instance of the value type :cpp:type:`T`.
+      - :cpp:var:`args` can be perfectly-forwarded to construct an instance of the value type :cpp:type:`T`;
+      - when employing value semantics, the copyability, movability and swappability of the value type :cpp:type:`T`
+        are consistent with the corresponding settings in :cpp:var:`Cfg`.
 
       :param args: the input construction arguments.
 
@@ -120,10 +124,9 @@ The ``wrap`` class
 
       :param other: the :cpp:class:`wrap` to be copied.
 
-      :throws std\:\:invalid_argument: if the type-erased value is not copy-constructible and value semantics is being used.
       :throws: any exception thrown by the default constructor of the interface implementation or of
-        the :ref:`reference interface <ref_interface>`, by the copy-construction of the value type or by memory allocation errors
-        if the value type does not fit in static storage or if value semantics is being used. This constructor
+        the :ref:`reference interface <ref_interface>`, or by the copy-construction of the value type or by memory allocation errors
+        when value semantics is being used. This constructor
         is marked ``noexcept`` when using reference semantics and if the :ref:`reference interface <ref_interface>`'s
         default constructor is marked ``noexcept``.
 
@@ -158,9 +161,14 @@ The ``wrap`` class
       This function will first destroy the value in :cpp:var:`w` (if :cpp:var:`w` is not already in the :ref:`invalid state <invalid_state>`).
       It will then construct in :cpp:var:`w` a value of type :cpp:type:`T` using the construction arguments :cpp:type:`Args`.
 
-      This function is enabled only if an instance of :cpp:type:`T` can be constructed from :cpp:type:`Args`
-      and if the interface :cpp:type:`IFace` has a valid, default-initialisable implementation for the value type :cpp:type:`T`
-      (see the :cpp:concept:`iface_with_impl` concept).
+      This function is enabled only if the following conditions are satisfied:
+
+      - :cpp:type:`T` is an object type without cv qualifications;
+      - an instance of :cpp:type:`T` can be constructed from :cpp:type:`Args`;
+      - the interface :cpp:type:`IFace` has a valid, default-initialisable implementation for the value type :cpp:type:`T`
+        (see the :cpp:concept:`iface_with_impl` concept);
+      - when employing value semantics, the copyability, movability and swappability of the value type :cpp:type:`T`
+        are consistent with the corresponding settings in :cpp:var:`Cfg`.
 
       Passing :cpp:var:`w` as an argument in :cpp:var:`args` (e.g., attempting to emplace :cpp:var:`w` into itself) will lead to
       undefined behaviour.

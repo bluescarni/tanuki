@@ -92,6 +92,9 @@ struct small2 {
     }
 };
 
+template <typename W, typename T, typename... Args>
+concept emplaceable = requires(W &w, Args &&...args) { emplace<T>(w, std::forward<Args>(args)...); };
+
 #if defined(TANUKI_WITH_BOOST_S11N)
 
 TANUKI_S11N_WRAP_EXPORT(large, any_iface)
@@ -216,6 +219,15 @@ TEST_CASE("basics")
     using wrap2_t = wrap<any_iface2>;
     wrap2_t w2inl{std::string{"foo"}};
     REQUIRE(value_ref<std::string>(w2inl) == "foo");
+
+    // Check that we cannot emplace/in-place init with invalid types.
+    REQUIRE(!std::constructible_from<wrap_t, std::in_place_type_t<void>>);
+    REQUIRE(!std::constructible_from<wrap_t, std::in_place_type_t<int &>>);
+    REQUIRE(!std::constructible_from<wrap_t, std::in_place_type_t<const int>>);
+
+    REQUIRE(!emplaceable<wrap_t, void>);
+    REQUIRE(!emplaceable<wrap_t, int &>);
+    REQUIRE(!emplaceable<wrap_t, const int>);
 }
 
 TEST_CASE("assignment")

@@ -3,6 +3,7 @@
 #include <functional>
 #include <mutex>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <typeinfo>
@@ -20,6 +21,8 @@
 #include <tanuki/tanuki.hpp>
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_exception.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #if defined(__GNUC__)
 
@@ -141,14 +144,23 @@ TEST_CASE("basics")
 
     // noexcept handling for the value ctor.
     REQUIRE(std::is_nothrow_constructible_v<wrap_t, int>);
-    // TODO update tests.
-    // REQUIRE(std::is_constructible_v<wrap_t, const copythrow &>);
-    // REQUIRE(!std::is_nothrow_constructible_v<wrap_t, const copythrow &>);
+    REQUIRE(std::is_constructible_v<wrap_t, const std::string &>);
+    REQUIRE(!std::is_nothrow_constructible_v<wrap_t, const std::string &>);
+    REQUIRE(std::is_nothrow_constructible_v<wrap_t, std::string &&>);
+    REQUIRE(std::is_constructible_v<wrap_t, int>);
+    REQUIRE(std::is_nothrow_constructible_v<wrap_t, int>);
 
     // noexcept handling for the emplace ctor.
     REQUIRE(std::is_nothrow_constructible_v<wrap_t, std::in_place_type_t<int>, int>);
-    // REQUIRE(std::is_constructible_v<wrap_t, std::in_place_type_t<copythrow>, const copythrow &>);
-    // REQUIRE(!std::is_nothrow_constructible_v<wrap_t, std::in_place_type_t<copythrow>, const copythrow &>);
+    REQUIRE(!std::is_nothrow_constructible_v<wrap_t, std::in_place_type_t<std::string>, const std::string &>);
+    REQUIRE(std::is_nothrow_constructible_v<wrap_t, std::in_place_type_t<std::string>, std::string &&>);
+    REQUIRE(std::is_nothrow_constructible_v<wrap_t, std::in_place_type_t<int>, int>);
+
+    // noexcept handling for emplacement.
+    REQUIRE(noexcept(emplace<int>(w1)));
+    REQUIRE(!noexcept(emplace<std::string>(w1, "asdsada")));
+    std::string tmp_str = "asda";
+    REQUIRE(noexcept(emplace<std::string>(w1, std::move(tmp_str))));
 
     // Value ctor explicit by default.
     REQUIRE(!std::is_convertible_v<int, wrap_t>);
@@ -475,6 +487,59 @@ TEST_CASE("s11n invalid")
     }
 
     REQUIRE(is_invalid(w));
+}
+
+struct nodefctor {
+    explicit nodefctor(int) {}
+    nodefctor() = delete;
+    nodefctor(nodefctor &&) noexcept = default;
+};
+
+TEST_CASE("s11n nodef")
+{
+    using Catch::Matchers::ContainsSubstring;
+    using Catch::Matchers::Message;
+    using Catch::Matchers::MessageMatches;
+    using Catch::Matchers::StartsWith;
+
+    using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{.copyable = false, .movable = false, .swappable = false}>;
+
+    wrap_t w(nodefctor{3});
+
+    std::stringstream ss;
+
+    boost::archive::binary_oarchive oa(ss);
+
+    REQUIRE_THROWS_MATCHES(oa << w, std::invalid_argument,
+                           MessageMatches(StartsWith("Cannot serialise a wrap containing a value of type '")));
+    REQUIRE_THROWS_MATCHES(oa << w, std::invalid_argument,
+                           MessageMatches(ContainsSubstring("the type is not default-initializable")));
+}
+
+struct nomovector {
+    nomovector() = default;
+    nomovector(nomovector &&) noexcept = delete;
+};
+
+TEST_CASE("s11n nomove")
+{
+    using Catch::Matchers::ContainsSubstring;
+    using Catch::Matchers::Message;
+    using Catch::Matchers::MessageMatches;
+    using Catch::Matchers::StartsWith;
+
+    using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{.copyable = false, .movable = false, .swappable = false}>;
+
+    wrap_t w(std::in_place_type<nomovector>);
+
+    std::stringstream ss;
+
+    boost::archive::binary_oarchive oa(ss);
+
+    REQUIRE_THROWS_MATCHES(oa << w, std::invalid_argument,
+                           MessageMatches(StartsWith("Cannot serialise a wrap containing a value of type '")));
+    REQUIRE_THROWS_MATCHES(oa << w, std::invalid_argument,
+                           MessageMatches(ContainsSubstring("the type is not move-constructible")));
 }
 
 #endif

@@ -344,7 +344,6 @@ struct TANUKI_VISIBLE value_iface : public IFace, value_iface_base {
         unreachable();
         assert(false);
     }
-    // LCOV_EXCL_STOP
 
 #if defined(TANUKI_WITH_BOOST_S11N)
 
@@ -359,6 +358,8 @@ struct TANUKI_VISIBLE value_iface : public IFace, value_iface_base {
         unreachable();
         assert(false);
     }
+
+    // LCOV_EXCL_STOP
 
 private:
     // Serialization.

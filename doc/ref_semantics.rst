@@ -32,3 +32,69 @@ a new shared reference to it).
 
 The second one, :cpp:func:`wrap::same_value()`, can be used to detect if two :cpp:class:`wrap`
 objects share ownership of the same value.
+
+Let us see a simple example of reference semantics in action. We begin with our usual, super-simple
+interface and its implementation:
+
+.. literalinclude:: ../tutorial/ref_semantics.cpp
+   :language: c++
+   :lines: 7-14
+
+We introduce a :cpp:class:`wrap` type employing reference semantics:
+
+.. literalinclude:: ../tutorial/ref_semantics.cpp
+   :language: c++
+   :lines: 18-18
+
+And we create a :cpp:class:`wrap` instance storing a ``std::string``:
+
+.. literalinclude:: ../tutorial/ref_semantics.cpp
+   :language: c++
+   :lines: 20-20
+
+Let us now make a copy of ``w1``:
+
+.. literalinclude:: ../tutorial/ref_semantics.cpp
+   :language: c++
+   :lines: 22-22
+
+As explained earlier, this operation will not copy the string inside ``w1``, rather it will create a new reference to it.
+We can confirm that this indeed is the case by comparing the addresses of the values stored in ``w1`` and ``w2``:
+
+.. literalinclude:: ../tutorial/ref_semantics.cpp
+   :language: c++
+   :lines: 26-27
+
+.. code-block:: console
+
+   Address of the value wrapped by w1: 0x606000000038
+   Address of the value wrapped by w2: 0x606000000038
+
+We can also invoke the :cpp:func:`wrap::same_value()` function for further confirmation:
+
+.. literalinclude:: ../tutorial/ref_semantics.cpp
+   :language: c++
+   :lines: 29-29
+
+.. code-block:: console
+
+   Do w1 and w2 share ownership? true
+
+If, on the other hand, we use the :cpp:func:`wrap::copy()` function, we will be performing a copy
+of the string stored in ``w1``:
+
+.. literalinclude:: ../tutorial/ref_semantics.cpp
+   :language: c++
+   :lines: 31-36
+
+.. code-block:: console
+
+   Address of the value wrapped by w1: 0x606000000038
+   Address of the value wrapped by w3: 0x606000000098
+   Do w1 and w3 share ownership? false
+
+Full code listing
+-----------------
+
+.. literalinclude:: ../tutorial/ref_semantics.cpp
+    :language: c++

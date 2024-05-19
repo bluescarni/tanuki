@@ -88,6 +88,16 @@ Configuration options
 
 .. cpp:enum-class:: wrap_semantics
 
+   Enumerator representing the semantics chosen for a :cpp:class:`wrap` class.
+
+   .. cpp:enumerator:: value
+
+      Value semantics.
+
+   .. cpp:enumerator:: reference
+
+      :ref:`Reference semantics <ref_semantics>`.
+
 .. cpp:var:: template <typename T, typename IFace> requires iface_with_impl<IFace, T> inline constexpr std::size_t holder_size
 
    Helper to compute the total amount of memory (in bytes) needed to statically store in a :cpp:class:`wrap`

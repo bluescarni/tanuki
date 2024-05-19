@@ -195,6 +195,30 @@ The ``wrap`` class
 
       :return: ``true`` if :cpp:var:`w` is currently employing static storage, ``false`` otherwise.
 
+   .. cpp:function:: [[nodiscard]] friend wrap copy(const wrap &w) requires(Cfg.semantics == wrap_semantics::reference)
+
+      Make a deep-copy of a :cpp:class:`wrap` employing :ref:`reference semantics <ref_semantics>`.
+
+      This function will return a new :cpp:class:`wrap` containing a copy of the value stored in :cpp:var:`w`.
+
+      :param w: the input :cpp:class:`wrap`.
+
+      :return: a deep copy of :cpp:var:`w`.
+
+      :throws std\:\:invalid_argument: if the value stored in :cpp:var:`w` is not copy-constructible.
+      :throws: any exception thrown by memory allocation primitives or by the
+         copy constructor of the value stored in :cpp:var:`w`.
+
+   .. cpp:function:: [[nodiscard]] friend bool same_value(const wrap &w1, const wrap &w2) noexcept requires(Cfg.semantics == wrap_semantics::reference)
+
+      Check if two :cpp:class:`wrap` objects employing :ref:`reference semantics <ref_semantics>` share
+      ownership of the internal value.
+
+      :param w1: the first :cpp:class:`wrap`.
+      :param w2: the second :cpp:class:`wrap`.
+
+      :return: ``true`` if :cpp:var:`w1` and :cpp:var:`w2` share the internal value, ``false`` otherwise.
+
 .. cpp:function:: [[nodiscard]] bool is_valid(const wrap &w) noexcept
 
    This function will return ``false`` if :cpp:var:`w` is in the :ref:`invalid state <invalid_state>`,

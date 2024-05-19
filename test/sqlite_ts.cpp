@@ -182,7 +182,7 @@ struct sqlite_ts {
         }
     }
     sqlite_ts &operator=(const sqlite_ts &) = delete;
-    sqlite_ts &operator=(sqlite_ts &&) noexcept = delete;
+    sqlite_ts &operator=(sqlite_ts &&) noexcept = default;
     ~sqlite_ts()
     {
         if (db != nullptr) {

@@ -13,7 +13,6 @@
 #include <cstddef>
 #include <functional>
 #include <stdexcept>
-#include <type_traits>
 #include <typeinfo>
 
 #include <tanuki/tanuki.hpp>
@@ -26,23 +25,17 @@ namespace detail
 
 // Detect instances of std::reference_wrapper.
 template <typename>
-struct is_reference_wrapper : std::false_type {
-};
+inline constexpr bool is_reference_wrapper_v = false;
 
 template <typename T>
-struct is_reference_wrapper<std::reference_wrapper<T>> : std::true_type {
-};
+inline constexpr bool is_reference_wrapper_v<std::reference_wrapper<T>> = true;
 
 // A type-erased interface for storing references to objects.
-template <typename Base, typename Holder, typename T>
-    requires is_reference_wrapper<T>::value
-struct any_ref_iface_impl : public Base {
-};
-
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions,hicpp-special-member-functions)
 struct any_ref_iface {
     template <typename Base, typename Holder, typename T>
-    using impl = any_ref_iface_impl<Base, Holder, T>;
+        requires is_reference_wrapper_v<T>
+    struct impl : public Base {
+    };
 };
 
 inline constexpr auto any_ref_config
@@ -94,40 +87,33 @@ concept has_distance_to_iter = requires(const T &x, const any_ref &ar) {
 
 // Detect instances of sentinel_box.
 template <typename>
-struct is_sentinel_box : std::false_type {
-};
+inline constexpr bool is_sentinel_box_v = false;
 
 template <typename S, typename It>
-struct is_sentinel_box<sentinel_box<S, It>> : std::true_type {
-};
+inline constexpr bool is_sentinel_box_v<sentinel_box<S, It>> = true;
 
-// Definition of the interface implementation for sentinel.
-template <typename Base, typename Holder, typename T>
-    requires is_sentinel_box<T>::value
-struct sentinel_iface_impl : public Base {
-    [[nodiscard]] bool at_end(const any_ref &ar) const final
-    {
-        return getval<Holder>(this).at_end(ar);
-    }
-    [[nodiscard]] std::ptrdiff_t distance_to_iter(const any_ref &ar) const final
-    {
-        if constexpr (has_distance_to_iter<T>) {
-            return getval<Holder>(this).distance_to_iter(ar);
-        } else {
-            throw std::runtime_error("The sentinel type '" + tanuki::demangle(typeid(T).name())
-                                     + "' is not a sized sentinel");
-        }
-    }
-};
-
-// Definition of the interface.
-// NOLINTNEXTLINE(cppcoreguidelines-special-member-functions,hicpp-special-member-functions)
+// Sentinel interface.
 struct sentinel_iface {
     [[nodiscard]] virtual bool at_end(const any_ref &) const = 0;
     [[nodiscard]] virtual std::ptrdiff_t distance_to_iter(const any_ref &) const = 0;
 
     template <typename Base, typename Holder, typename T>
-    using impl = sentinel_iface_impl<Base, Holder, T>;
+        requires is_sentinel_box_v<T>
+    struct impl : public Base {
+        [[nodiscard]] bool at_end(const any_ref &ar) const final
+        {
+            return getval<Holder>(this).at_end(ar);
+        }
+        [[nodiscard]] std::ptrdiff_t distance_to_iter(const any_ref &ar) const final
+        {
+            if constexpr (has_distance_to_iter<T>) {
+                return getval<Holder>(this).distance_to_iter(ar);
+            } else {
+                throw std::runtime_error("The sentinel type '" + tanuki::demangle(typeid(T).name())
+                                         + "' is not a sized sentinel");
+            }
+        }
+    };
 };
 
 struct default_sentinel {

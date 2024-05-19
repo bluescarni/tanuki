@@ -20,6 +20,16 @@ struct bar {
     bar() = delete;
 };
 
+// Move-only struct.
+struct baz {
+    baz() = default;
+    baz(const baz &) = delete;
+    baz(baz &&) noexcept = default;
+    baz &operator=(const baz &) = delete;
+    baz &operator=(baz &&) noexcept = default;
+    ~baz() = default;
+};
+
 template <typename, typename, typename>
 struct any_iface_impl {
 };
@@ -80,6 +90,20 @@ TEST_CASE("def value type")
     using wrap4_t = tanuki::wrap<any_iface, tanuki::config<bar>{}>;
 
     REQUIRE(!std::default_initializable<wrap4_t>);
+
+    // Try with a default value type whose copy/move/swap-ability do not
+    // match the config settings.
+    using wrap5_t = tanuki::wrap<any_iface, tanuki::config<baz>{}>;
+
+    REQUIRE(!std::default_initializable<wrap5_t>);
+
+    using wrap6_t = tanuki::wrap<any_iface, tanuki::config<baz>{.copyable = false}>;
+
+    REQUIRE(std::default_initializable<wrap6_t>);
+
+    using wrap7_t = tanuki::wrap<any_iface, tanuki::config<baz>{.copyable = false, .movable = false}>;
+
+    REQUIRE(std::default_initializable<wrap7_t>);
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

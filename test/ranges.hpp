@@ -311,7 +311,8 @@ inline constexpr auto generic_range_config = tanuki::config<void, generic_range_
     = tanuki::holder_size<generic_range_mock<V, R, RR, CR, CRR, It>, generic_range_iface<V, R, RR, CR, CRR, It>>,
     .static_align
     = tanuki::holder_align<generic_range_mock<V, R, RR, CR, CRR, It>, generic_range_iface<V, R, RR, CR, CRR, It>>,
-    .pointer_interface = false};
+    .pointer_interface = false,
+    .copyable = false};
 
 template <typename V, typename R, typename RR, typename CR, typename CRR,
           template <typename, typename, typename> typename It>

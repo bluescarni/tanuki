@@ -163,7 +163,7 @@ What happens now if we try to construct a ``foo3_wrap`` from an ``int``? The err
 That is, the constructor of the :cpp:class:`wrap` class now detects that ``int`` does not have an
 interface implementation, and as a consequence the compiler detects an error *before* trying to
 invoke the (non-existing) ``foo()`` member function on the ``int``. We can confirm
-that the non-constructability of ``foo3_wrap`` from ``int`` is detected at compile time
+that the non-constructibility of ``foo3_wrap`` from ``int`` is detected at compile time
 by checking the ``std::is_constructible`` type trait:
 
 .. literalinclude:: ../tutorial/simple_interface.cpp
@@ -219,7 +219,7 @@ It works! Bu what happens if we try to construct a ``foo4_wrap`` from an object 
 ``fooable`` nor an ``int``? The :cpp:class:`wrap` class will detect
 that the interface implementation corresponding to an object of such type is empty (i.e., invalid),
 and it will thus disable the constructor. We can confirm that this is the case by checking
-the constructability of ``foo4_wrap`` from a ``float`` (which is neither
+the constructibility of ``foo4_wrap`` from a ``float`` (which is neither
 ``fooable`` nor an ``int``):
 
 .. literalinclude:: ../tutorial/simple_interface.cpp

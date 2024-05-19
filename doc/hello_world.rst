@@ -95,11 +95,12 @@ Although this code looks superficially similar to the OO-style approach, there a
 key differences:
 
 - no dynamic memory allocation is enforced: the :cpp:class:`wrap` class employs
-  an :ref:`optimisation <custom_storage>` that stores small values inline,
+  an :ref:`optimisation <custom_storage>` that stores small values inline;
 - there is no hierarchical coupling: objects of any destructible class can be
-  stored in an ``any_wrap`` without the need to inherit from anything,
-- ``any_wrap`` employs value semantics (that is, its copy constructor will make a copy
-  of the internal value).
+  stored in an ``any_wrap`` without the need to inherit from anything;
+- ``any_wrap`` employs (by default) value semantics (that is, copy/move/swap operations
+  on a :cpp:class:`wrap` will result in copying/moving/swapping the internal
+  value).
 
 And that's it for the most minimal example!
 

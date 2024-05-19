@@ -22,8 +22,6 @@ for which an empty state is meaningful.
 The other option is to specify a custom (i.e., non-``void``) :cpp:type:`~config::DefaultValueType`
 as first template argument in :cpp:struct:`config`, in which case the default constructor of
 :cpp:class:`wrap` will value-initialise an interal value of type :cpp:type:`~config::DefaultValueType`.
-Note that a custom :cpp:type:`~config::DefaultValueType` must satisfy the requirements
-of the interface being wrapped by :cpp:class:`wrap`.
 
 If both the :cpp:var:`config::invalid_default_ctor` option is activated and
 a custom :cpp:type:`~config::DefaultValueType` is specified, then the :cpp:var:`config::invalid_default_ctor` option
@@ -61,6 +59,36 @@ Note that the invalid status is only about whether or not a :cpp:class:`wrap`
 contains a value -- a valid wrap could be containing a moved-from value,
 and it is up to the user to handle such an occurrence.
 
+.. _wrap_construct:
+
+Customising :cpp:class:`wrap`'s constructors
+--------------------------------------------
+
+Beside the :ref:`default constructor <def_ctor>`, it is also possible to customise
+the behaviour of :cpp:class:`wrap`'s other constructors in a variety of ways.
+
+:cpp:class:`wrap`'s generic constructors, for instance, are by default ``explicit``,
+but they can be made implicit by altering the :cpp:var:`config::explicit_ctor`
+configuration setting. If :cpp:var:`config::explicit_ctor` is set to
+:cpp:enumerator:`wrap_ctor::ref_implicit`, then generic construction is implicit
+when :ref:`wrapping a reference <wrap_reference>`, ``explicit`` otherwise.
+If :cpp:var:`config::explicit_ctor` is set to
+:cpp:enumerator:`wrap_ctor::always_implicit`, then generic construction is always implicit.
+
+By default, :cpp:class:`wrap` is copy/move constructible and copy/move assignable.
+The copy/move constructors and assignment operators can be disabled by switching off
+the :cpp:var:`config::copyable` and :cpp:var:`config::movable` configuration settings.
+The :cpp:class:`wrap` is also by default `swappable <https://en.cppreference.com/w/cpp/concepts/swappable>`__.
+Swappability can be switched on/off via the :cpp:var:`config::swappable` configuration setting.
+
+Copyability, movability and swappability are subject to several sanity checks and constraints.
+Specifically:
+
+- a :cpp:var:`~config::copyable` :cpp:class:`wrap` must also be :cpp:var:`~config::movable`,
+  and a :cpp:var:`~config::movable` :cpp:class:`wrap` must also be :cpp:var:`~config::swappable`;
+- when employing value semantics (the default), it is not possible to create a copyable/movable/swappable
+  :cpp:class:`wrap` containing a value type which is not also copyable/movable/swappable.
+
 .. _emplacement:
 
 Emplacement
@@ -93,7 +121,10 @@ We can emplace-construct a :cpp:class:`wrap` containing a ``std::mutex``:
 
 Note that in this specific case the variadic pack is empty (as the constructor of
 ``std::mutex`` takes no arguments) and thus only the ``std::in_place_type_t`` argument
-is required.
+is required. Note also that we used a custom configuration in which we disabled copy/move/swap
+operations: this is necessary because ``std::mutex`` cannot be copied/moved/swapped, and thus,
+as explained in the :ref:`previous section <wrap_construct>`, the :cpp:class:`wrap`'s copy/move/swap primitives must
+also be disabled.
 
 In addition to the emplace constructor, the :cpp:func:`~wrap::emplace()` function is also
 available to emplace-assign a value into an existing :cpp:class:`wrap` object. Here
@@ -103,23 +134,3 @@ is a simple example:
    :language: c++
    :lines: 22-26
 
-Customising :cpp:class:`wrap`'s constructors
---------------------------------------------
-
-Beside the :ref:`default constructor <def_ctor>`, it is also possible to customise
-the behaviour of :cpp:class:`wrap`'s other constructors in a variety of ways.
-
-:cpp:class:`wrap`'s generic constructors, for instance, are by default ``explicit``,
-but they can be made implicit by altering the :cpp:var:`config::explicit_ctor`
-configuration setting. If :cpp:var:`config::explicit_ctor` is set to
-:cpp:enumerator:`wrap_ctor::ref_implicit`, then generic construction is implicit
-when :ref:`wrapping a reference <wrap_reference>`, ``explicit`` otherwise.
-If :cpp:var:`config::explicit_ctor` is set to
-:cpp:enumerator:`wrap_ctor::always_implicit`, then generic construction is always implicit.
-
-By default, :cpp:class:`wrap` is copy/move constructible and copy/move assignable.
-The copy/move constructors and assignment operators can be disabled by switching off
-the :cpp:var:`config::copyable` and :cpp:var:`config::movable` configuration settings.
-
-The :cpp:class:`wrap` is also by default `swappable <https://en.cppreference.com/w/cpp/types/is_swappable>`__.
-Swappability can be switched on/off via the :cpp:var:`config::swappable` configuration setting.

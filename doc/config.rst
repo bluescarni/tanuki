@@ -51,14 +51,19 @@ Configuration options
 
       This option selects whether or not the :cpp:class:`wrap` class is copy constructible/assignable.
 
+      This option is ignored when employing :ref:`reference semantics <ref_semantics>`.
+
    .. cpp:var:: bool movable = true
 
       This option selects whether or not the :cpp:class:`wrap` class is move constructible/assignable.
+
+      This option is ignored when employing :ref:`reference semantics <ref_semantics>`.
 
    .. cpp:var:: bool swappable = true
 
       This option selects whether or not the :cpp:class:`wrap` class is swappable.
 
+      This option is ignored when employing :ref:`reference semantics <ref_semantics>`.
 
 .. cpp:var:: inline constexpr auto default_config = config{}
 

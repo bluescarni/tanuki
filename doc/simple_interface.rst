@@ -34,8 +34,8 @@ an implementation for the ``void foo() const`` function:
    :lines: 5-12
 
 The ``Holder`` template parameter is a class defined in the tanuki library which stores the
-value we are type-erasing as the ``m_value`` data member. ``Holder`` derives from ``foo1_iface_impl``
-and thus we can reach the ``m_value`` data member via the cast
+value we are type-erasing as the ``_tanuki_value`` data member. ``Holder`` derives from ``foo1_iface_impl``
+and thus we can reach the ``_tanuki_value`` data member via the cast
 ``static_cast<const Holder *>(this)`` leveraging the
 `curiously recurring template pattern (CRTP) <https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern>`__.
 In other words, this implementation of the ``void foo() const`` function will invoke
@@ -106,7 +106,7 @@ function (such as, e.g., an ``int``)? The compiler will loudly complain:
 .. code-block:: console
 
    simple_interface.cpp:34:23: error: request for member ‘foo’ in [...] which is of non-class type ‘const int’
-   34 |         m_value.foo();
+   34 |         _tanuki_value.foo();
 
 This is of course not ideal, for at least a couple of reasons:
 

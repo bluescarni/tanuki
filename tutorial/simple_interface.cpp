@@ -7,7 +7,7 @@ struct foo1_iface_impl : public Base {
     void foo() const override
     {
         std::cout << "foo1_iface_impl calling foo()\n";
-        static_cast<const Holder *>(this)->m_value.foo();
+        static_cast<const Holder *>(this)->_tanuki_value.foo();
     }
 };
 

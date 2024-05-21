@@ -151,6 +151,8 @@ Second, we can use the custom configuration instance to define another wrap type
 
    foo_iface_impl calling foo()
 
+.. _ref_interface23:
+
 Reference interfaces in C++23
 -----------------------------
 

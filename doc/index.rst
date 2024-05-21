@@ -10,7 +10,7 @@ tanuki
     classics and in the folklore and legends of various places in Japan. They are reputed to be mischievous and jolly,
     masters of disguise and shapeshifting but somewhat gullible and absent-minded.
 
-tanuki is a small, single-header and self-contained C++20 toolkit for
+tanuki is a small, single-header and self-contained C++20/23 toolkit for
 `type-erasure <https://en.wikibooks.org/wiki/More_C%2B%2B_Idioms/Type_Erasure>`__.
 Main features include:
 

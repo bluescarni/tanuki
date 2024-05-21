@@ -47,6 +47,8 @@ Configuration options
 
    .. cpp:var:: wrap_semantics semantics = wrap_semantics::value
 
+      This option selects the semantics for the :cpp:class:`wrap` class.
+
    .. cpp:var:: bool copyable = true
 
       This option selects whether or not the :cpp:class:`wrap` class is copy constructible/assignable.

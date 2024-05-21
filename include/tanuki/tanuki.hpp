@@ -1213,7 +1213,7 @@ concept copy_move_swap_consistent = (Cfg.semantics == wrap_semantics::reference)
 
 // The wrap class.
 template <typename IFace, auto Cfg = default_config>
-    requires valid_config<Cfg>
+    requires std::is_class_v<IFace> && std::same_as<IFace, std::remove_cv_t<IFace>> && valid_config<Cfg>
 class TANUKI_VISIBLE wrap : private detail::wrap_storage<IFace, Cfg.static_size, Cfg.static_align, Cfg.semantics>,
                             // NOTE: the reference interface is not supposed to hold any data: it will always
                             // be def-inited (even when copying/moving a wrap object), its assignment operators

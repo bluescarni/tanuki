@@ -578,7 +578,7 @@ concept iface_has_impl = requires() {
 // are checked in the generic ctors of the wrap class.
 template <typename T, typename IFace, wrap_semantics Sem>
 struct TANUKI_VISIBLE holder final : public detail::impl_from_iface<IFace, holder<T, IFace, Sem>, T, Sem> {
-    TANUKI_NO_UNIQUE_ADDRESS T m_value;
+    TANUKI_NO_UNIQUE_ADDRESS T _tanuki_value;
 
     // Make sure we don't end up accidentally copying/moving
     // this class.
@@ -609,7 +609,7 @@ struct TANUKI_VISIBLE holder final : public detail::impl_from_iface<IFace, holde
     explicit holder(U &&x) noexcept(
         std::is_nothrow_constructible_v<T, U &&>
         && detail::nothrow_default_initializable<detail::impl_from_iface<IFace, holder<T, IFace, Sem>, T, Sem>>)
-        : m_value(std::forward<U>(x))
+        : _tanuki_value(std::forward<U>(x))
     {
     }
     template <typename... U>
@@ -617,7 +617,7 @@ struct TANUKI_VISIBLE holder final : public detail::impl_from_iface<IFace, holde
     explicit holder(U &&...x) noexcept(
         std::is_nothrow_constructible_v<T, U &&...>
         && detail::nothrow_default_initializable<detail::impl_from_iface<IFace, holder<T, IFace, Sem>, T, Sem>>)
-        : m_value(std::forward<U>(x)...)
+        : _tanuki_value(std::forward<U>(x)...)
     {
     }
 
@@ -636,7 +636,7 @@ private:
     }
     [[nodiscard]] void *_tanuki_value_ptr() noexcept final
     {
-        return std::addressof(m_value);
+        return std::addressof(_tanuki_value);
     }
 
     [[nodiscard]] bool _tanuki_value_is_reference() const noexcept final
@@ -654,7 +654,7 @@ private:
         // there is a default-constructible interface implementation.
         if constexpr (std::is_copy_constructible_v<T>) {
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-            return new holder(m_value);
+            return new holder(_tanuki_value);
         }
 
         // NOTE: we should never reach this point as we are using this function
@@ -666,7 +666,7 @@ private:
     [[nodiscard]] std::shared_ptr<detail::value_iface<IFace, Sem>> _tanuki_shared_clone_holder() const final
     {
         if constexpr (std::is_copy_constructible_v<T>) {
-            return std::make_shared<holder>(m_value);
+            return std::make_shared<holder>(_tanuki_value);
         } else {
             // NOTE: this is the one case in which we might end up here at runtime. This function
             // is used only in the implementation of the copy() function to force deep copy
@@ -687,7 +687,7 @@ private:
 #endif
 
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory,clang-analyzer-cplusplus.PlacementNew)
-            return ::new (ptr) holder(m_value);
+            return ::new (ptr) holder(_tanuki_value);
         }
 
         // NOTE: we should never reach this point as we are using this function
@@ -705,7 +705,7 @@ private:
 #endif
 
             // NOLINTNEXTLINE(cppcoreguidelines-owning-memory,clang-analyzer-cplusplus.PlacementNew)
-            return ::new (ptr) holder(std::move(m_value));
+            return ::new (ptr) holder(std::move(_tanuki_value));
         }
 
         // NOTE: we should never reach this point as we are using this function
@@ -716,7 +716,7 @@ private:
 
     // Copy/move assignment and swap primitives.
 
-    // Copy-assign m_value into the m_value of v_iface.
+    // Copy-assign _tanuki_value into the _tanuki_value of v_iface.
     void _tanuki_copy_assign_value_to(detail::value_iface<IFace, Sem> *v_iface) const final
     {
         if constexpr (std::is_copy_assignable_v<T>) {
@@ -726,7 +726,7 @@ private:
             // the same T, the conversion chain should boil down to T * -> void * -> T *, which
             // does not require laundering.
             assert(typeid(T) == v_iface->_tanuki_value_type_index());
-            *static_cast<T *>(v_iface->_tanuki_value_ptr()) = m_value;
+            *static_cast<T *>(v_iface->_tanuki_value_ptr()) = _tanuki_value;
             return;
         }
 
@@ -735,12 +735,12 @@ private:
         // the creation of a copyable value semantics wrap from a non-copyable value.
         detail::unreachable(); // LCOV_EXCL_LINE
     }
-    // Move-assign m_value into the m_value of v_iface.
+    // Move-assign _tanuki_value into the _tanuki_value of v_iface.
     void _tanuki_move_assign_value_to(detail::value_iface<IFace, Sem> *v_iface) && noexcept final
     {
         if constexpr (std::is_move_assignable_v<T>) {
             assert(typeid(T) == v_iface->_tanuki_value_type_index());
-            *static_cast<T *>(v_iface->_tanuki_value_ptr()) = std::move(m_value);
+            *static_cast<T *>(v_iface->_tanuki_value_ptr()) = std::move(_tanuki_value);
             return;
         }
 
@@ -749,11 +749,11 @@ private:
         // the creation of a movable value semantics wrap from a non-movable value.
         detail::unreachable(); // LCOV_EXCL_LINE
     }
-    // Copy-assign the object of type T assumed to be stored in ptr into m_value.
+    // Copy-assign the object of type T assumed to be stored in ptr into _tanuki_value.
     void _tanuki_copy_assign_value_from(const void *ptr) final
     {
         if constexpr (std::is_copy_assignable_v<T>) {
-            m_value = *static_cast<const T *>(ptr);
+            _tanuki_value = *static_cast<const T *>(ptr);
             return;
         }
 
@@ -765,7 +765,7 @@ private:
     void _tanuki_move_assign_value_from(void *ptr) noexcept final
     {
         if constexpr (std::is_move_assignable_v<T>) {
-            m_value = std::move(*static_cast<T *>(ptr));
+            _tanuki_value = std::move(*static_cast<T *>(ptr));
             return;
         }
 
@@ -774,14 +774,14 @@ private:
         // the creation of a movable value semantics wrap from a non-movable value.
         detail::unreachable(); // LCOV_EXCL_LINE
     }
-    // Swap m_value with the m_value of v_iface.
+    // Swap _tanuki_value with the _tanuki_value of v_iface.
     void _tanuki_swap_value(detail::value_iface<IFace, Sem> *v_iface) noexcept final
     {
         if constexpr (std::swappable<T>) {
             assert(typeid(T) == v_iface->_tanuki_value_type_index());
 
             using std::swap;
-            swap(m_value, *static_cast<T *>(v_iface->_tanuki_value_ptr()));
+            swap(_tanuki_value, *static_cast<T *>(v_iface->_tanuki_value_ptr()));
 
             return;
         }
@@ -809,7 +809,7 @@ private:
     void serialize(Archive &ar, unsigned)
     {
         ar &boost::serialization::base_object<detail::value_iface<IFace, Sem>>(*this);
-        ar & m_value;
+        ar & _tanuki_value;
     }
 
 #endif
@@ -1213,7 +1213,7 @@ concept copy_move_swap_consistent = (Cfg.semantics == wrap_semantics::reference)
 
 // The wrap class.
 template <typename IFace, auto Cfg = default_config>
-    requires valid_config<Cfg>
+    requires std::is_class_v<IFace> && std::same_as<IFace, std::remove_cv_t<IFace>> && valid_config<Cfg>
 class TANUKI_VISIBLE wrap : private detail::wrap_storage<IFace, Cfg.static_size, Cfg.static_align, Cfg.semantics>,
                             // NOTE: the reference interface is not supposed to hold any data: it will always
                             // be def-inited (even when copying/moving a wrap object), its assignment operators
@@ -2028,7 +2028,7 @@ template <typename Holder, typename U>
 
     using T = typename detail::holder_value<Holder>::type;
 
-    const auto &val = static_cast<const Holder *>(h)->m_value;
+    const auto &val = static_cast<const Holder *>(h)->_tanuki_value;
 
     if constexpr (detail::is_reference_wrapper_v<T>) {
         return val.get();
@@ -2045,7 +2045,7 @@ template <typename Holder, typename U>
 
     using T = typename detail::holder_value<Holder>::type;
 
-    auto &val = static_cast<Holder *>(h)->m_value;
+    auto &val = static_cast<Holder *>(h)->_tanuki_value;
 
     if constexpr (detail::is_reference_wrapper_v<T>) {
         if constexpr (std::is_const_v<std::remove_reference_t<std::unwrap_reference_t<T>>>) {

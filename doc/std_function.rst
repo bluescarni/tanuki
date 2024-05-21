@@ -125,6 +125,22 @@ the pointer to the interface via the :cpp:func:`~wrap::iface_ptr()` function, wh
 the interface's call operator. The arguments are perfectly forwarded, and expression SFINAE is used
 (via the trailing ``decltype(...)``) to disable the call operator if it is malformed.
 
+Note that the visual complexity of this call operator is mainly due to CRTP limitations when employing C++20.
+In :ref:`C++23 <ref_interface23>`, the call operator could be simplified to something like this:
+
+.. code-block:: c++
+
+   template <typename Wrap, typename... FArgs>
+   auto operator()(this const Wrap &self,
+                   FArgs &&...fargs) -> decltype(iface_ptr(self)->operator()(std::forward<FArgs>(fargs)...))
+   {
+       if (is_invalid(self)) {
+           throw std::bad_function_call{};
+       }
+
+       return iface_ptr(self)->operator()(std::forward<FArgs>(fargs)...);
+   }
+
 Next, we take a look at the ``bool`` conversion operator:
 
 .. literalinclude:: ../tutorial/std_function.cpp

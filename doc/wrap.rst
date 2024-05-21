@@ -3,7 +3,7 @@
 The ``wrap`` class
 ==================
 
-.. cpp:class:: template <typename IFace, auto Cfg = default_config> requires valid_config<Cfg> wrap
+.. cpp:class:: template <typename IFace, auto Cfg = default_config> requires std::is_class_v<IFace> && std::same_as<IFace, std::remove_cv_t<IFace>> && valid_config<Cfg> wrap
 
    .. cpp:function:: wrap()
 

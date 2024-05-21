@@ -28,6 +28,7 @@ default implementations, single/multiple inheritance, etc.) with C++20 concepts.
 .. toctree::
    :maxdepth: 1
 
+   installation.rst
    tutorials.rst
    case_studies.rst
    api_reference.rst

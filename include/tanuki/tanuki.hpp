@@ -1849,37 +1849,32 @@ public:
         return w.m_pv_iface->_tanuki_value_type_index();
     }
 
-    [[nodiscard]] friend const IFace *iface_ptr(const wrap &w) noexcept
+    template <typename Wrap>
+        requires std::same_as<wrap, std::remove_cv_t<Wrap>>
+    [[nodiscard]] friend auto iface_ptr_impl(Wrap &w) noexcept
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
             return w.m_pv_iface;
         } else {
             return w.m_pv_iface.get();
         }
+    }
+
+    [[nodiscard]] friend const IFace *iface_ptr(const wrap &w) noexcept
+    {
+        return iface_ptr_impl(w);
     }
     [[nodiscard]] friend const IFace *iface_ptr(const wrap &&w) noexcept
     {
-        if constexpr (Cfg.semantics == wrap_semantics::value) {
-            return w.m_pv_iface;
-        } else {
-            return w.m_pv_iface.get();
-        }
+        return iface_ptr_impl(w);
     }
     [[nodiscard]] friend IFace *iface_ptr(wrap &w) noexcept
     {
-        if constexpr (Cfg.semantics == wrap_semantics::value) {
-            return w.m_pv_iface;
-        } else {
-            return w.m_pv_iface.get();
-        }
+        return iface_ptr_impl(w);
     }
     [[nodiscard]] friend IFace *iface_ptr(wrap &&w) noexcept
     {
-        if constexpr (Cfg.semantics == wrap_semantics::value) {
-            return w.m_pv_iface;
-        } else {
-            return w.m_pv_iface.get();
-        }
+        return iface_ptr_impl(w);
     }
 
     friend void swap(wrap &w1, wrap &w2) noexcept

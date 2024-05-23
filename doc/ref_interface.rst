@@ -205,8 +205,9 @@ or not the nested template ``impl`` is present and will auto-select the API acco
 Tips & tricks
 -------------
 
-It should be noted that reference interfaces are useful beyond just enabling dot-style
-access to the member functions. For instance, they also allow to define nested types and inline friend functions and operators
+Reference interfaces are useful beyond just enabling dot-style
+access to the member functions. For instance, they also allow to define nested types/typedefs/aliases
+and inline friend functions and operators
 that will be accessible via `ADL <https://en.cppreference.com/w/cpp/language/adl>`__.
 
 On the other hand, it is also possible to design an API around the :cpp:class:`wrap` class which does not

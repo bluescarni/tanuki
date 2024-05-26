@@ -25,7 +25,7 @@ be problematic.
 
 To begin with, the arrow operator ``->`` is usually associated with pointers, but, as
 we mentioned :ref:`previously <hello_world>`, the :cpp:class:`wrap` class employs
-*value* semantics and not pointer semantics. Although the usage of the arrow operator
+by default *value* semantics and not pointer semantics. Although the usage of the arrow operator
 with value semantics is not unprecedented (e.g., see
 `std::optional <https://en.cppreference.com/w/cpp/utility/optional>`__), it may be a source
 of confusion.

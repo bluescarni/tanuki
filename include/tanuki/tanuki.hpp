@@ -1260,7 +1260,7 @@ class TANUKI_VISIBLE wrap : private detail::wrap_storage<IFace, Cfg.static_size,
                && std::less<void>{}(ptr, this->static_storage + sizeof(this->static_storage));
     }
 
-    // Implementation of generic construction. This will constrcut
+    // Implementation of generic construction. This will construct
     // a holder with value type T using the construction argument(s) x.
     // NOTE: the requirements for the construction of the holder object
     // are in the holder_constructible_from concept.

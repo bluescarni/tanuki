@@ -40,13 +40,13 @@ jobs:
       - name: Build
         run: bash tools/gha_conda_docs.sh
   osx_clang_14:
-    runs-on: macos-11
+    runs-on: macos-13
     steps:
       - uses: actions/checkout@v4
       - name: Build
         run: bash tools/gha_osx_clang_14.sh
   osx_clang_18:
-    runs-on: macos-11
+    runs-on: macos-13
     steps:
       - uses: actions/checkout@v4
       - name: Build

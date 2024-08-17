@@ -44,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build
-        run: bash tools/gha_osx_clang_14.sh
+        run: bash tools/gha_osx_clang_16.sh
   osx_clang_18:
     runs-on: macos-13
     steps:

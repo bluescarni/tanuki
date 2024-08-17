@@ -11,7 +11,7 @@ wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge
 export deps_dir=$HOME/local
 export PATH="$HOME/miniconda/bin:$PATH"
 bash miniconda.sh -b -p $HOME/miniconda
-mamba create -y -q -p $deps_dir 'clangxx=14.*' cmake libboost-devel ninja
+mamba create -y -q -p $deps_dir 'clangxx=16.*' cmake libboost-devel ninja
 source activate $deps_dir
 
 # Create the build dir and cd into it.

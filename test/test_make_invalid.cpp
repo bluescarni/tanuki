@@ -68,6 +68,14 @@ TEST_CASE("invalid ctor/assignment")
 
         REQUIRE(is_invalid(w1));
     }
+
+#if defined(TANUKI_HAVE_CONSTEXPR_26)
+
+    {
+        constexpr wrap_t w(tanuki::invalid_wrap);
+    }
+
+#endif
 }
 
 // NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

@@ -1,18 +1,17 @@
-name: Mac builds
+name: Intel Mac builds
 
 on: [push, pull_request]
 
 jobs:
   build:
-    # macos-12 updated to a toolchain that crashes when linking the
-    # test binary. This seems to be a known bug in that version,
-    # and will eventually get fixed in an update. After that, we can go
-    # back to newer macos images.
-    runs-on: macos-11
+    # From macos-14 forward, the baseline "macos-X" image is Arm based,
+    # and not Intel based. Thus this is the newest image we can use for
+    # Intel MacOS CI, and there don't seem to be any plans to keep providing
+    # the Intel based images for free to OSS projects.
+    runs-on: macos-13
     strategy:
       matrix:
         cxx:
-          - g++-11
           - clang++
         build_type: [Debug, Release]
         std: [14, 17]
@@ -22,15 +21,13 @@ jobs:
             extra_tests: ON
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Configure build
       working-directory: ${{runner.workspace}}
       env:
         CXX: ${{matrix.cxx}}
         CXXFLAGS: ${{matrix.cxxflags}}
-      # Note: $GITHUB_WORKSPACE is distinct from ${{runner.workspace}}.
-      #       This is important
       run: |
         cmake -Bbuild -H$GITHUB_WORKSPACE \
               -DCMAKE_BUILD_TYPE=${{matrix.build_type}} \
@@ -42,11 +39,10 @@ jobs:
 
     - name: Build tests + lib
       working-directory: ${{runner.workspace}}/build
-      run: make -j 2
+      run: make -j `sysctl -n hw.ncpu`
 
     - name: Run tests
       env:
           CTEST_OUTPUT_ON_FAILURE: 1
       working-directory: ${{runner.workspace}}/build
-      # Hardcode 2 cores we know are there
-      run: ctest -C ${{matrix.build_type}} -j 2
+      run: ctest -C ${{matrix.build_type}} -j `sysctl -n hw.ncpu`

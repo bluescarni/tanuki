@@ -29,7 +29,7 @@
 
 #endif
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
 
 struct nonwrappable {
 };
@@ -67,7 +67,7 @@ struct small {
     std::string s = "42";
 };
 
-void my_func(int) {}
+static void my_func(int) {}
 
 #if defined(TANUKI_WITH_BOOST_S11N)
 
@@ -180,7 +180,7 @@ TEST_CASE("assignment")
         auto wl2 = std::move(wl1);
         // NOLINTNEXTLINE
         REQUIRE(is_invalid(wl1));
-        const wrap_t wl3(large{{}, "briffo"});
+        const wrap_t wl3(large{.buffer = {}, .str = "briffo"});
         wl1 = wl3;
         REQUIRE(!is_invalid(wl1));
         REQUIRE(value_ref<large>(wl1).str == "briffo");
@@ -203,7 +203,7 @@ TEST_CASE("assignment")
         auto wl2 = std::move(wl1);
         // NOLINTNEXTLINE
         REQUIRE(is_invalid(wl1));
-        wrap_t wl3(large{{}, "briffo"});
+        wrap_t wl3(large{.buffer = {}, .str = "briffo"});
         wl1 = std::move(wl3);
         REQUIRE(!is_invalid(wl1));
         // NOLINTNEXTLINE
@@ -389,7 +389,7 @@ TEST_CASE("s11n invalid")
 
 #endif
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
 
 #if defined(__GNUC__)
 

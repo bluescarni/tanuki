@@ -19,7 +19,7 @@
 
 #endif
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance,bugprone-crtp-constructor-accessibility)
 
 template <typename, typename, typename>
 struct foo_iface_impl {
@@ -267,7 +267,7 @@ TEST_CASE("template")
 #endif
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance,bugprone-crtp-constructor-accessibility)
 
 #if defined(__GNUC__)
 

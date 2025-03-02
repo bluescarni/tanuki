@@ -14,7 +14,7 @@
 
 #endif
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance,bugprone-crtp-constructor-accessibility)
 
 // Default implementation of the summary interface:
 // inherits from Base, thus using the default implementation
@@ -75,7 +75,7 @@ struct summary_iface_impl<Base, Holder, T> : Base {
 using summary = tanuki::wrap<summary_iface, tanuki::config<>{.explicit_ctor = tanuki::wrap_ctor::always_implicit}>;
 
 // A function with summary input param.
-summary notify(const summary &s)
+static summary notify(const summary &s)
 {
     std::cout << "Breaking news! " << s->summarize() << '\n';
 
@@ -140,7 +140,7 @@ using fooable = tanuki::wrap<fooable_iface, tanuki::config<>{.explicit_ctor = ta
 using fooable_summary = tanuki::wrap<tanuki::composite_iface<summary_iface, fooable_iface>,
                                      tanuki::config<>{.explicit_ctor = tanuki::wrap_ctor::always_implicit}>;
 
-fooable_summary notify_fooable(const fooable_summary &s)
+static fooable_summary notify_fooable(const fooable_summary &s)
 {
     std::cout << "Breaking news! " << s->summarize() << '\n';
     std::cout << "About to foo: " << s->foo() << '\n';
@@ -161,7 +161,7 @@ TEST_CASE("composite wrap")
     REQUIRE(&value_ref<std::reference_wrapper<foo_capable>>(notify_fooable(std::ref(f))).get() == &f);
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance,bugprone-crtp-constructor-accessibility)
 
 #if defined(__GNUC__)
 

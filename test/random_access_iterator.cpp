@@ -12,7 +12,7 @@
 #include "random_access_iterator.hpp"
 #include "sentinel.hpp"
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
 
 template <typename T>
 concept can_make_random_access_iterator = requires(T it) { facade::make_random_access_iterator(it); };
@@ -22,7 +22,7 @@ concept can_make_random_access_iterator = requires(T it) { facade::make_random_a
 // are implemented correctly for a non-iterator
 // value type.
 struct min_iter_wrapper {
-    std::vector<int>::iterator it = {};
+    std::vector<int>::iterator it;
 
     int &operator*() const
     {
@@ -499,9 +499,9 @@ struct iter_move1 {
 // LCOV_EXCL_STOP
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-int iter_move1_counter = 0;
+static int iter_move1_counter = 0;
 
-double iter_move(const iter_move1 &)
+static double iter_move(const iter_move1 &)
 {
     ++iter_move1_counter;
 
@@ -553,9 +553,9 @@ struct iter_move2 {
 // LCOV_EXCL_STOP
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-int iter_move2_counter = 0;
+static int iter_move2_counter = 0;
 
-int iter_move(const iter_move2 &)
+static int iter_move(const iter_move2 &)
 {
     ++iter_move2_counter;
 
@@ -576,4 +576,4 @@ TEST_CASE("iter_move factory")
     REQUIRE(ns::iter_move2_counter == 3);
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)

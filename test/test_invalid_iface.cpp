@@ -6,7 +6,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
 
 template <typename T>
 concept ostreamable = requires(std::ostream &os, const T &x) { os << x; };
@@ -21,7 +21,7 @@ struct print_iface_impl : Base {
 };
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-int counter = 0;
+static int counter = 0;
 
 template <typename Base, typename Holder>
 struct print_iface_impl<Base, Holder, int> : Base {
@@ -41,8 +41,6 @@ struct print_iface {
 };
 
 using print_wrap = tanuki::wrap<print_iface>;
-
-void print_iface_func(print_wrap &);
 
 struct foo {
     friend std::ostream &operator<<(std::ostream &os, const foo &)
@@ -69,4 +67,4 @@ TEST_CASE("invalid iface")
     REQUIRE(!std::constructible_from<print_wrap, bar>);
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)

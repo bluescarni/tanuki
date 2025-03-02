@@ -15,7 +15,7 @@
 
 #endif
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
 
 template <typename Base, typename, typename>
 struct any_iface_impl : Base {
@@ -58,8 +58,8 @@ struct cm_throw {
     }
 };
 
-void my_func1(int) {}
-void my_func2(int) {}
+static void my_func1(int) {}
+static void my_func2(int) {}
 
 TEST_CASE("gen assignment")
 {
@@ -137,7 +137,7 @@ TEST_CASE("gen assignment")
     }
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
 
 #if defined(__GNUC__)
 

@@ -4,22 +4,24 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
 
 namespace ns
 {
 
+// NOLINTNEXTLINE
 struct my_iface {
     virtual ~my_iface() = default;
-    virtual int foo() const = 0;
+    [[nodiscard]] virtual int foo() const = 0;
 };
 
 // Also include an interface with an impl template
 // to check the non-intrusive representation takes
 // the precedence.
+// NOLINTNEXTLINE
 struct my_iface2 {
     virtual ~my_iface2() = default;
-    virtual int bar() const = 0;
+    [[nodiscard]] virtual int bar() const = 0;
 
     template <typename Base, typename Holder, typename T>
     struct impl {
@@ -39,7 +41,7 @@ struct iface_impl<ns::my_iface, Base, Holder, T> {
 // Specialisation for int value type.
 template <typename Base, typename Holder>
 struct iface_impl<ns::my_iface, Base, Holder, int> : public Base {
-    int foo() const final
+    [[nodiscard]] int foo() const final
     {
         return 42;
     }
@@ -52,7 +54,7 @@ struct iface_impl<ns::my_iface2, Base, Holder, T> {
 // Specialisation for int value type.
 template <typename Base, typename Holder>
 struct iface_impl<ns::my_iface2, Base, Holder, int> : public Base {
-    int bar() const final
+    [[nodiscard]] int bar() const final
     {
         return 43;
     }
@@ -86,4 +88,4 @@ TEST_CASE("basics")
     REQUIRE(!std::constructible_from<wrap3_t, long>);
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)

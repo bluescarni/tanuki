@@ -13,7 +13,7 @@
 #include "forward_iterator.hpp"
 #include "sentinel.hpp"
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
 
 template <typename T>
 concept can_make_forward_iterator = requires(T it) { facade::make_forward_iterator(it); };
@@ -242,7 +242,7 @@ struct iter_move1 {
     void operator++() {}
 };
 
-bool operator==(const iter_move1 &, const iter_move1 &)
+static bool operator==(const iter_move1 &, const iter_move1 &)
 {
     return true;
 }
@@ -250,9 +250,9 @@ bool operator==(const iter_move1 &, const iter_move1 &)
 // LCOV_EXCL_STOP
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-int iter_move1_counter = 0;
+static int iter_move1_counter = 0;
 
-double iter_move(const iter_move1 &)
+static double iter_move(const iter_move1 &)
 {
     ++iter_move1_counter;
 
@@ -272,4 +272,4 @@ TEST_CASE("iter_move")
     REQUIRE(ns::iter_move1_counter == 3);
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)

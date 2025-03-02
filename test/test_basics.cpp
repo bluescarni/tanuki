@@ -32,7 +32,7 @@
 
 #endif
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
 
 struct nonwrappable {
 };
@@ -106,7 +106,12 @@ TANUKI_S11N_WRAP_EXPORT2(small2, "small2", any_iface)
 
 #endif
 
+namespace
+{
+
 void my_func(int) {}
+
+} // namespace
 
 TEST_CASE("basics")
 {
@@ -159,6 +164,7 @@ TEST_CASE("basics")
     // noexcept handling for emplacement.
     REQUIRE(noexcept(emplace<int>(w1)));
     REQUIRE(!noexcept(emplace<std::string>(w1, "asdsada")));
+    // NOLINTNEXTLINE(misc-const-correctness)
     std::string tmp_str = "asda";
     REQUIRE(noexcept(emplace<std::string>(w1, std::move(tmp_str))));
 
@@ -219,7 +225,7 @@ TEST_CASE("basics")
     REQUIRE(!with_holder_align<nonwrappable, any_iface>);
 
     // In-place nested construction.
-    wrap_t w4(4.), w5(std::in_place_type<wrap_t>, w4);
+    const wrap_t w4(4.), w5(std::in_place_type<wrap_t>, w4);
     REQUIRE(!noexcept(wrap_t(std::in_place_type<wrap_t>, w4)));
     REQUIRE(value_ref<double>(value_ref<wrap_t>(w5)) == 4.);
 
@@ -260,7 +266,7 @@ TEST_CASE("assignment")
         auto wl2 = std::move(wl1);
         // NOLINTNEXTLINE
         REQUIRE(is_invalid(wl1));
-        const wrap_t wl3(large{{}, "briffo"});
+        const wrap_t wl3(large{.buffer = {}, .str = "briffo"});
         wl1 = wl3;
         REQUIRE(!is_invalid(wl1));
         REQUIRE(value_ref<large>(wl1).str == "briffo");
@@ -283,7 +289,7 @@ TEST_CASE("assignment")
         auto wl2 = std::move(wl1);
         // NOLINTNEXTLINE
         REQUIRE(is_invalid(wl1));
-        wrap_t wl3(large{{}, "briffo"});
+        wrap_t wl3(large{.buffer = {}, .str = "briffo"});
         wl1 = std::move(wl3);
         REQUIRE(!is_invalid(wl1));
         // NOLINTNEXTLINE
@@ -489,6 +495,7 @@ TEST_CASE("s11n invalid")
     REQUIRE(is_invalid(w));
 }
 
+// NOLINTNEXTLINE(hicpp-special-member-functions,cppcoreguidelines-special-member-functions)
 struct nodefctor {
     explicit nodefctor(int) {}
     nodefctor() = delete;
@@ -504,7 +511,7 @@ TEST_CASE("s11n nodef")
 
     using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{.copyable = false, .movable = false, .swappable = false}>;
 
-    wrap_t w(nodefctor{3});
+    const wrap_t w(nodefctor{3});
 
     std::stringstream ss;
 
@@ -516,6 +523,7 @@ TEST_CASE("s11n nodef")
                            MessageMatches(ContainsSubstring("the type is not default-initializable")));
 }
 
+// NOLINTNEXTLINE(hicpp-special-member-functions,cppcoreguidelines-special-member-functions)
 struct nomovector {
     nomovector() = default;
     nomovector(nomovector &&) noexcept = delete;
@@ -530,7 +538,7 @@ TEST_CASE("s11n nomove")
 
     using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{.copyable = false, .movable = false, .swappable = false}>;
 
-    wrap_t w(std::in_place_type<nomovector>);
+    const wrap_t w(std::in_place_type<nomovector>);
 
     std::stringstream ss;
 
@@ -544,7 +552,7 @@ TEST_CASE("s11n nomove")
 
 #endif
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
 
 #if defined(__GNUC__)
 

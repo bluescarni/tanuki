@@ -1,8 +1,5 @@
 add_subdirectory(catch)
 
-# NOTE: forcibly disable clang-tidy on catch to avoid warnings.
-set_property(TARGET Catch2WithMain PROPERTY CXX_CLANG_TIDY "")
-
 function(ADD_TANUKI_TESTCASE arg1)
   add_executable(${arg1} ${arg1}.cpp)
   target_link_libraries(${arg1} PRIVATE tanuki Catch2::Catch2WithMain)
@@ -34,8 +31,6 @@ find_package(Threads REQUIRED)
 unset(THREADS_PREFER_PTHREAD_FLAG)
 add_library(tanuki_sqlite STATIC sqlite3.c)
 target_link_libraries(tanuki_sqlite PRIVATE ${CMAKE_DL_LIBS} Threads::Threads)
-# NOTE: forcibly disable clang-tidy on tanuki_sqlite to avoid warnings.
-set_property(TARGET tanuki_sqlite PROPERTY C_CLANG_TIDY "")
 
 ADD_TANUKI_TESTCASE(test_basics)
 ADD_TANUKI_TESTCASE(test_swap)

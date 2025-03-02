@@ -14,7 +14,7 @@
 
 #include "time_series.hpp"
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
 
 struct minimal_forward_ts {
     std::vector<std::pair<double, double>> m_container;
@@ -156,7 +156,7 @@ struct minimal_ra_ts {
 template <typename TS, typename Key, std::indirect_strict_weak_order<const Key *, const Key *> Comp = std::ranges::less>
     requires facade::any_random_access_ts<TS> && std::same_as<Key, facade::ts_key_t<TS>>
 // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
-auto lagrange_interpolation(TS &&ts, const Key &key, std::size_t order, Comp comp = {})
+static auto lagrange_interpolation(TS &&ts, const Key &key, std::size_t order, Comp comp = {})
 {
     assert(order >= 2u);
     const auto order_half = static_cast<std::ranges::range_difference_t<TS>>(order / 2u);
@@ -260,4 +260,4 @@ TEST_CASE("lagrange interpolation")
     }
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)

@@ -203,9 +203,9 @@ struct iter_move1 {
 // LCOV_EXCL_STOP
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-int iter_move1_counter = 0;
+static int iter_move1_counter = 0;
 
-double iter_move(const iter_move1 &)
+static double iter_move(const iter_move1 &)
 {
     ++iter_move1_counter;
 

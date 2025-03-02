@@ -4,7 +4,6 @@
 #include <tanuki/tanuki.hpp>
 
 #include <catch2/catch_test_macros.hpp>
-#include <utility>
 
 #if defined(__GNUC__)
 
@@ -13,7 +12,7 @@
 
 #endif
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
 
 template <typename Base, typename, typename>
 struct any_iface_impl : Base {
@@ -104,7 +103,7 @@ TEST_CASE("nonmovable")
     REQUIRE(std::swappable<wrap3_t>);
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
 
 #if defined(__GNUC__)
 

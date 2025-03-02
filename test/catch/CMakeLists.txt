@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.16)
 
 # detect if Catch is being bundled,
 # disable testsuite in that case
@@ -8,9 +8,12 @@ else()
   set(NOT_SUBPROJECT OFF)
 endif()
 
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 option(CATCH_INSTALL_DOCS "Install documentation alongside library" ON)
 option(CATCH_INSTALL_EXTRAS "Install extras (CMake scripts, debugger helpers) alongside library" ON)
 option(CATCH_DEVELOPMENT_BUILD "Build tests, enable warnings, enable Werror, etc" OFF)
+option(CATCH_ENABLE_REPRODUCIBLE_BUILD "Add compiler flags for improving build reproducibility" ON)
 
 include(CMakeDependentOption)
 cmake_dependent_option(CATCH_BUILD_TESTING "Build the SelfTest project" ON "CATCH_DEVELOPMENT_BUILD" OFF)
@@ -32,14 +35,11 @@ if (CMAKE_BINARY_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 endif()
 
 project(Catch2
-  VERSION 3.4.0 # CML version placeholder, don't delete
+  VERSION 3.8.0 # CML version placeholder, don't delete
   LANGUAGES CXX
-  # HOMEPAGE_URL is not supported until CMake version 3.12, which
-  # we do not target yet.
-  # HOMEPAGE_URL "https://github.com/catchorg/Catch2"
+  HOMEPAGE_URL "https://github.com/catchorg/Catch2"
   DESCRIPTION "A modern, C++-native, unit test framework."
 )
-
 
 # Provide path for scripts. We first add path to the scripts we don't use,
 # but projects including us might, and set the path up to parent scope.
@@ -75,8 +75,6 @@ endif()
 set(CATCH_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(SOURCES_DIR ${CATCH_DIR}/src/catch2)
 set(SELF_TEST_DIR ${CATCH_DIR}/tests/SelfTest)
-set(BENCHMARK_DIR ${CATCH_DIR}/tests/Benchmark)
-set(EXAMPLES_DIR ${CATCH_DIR}/examples)
 
 # We need to bring-in the variables defined there to this scope
 add_subdirectory(src)
@@ -87,18 +85,22 @@ if (BUILD_TESTING AND CATCH_BUILD_TESTING AND NOT_SUBPROJECT)
     if (NOT PYTHONINTERP_FOUND)
         message(FATAL_ERROR "Python not found, but required for tests")
     endif()
+    set(CMAKE_FOLDER "tests")
     add_subdirectory(tests)
 endif()
 
 if(CATCH_BUILD_EXAMPLES)
+    set(CMAKE_FOLDER "Examples")
     add_subdirectory(examples)
 endif()
 
 if(CATCH_BUILD_EXTRA_TESTS)
+    set(CMAKE_FOLDER "tests/ExtraTests")
     add_subdirectory(tests/ExtraTests)
 endif()
 
 if(CATCH_BUILD_FUZZERS)
+    set(CMAKE_FOLDER "fuzzing")
     add_subdirectory(fuzzing)
 endif()
 
@@ -188,15 +190,9 @@ if (NOT_SUBPROJECT)
         ${PKGCONFIG_INSTALL_DIR}
     )
 
-    # CPack/CMake started taking the package version from project version 3.12
-    # So we need to set the version manually for older CMake versions
-    if(${CMAKE_VERSION} VERSION_LESS "3.12.0")
-        set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
-    endif()
-
     set(CPACK_PACKAGE_CONTACT "https://github.com/catchorg/Catch2/")
 
 
     include( CPack )
 
-endif(NOT_SUBPROJECT)
+endif()

@@ -14,7 +14,7 @@
 
 #endif
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance,bugprone-crtp-constructor-accessibility)
 
 template <typename Base, typename, typename>
 struct summary_iface_impl : Base {
@@ -52,7 +52,7 @@ struct summary_iface_impl<Base, Holder, T> : Base {
 using summary = tanuki::wrap<summary_iface, tanuki::config<>{.explicit_ctor = tanuki::wrap_ctor::ref_implicit}>;
 
 // A function with summary input param.
-summary notify(const summary &s)
+static summary notify(const summary &s)
 {
     std::cout << "Breaking news! " << s->summarize() << '\n';
 
@@ -77,7 +77,7 @@ TEST_CASE("implicit ref ctor")
     REQUIRE(!can_notify<news_article>);
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance,bugprone-crtp-constructor-accessibility)
 
 #if defined(__GNUC__)
 

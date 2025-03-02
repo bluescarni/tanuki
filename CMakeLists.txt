@@ -138,7 +138,18 @@ if(TANUKI_WITH_BOOST_S11N)
   # NOTE: we rely on Boost.align to check alignment of pointers
   # at runtime in debug mode. The Boost.align library appeared in
   # version 1.59.0 but its API was updated in 1.61.0.
-  find_package(Boost 1.61.0 REQUIRED serialization)
+  # NOTE: we look for Boost in CONFIG mode first, as that has become the official supported way
+  # of locating Boost in recent Boost/CMake versions. If we fail, we try again in
+  # MODULE mode as last resort.
+  find_package(Boost 1.61.0 QUIET COMPONENTS serialization CONFIG)
+  if(NOT ${Boost_FOUND})
+      message(STATUS "Boost not found in CONFIG mode, retrying in MODULE mode.")
+      find_package(Boost 1.61.0 QUIET MODULE COMPONENTS serialization)
+  endif()
+  if(NOT ${Boost_FOUND})
+      message(FATAL_ERROR "Could not locate Boost in either CONFIG or MODULE mode.")
+  endif()
+  message(STATUS "Found Boost version ${Boost_VERSION}.")
   add_library(tanuki_boost_s11n INTERFACE)
   target_link_libraries(tanuki_boost_s11n INTERFACE Boost::serialization)
   target_compile_definitions(tanuki_boost_s11n INTERFACE TANUKI_WITH_BOOST_S11N)

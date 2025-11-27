@@ -195,6 +195,7 @@ TEST_CASE("basics")
     // NOLINTBEGIN
     REQUIRE(is_invalid(w2));
     // NOLINTEND
+    REQUIRE(has_dynamic_storage(w2));
 
     // Emplace test with class which is not copyable/movable/swappable.
     wrap<any_iface, tanuki::config<>{.copyable = false, .movable = false, .swappable = false}> w_mut(
@@ -232,6 +233,7 @@ TEST_CASE("basics")
     wrap_t w8(large{.str = "foobar"}), w9(std::in_place_type<wrap_t>, std::move(w8));
     REQUIRE(value_ref<large>(value_ref<wrap_t>(w9)).str == "foobar");
     REQUIRE(is_invalid(w8));
+    REQUIRE(has_dynamic_storage(w8));
 
     // Try with inline implementation as well.
     using wrap2_t = wrap<any_iface2>;
@@ -266,6 +268,7 @@ TEST_CASE("assignment")
         auto wl2 = std::move(wl1);
         // NOLINTNEXTLINE
         REQUIRE(is_invalid(wl1));
+        REQUIRE(has_dynamic_storage(wl1));
         const wrap_t wl3(large{.buffer = {}, .str = "briffo"});
         wl1 = wl3;
         REQUIRE(!is_invalid(wl1));
@@ -277,6 +280,7 @@ TEST_CASE("assignment")
         auto wl2 = std::move(wl1);
         // NOLINTNEXTLINE
         REQUIRE(!is_invalid(wl1));
+        REQUIRE(has_static_storage(wl1));
         const wrap_t wl3(small{"briffo"});
         wl1 = wl3;
         REQUIRE(!is_invalid(wl1));

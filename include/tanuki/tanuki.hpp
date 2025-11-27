@@ -1946,6 +1946,7 @@ public:
         }
     }
 
+    // NOTE: a wrap in the invalid state is always considered as being in *dynamic* storage.
     [[nodiscard]] friend bool has_static_storage(const wrap &w) noexcept
     {
         if constexpr (Cfg.semantics == wrap_semantics::reference || Cfg.static_size == 0u) {
@@ -2078,6 +2079,7 @@ template <typename IFace, auto Cfg>
     return !is_invalid(w);
 }
 
+// NOTE: a wrap in the invalid state is always considered as being in *dynamic* storage.
 template <typename IFace, auto Cfg>
 bool has_dynamic_storage(const wrap<IFace, Cfg> &w) noexcept
 {

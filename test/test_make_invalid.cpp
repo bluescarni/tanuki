@@ -37,36 +37,44 @@ TEST_CASE("invalid ctor/assignment")
         auto w1 = wrap_t(tanuki::invalid_wrap);
 
         REQUIRE(is_invalid(w1));
+        REQUIRE(has_dynamic_storage(w1));
 
         w1 = tanuki::invalid_wrap_t{};
 
         REQUIRE(is_invalid(w1));
+        REQUIRE(has_dynamic_storage(w1));
 
         w1 = 123;
 
         REQUIRE(!is_invalid(w1));
+        REQUIRE(has_static_storage(w1));
 
         w1 = tanuki::invalid_wrap_t{};
 
         REQUIRE(is_invalid(w1));
+        REQUIRE(has_dynamic_storage(w1));
     }
 
     {
         auto w1 = wrap_t(tanuki::invalid_wrap_t{});
 
         REQUIRE(is_invalid(w1));
+        REQUIRE(has_dynamic_storage(w1));
 
         w1 = tanuki::invalid_wrap_t{};
 
         REQUIRE(is_invalid(w1));
+        REQUIRE(has_dynamic_storage(w1));
 
         w1 = large{};
 
         REQUIRE(!is_invalid(w1));
+        REQUIRE(has_dynamic_storage(w1));
 
         w1 = tanuki::invalid_wrap_t{};
 
         REQUIRE(is_invalid(w1));
+        REQUIRE(has_dynamic_storage(w1));
     }
 }
 

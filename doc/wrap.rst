@@ -191,6 +191,10 @@ The ``wrap`` class
 
       Query the storage type of a :cpp:class:`wrap`.
 
+      .. note::
+
+         A :cpp:class:`wrap` in the :ref:`invalid state <invalid_state>` is always considered as employing dynamic storage.
+
       :param w: the input :cpp:class:`wrap`.
 
       :return: ``true`` if :cpp:var:`w` is currently employing static storage, ``false`` otherwise.
@@ -231,6 +235,10 @@ The ``wrap`` class
 .. cpp:function:: template <typename IFace, auto Cfg> bool has_dynamic_storage(const wrap<IFace, Cfg> &w) noexcept
 
    Query the storage type of a :cpp:class:`wrap`.
+
+   .. note::
+
+      A :cpp:class:`wrap` in the :ref:`invalid state <invalid_state>` is always considered as employing dynamic storage.
 
    :param w: the input :cpp:class:`wrap`.
 

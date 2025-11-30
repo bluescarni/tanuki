@@ -54,10 +54,10 @@
 #endif
 
 // Versioning.
-#define TANUKI_VERSION_MAJOR 1
+#define TANUKI_VERSION_MAJOR 2
 #define TANUKI_VERSION_MINOR 0
 #define TANUKI_VERSION_PATCH 0
-#define TANUKI_ABI_VERSION 1
+#define TANUKI_ABI_VERSION 2
 
 // NOTE: indirection to allow token pasting/stringification:
 // https://stackoverflow.com/questions/24991208/expand-a-macro-in-a-macro

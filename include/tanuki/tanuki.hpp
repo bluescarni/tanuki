@@ -361,16 +361,18 @@ struct TANUKI_VISIBLE value_iface : public IFace, value_iface_base {
 
     // LCOV_EXCL_STOP
 
-private:
-    // Serialization.
-    friend class boost::serialization::access;
-    template <typename Archive>
-    void serialize(Archive &, unsigned)
-    {
-    }
-
 #endif
 };
+
+#if defined(TANUKI_WITH_BOOST_S11N)
+
+// NOTE: keep serialisation outside the class in order not to pollute the internal namespace.
+template <typename Archive, typename IFace, wrap_semantics Sem>
+void serialize(Archive &, value_iface<IFace, Sem> &, const unsigned)
+{
+}
+
+#endif
 
 #if defined(__GNUC__) && !defined(__clang__)
 

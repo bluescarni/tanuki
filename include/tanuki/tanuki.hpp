@@ -252,6 +252,19 @@ inline constexpr bool is_any_wrap_v = false;
 
 #endif
 
+// NOTE: in traditional OOP, the class hierarchy would be:
+//
+// iface_impl -> iface
+//
+// In order to implement type erasure, we are interposing additional classes to the traditional OOP hierarchy:
+//
+// _tanuki_holder -> iface_impl -> _tanuki_value_iface -> iface
+//
+// _tanuki_value_iface contains the abstract functions used to interact with the type-erased value. _tanuki_holder
+// stores the type-erased value and implements the _tanuki_value_iface interface. The wrap class stores an instance of
+// _tanuki_holder and contains a pointer to _tanuki_value_iface, so that it can use both the iface and
+// _tanuki_value_iface API.
+
 // Interface for interacting with type-erased values.
 //
 // NOTE: we need to template _tanuki_value_iface on the semantics so that we can selectively disable address tracking in
@@ -455,6 +468,12 @@ template <typename, typename, wrap_semantics>
 struct impl_from_iface_impl {
 };
 
+// NOTE: this is a typed wrapper for _tanuki_value_iface.
+//
+// In the code below, we will ensure that any valid interface implementation derives from _tanuki_typed_value_iface.
+// This ensures that a pointer to an interface implementation is implicitly convertible to _tanuki_typed_value_iface,
+// which in turn allows us - in the implementation of getval() - to static_cast a pointer to an implementation to the
+// holder for that implementation. We would not be able to perform this static_cast without the information about T.
 template <typename T, typename IFace, wrap_semantics Sem>
 struct _tanuki_typed_value_iface : _tanuki_value_iface<IFace, Sem> {
 };
@@ -550,6 +569,8 @@ concept iface_has_impl = requires() {
 #endif
 
 // Class for holding type-erased values.
+//
+// This implements the _tanuki_value_iface interface.
 template <typename T, typename IFace, wrap_semantics Sem>
     requires iface_has_impl<IFace, T, Sem>
 struct TANUKI_VISIBLE _tanuki_holder final : public impl_from_iface<IFace, T, Sem> {
@@ -769,6 +790,9 @@ struct TANUKI_VISIBLE _tanuki_holder final : public impl_from_iface<IFace, T, Se
 template <typename Archive, typename T, typename IFace, wrap_semantics Sem>
 void serialize(Archive &ar, _tanuki_holder<T, IFace, Sem> &self, const unsigned)
 {
+    // NOTE: here we are "skipping" the serialisation of intermediate classes in the hierarchy and going directly to the
+    // serialisation of _tanuki_value_iface. This is ok, as we do not support state in the interface or its
+    // implementation.
     ar &boost::serialization::base_object<_tanuki_value_iface<IFace, Sem>>(self);
     ar & self._tanuki_value;
 }
@@ -785,6 +809,7 @@ void serialize(Archive &ar, _tanuki_holder<T, IFace, Sem> &self, const unsigned)
 
 #endif
 
+// Helper to determine if the non-const overload of getval() is noexcept.
 template <typename T>
 consteval bool getval_is_noexcept()
 {
@@ -795,7 +820,9 @@ consteval bool getval_is_noexcept()
     }
 }
 
+// Getters for the type-erased value, to be used in the implementation of interfaces.
 template <typename T, typename IFace, wrap_semantics Sem>
+    requires std::derived_from<_tanuki_holder<T, IFace, Sem>, _tanuki_typed_value_iface<T, IFace, Sem>>
 [[nodiscard]] const auto &getval(const _tanuki_typed_value_iface<T, IFace, Sem> *h) noexcept
 {
     assert(h != nullptr);
@@ -811,6 +838,7 @@ template <typename T, typename IFace, wrap_semantics Sem>
 }
 
 template <typename T, typename IFace, wrap_semantics Sem>
+    requires std::derived_from<_tanuki_holder<T, IFace, Sem>, _tanuki_typed_value_iface<T, IFace, Sem>>
 [[nodiscard]] auto &getval(_tanuki_typed_value_iface<T, IFace, Sem> *h) noexcept(getval_is_noexcept<T>())
 {
     assert(h != nullptr);

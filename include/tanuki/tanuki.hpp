@@ -183,6 +183,9 @@ inline std::string demangle(const char *s)
 // NOLINTNEXTLINE(performance-enum-size)
 enum class TANUKI_VISIBLE wrap_semantics { value, reference };
 
+// Helper to unwrap a std::reference_wrapper and remove reference and cv qualifiers from the result.
+template <typename T>
+using unwrap_cvref_t = std::remove_cvref_t<std::unwrap_reference_t<T>>;
 namespace detail
 {
 
@@ -239,10 +242,6 @@ inline constexpr bool is_reference_wrapper_v<std::reference_wrapper<T>> = true;
 // class.
 template <typename>
 inline constexpr bool is_any_wrap_v = false;
-
-// Helper to unwrap a std::reference_wrapper and remove reference and cv qualifiers from the result.
-template <typename T>
-using unwrap_cvref_t = std::remove_cvref_t<std::unwrap_reference_t<T>>;
 
 #if defined(__GNUC__) && !defined(__clang__)
 

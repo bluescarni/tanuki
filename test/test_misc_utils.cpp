@@ -15,21 +15,21 @@
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
 
-template <typename Base, typename, typename>
+template <typename Base, typename>
 struct any_iface_impl : Base {
 };
 
 // NOLINTNEXTLINE
 struct any_iface {
-    template <typename Base, typename Holder, typename T>
-    using impl = any_iface_impl<Base, Holder, T>;
+    template <typename Base, typename T>
+    using impl = any_iface_impl<Base, T>;
 };
 
-template <typename Base, typename Holder, typename>
+template <typename Base, typename>
 struct foo_iface_impl : Base {
     void foo() const final
     {
-        getval<Holder>(*this).foo();
+        getval(this).foo();
     }
 };
 
@@ -37,15 +37,15 @@ struct foo_iface_impl : Base {
 struct foo_iface {
     virtual void foo() const = 0;
 
-    template <typename Base, typename Holder, typename T>
-    using impl = foo_iface_impl<Base, Holder, T>;
+    template <typename Base, typename T>
+    using impl = foo_iface_impl<Base, T>;
 };
 
-template <typename Base, typename Holder, typename>
+template <typename Base, typename>
 struct bar_iface_impl : Base {
     void bar() final
     {
-        getval<Holder>(*this).bar();
+        getval(this).bar();
     }
 };
 
@@ -53,8 +53,8 @@ struct bar_iface_impl : Base {
 struct bar_iface {
     virtual void bar() = 0;
 
-    template <typename Base, typename Holder, typename T>
-    using impl = bar_iface_impl<Base, Holder, T>;
+    template <typename Base, typename T>
+    using impl = bar_iface_impl<Base, T>;
 };
 
 struct large {

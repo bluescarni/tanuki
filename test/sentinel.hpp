@@ -32,7 +32,7 @@ inline constexpr bool is_reference_wrapper_v<std::reference_wrapper<T>> = true;
 
 // A type-erased interface for storing references to objects.
 struct any_ref_iface {
-    template <typename Base, typename Holder, typename T>
+    template <typename Base, typename T>
         requires is_reference_wrapper_v<T>
     struct impl : public Base {
     };
@@ -97,17 +97,17 @@ struct sentinel_iface {
     [[nodiscard]] virtual bool at_end(const any_ref &) const = 0;
     [[nodiscard]] virtual std::ptrdiff_t distance_to_iter(const any_ref &) const = 0;
 
-    template <typename Base, typename Holder, typename T>
+    template <typename Base, typename T>
         requires is_sentinel_box_v<T>
     struct impl : public Base {
         [[nodiscard]] bool at_end(const any_ref &ar) const final
         {
-            return getval<Holder>(this).at_end(ar);
+            return getval(this).at_end(ar);
         }
         [[nodiscard]] std::ptrdiff_t distance_to_iter(const any_ref &ar) const final
         {
             if constexpr (has_distance_to_iter<T>) {
-                return getval<Holder>(this).distance_to_iter(ar);
+                return getval(this).distance_to_iter(ar);
             } else {
                 throw std::runtime_error("The sentinel type '" + tanuki::demangle(typeid(T).name())
                                          + "' is not a sized sentinel");

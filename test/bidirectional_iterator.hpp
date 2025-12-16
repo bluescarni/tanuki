@@ -32,12 +32,12 @@ concept pre_decrementable = requires(T &x) { static_cast<void>(--x); };
 template <typename T, typename V, typename R, typename RR>
 concept minimal_bidirectional_iterator = minimal_forward_iterator<T, V, R, RR> && pre_decrementable<T>;
 
-template <typename Base, typename Holder, typename T, typename V, typename R, typename RR>
+template <typename Base, typename T, typename V, typename R, typename RR>
     requires minimal_bidirectional_iterator<T, V, R, RR>
-struct bidirectional_iterator_iface_impl : forward_iterator_iface_impl<Base, Holder, T, V, R, RR> {
+struct bidirectional_iterator_iface_impl : forward_iterator_iface_impl<Base, T, V, R, RR> {
     void operator--() final
     {
-        static_cast<void>(--getval<Holder>(this));
+        static_cast<void>(--getval(this));
     }
 };
 
@@ -45,8 +45,8 @@ template <typename V, typename R, typename RR>
 struct bidirectional_iterator_iface : forward_iterator_iface<V, R, RR> {
     virtual void operator--() = 0;
 
-    template <typename Base, typename Holder, typename T>
-    using impl = bidirectional_iterator_iface_impl<Base, Holder, T, V, R, RR>;
+    template <typename Base, typename T>
+    using impl = bidirectional_iterator_iface_impl<Base, T, V, R, RR>;
 };
 
 // Implementation of the reference interface.

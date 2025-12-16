@@ -41,21 +41,21 @@ template <typename, typename, typename>
 struct forward_iterator_iface;
 
 // Implementation of the interface.
-template <typename Base, typename Holder, typename T, typename V, typename R, typename RR>
+template <typename Base, typename T, typename V, typename R, typename RR>
     requires minimal_forward_iterator<T, V, R, RR>
-struct forward_iterator_iface_impl : input_iterator_iface_impl<Base, Holder, T, V, R, RR> {
+struct forward_iterator_iface_impl : input_iterator_iface_impl<Base, T, V, R, RR> {
     [[nodiscard]] std::type_index get_type_index() const noexcept final
     {
         return typeid(T);
     }
     [[nodiscard]] const void *get_ptr() const noexcept final
     {
-        return std::addressof(getval<Holder>(this));
+        return std::addressof(getval(this));
     }
     bool equal_to_iter(const forward_iterator_iface<V, R, RR> &other) const final
     {
         if (typeid(T) == other.get_type_index()) {
-            return static_cast<bool>(getval<Holder>(this) == *static_cast<const T *>(other.get_ptr()));
+            return static_cast<bool>(getval(this) == *static_cast<const T *>(other.get_ptr()));
         } else {
             throw std::runtime_error("Unable to compare an iterator of type '" + tanuki::demangle(typeid(T).name())
                                      + "' to an iterator of type '" + tanuki::demangle(other.get_type_index().name())
@@ -70,8 +70,8 @@ struct forward_iterator_iface : input_iterator_iface<V, R, RR> {
     [[nodiscard]] virtual std::type_index get_type_index() const noexcept = 0;
     [[nodiscard]] virtual const void *get_ptr() const noexcept = 0;
 
-    template <typename Base, typename Holder, typename T>
-    using impl = forward_iterator_iface_impl<Base, Holder, T, V, R, RR>;
+    template <typename Base, typename T>
+    using impl = forward_iterator_iface_impl<Base, T, V, R, RR>;
 };
 
 template <typename R, typename RR>

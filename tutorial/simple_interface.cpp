@@ -2,22 +2,6 @@
 
 #include <tanuki/tanuki.hpp>
 
-template <typename Base, typename Holder, typename T>
-struct foo1_iface_impl : public Base {
-    void foo() const override
-    {
-        std::cout << "foo1_iface_impl calling foo()\n";
-        static_cast<const Holder *>(this)->_tanuki_value.foo();
-    }
-};
-
-struct foo1_iface {
-    virtual void foo() const = 0;
-
-    template <typename Base, typename Holder, typename T>
-    using impl = foo1_iface_impl<Base, Holder, T>;
-};
-
 struct foo_model {
     void foo() const
     {
@@ -25,83 +9,57 @@ struct foo_model {
     }
 };
 
-template <typename Base, typename Holder, typename T>
-struct foo2_iface_impl : public Base {
-    void foo() const override
-    {
-        std::cout << "foo2_iface_impl calling foo()\n";
-        getval<Holder>(this).foo();
-    }
-};
-
-struct foo2_iface {
-    virtual void foo() const = 0;
-
-    template <typename Base, typename Holder, typename T>
-    using impl = foo2_iface_impl<Base, Holder, T>;
-};
-
 template <typename T>
 concept fooable = requires(const T &x) { x.foo(); };
 
-template <typename Base, typename Holder, typename T>
+template <typename Base, typename T>
     requires fooable<T>
 struct foo3_iface_impl : public Base {
     void foo() const override
     {
         std::cout << "foo3_iface_impl calling foo()\n";
-        getval<Holder>(this).foo();
+        getval(this).foo();
     }
 };
 
 struct foo3_iface {
     virtual void foo() const = 0;
 
-    template <typename Base, typename Holder, typename T>
-    using impl = foo3_iface_impl<Base, Holder, T>;
+    template <typename Base, typename T>
+    using impl = foo3_iface_impl<Base, T>;
 };
 
-template <typename Base, typename Holder, typename T>
+template <typename Base, typename T>
 struct foo4_iface_impl {
 };
 
-template <typename Base, typename Holder, typename T>
+template <typename Base, typename T>
     requires fooable<T>
-struct foo4_iface_impl<Base, Holder, T> : public Base {
+struct foo4_iface_impl<Base, T> : public Base {
     void foo() const override
     {
         std::cout << "foo4_iface_impl calling foo()\n";
-        getval<Holder>(this).foo();
+        getval(this).foo();
     }
 };
 
-template <typename Base, typename Holder>
-struct foo4_iface_impl<Base, Holder, int> : public Base {
+template <typename Base>
+struct foo4_iface_impl<Base, int> : public Base {
     void foo() const override
     {
-        std::cout << "foo4_iface_impl implementing foo() for the integer " << getval<Holder>(this) << "\n";
+        std::cout << "foo4_iface_impl implementing foo() for the integer " << getval(this) << "\n";
     }
 };
 
 struct foo4_iface {
     virtual void foo() const = 0;
 
-    template <typename Base, typename Holder, typename T>
-    using impl = foo4_iface_impl<Base, Holder, T>;
+    template <typename Base, typename T>
+    using impl = foo4_iface_impl<Base, T>;
 };
 
 int main()
 {
-    using foo1_wrap = tanuki::wrap<foo1_iface>;
-
-    foo1_wrap w1(foo_model{});
-    w1->foo();
-
-    using foo2_wrap = tanuki::wrap<foo2_iface>;
-
-    foo2_wrap w2(foo_model{});
-    w2->foo();
-
     using foo3_wrap = tanuki::wrap<foo3_iface>;
 
     foo3_wrap w3(foo_model{});

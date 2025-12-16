@@ -15,11 +15,11 @@
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
 
-template <typename Base, typename Holder, typename>
+template <typename Base, typename>
 struct foobar_iface_impl : Base {
     void foo() const noexcept final
     {
-        getval<Holder>(this).foo();
+        getval(this).foo();
     }
     void bar() noexcept final {}
     void fuzz() && final {}
@@ -31,8 +31,8 @@ struct foobar_iface {
     virtual void bar() = 0;
     virtual void fuzz() && = 0;
 
-    template <typename Base, typename Holder, typename T>
-    using impl = foobar_iface_impl<Base, Holder, T>;
+    template <typename Base, typename T>
+    using impl = foobar_iface_impl<Base, T>;
 };
 
 struct fooer {

@@ -16,19 +16,19 @@
 
 // LCOV_EXCL_START
 
-template <typename, typename, typename>
+template <typename, typename>
 struct foo_iface_impl {
 };
 
 template <typename T>
 concept fooable = requires(const T &x) { static_cast<void>(x.foo()); };
 
-template <typename Base, typename Holder, typename T>
+template <typename Base, typename T>
     requires fooable<T>
-struct foo_iface_impl<Base, Holder, T> : Base {
+struct foo_iface_impl<Base, T> : Base {
     void foo() const final
     {
-        static_cast<void>(getval<Holder>(this).foo());
+        static_cast<void>(getval(this).foo());
     }
 };
 
@@ -36,8 +36,8 @@ struct foo_iface_impl<Base, Holder, T> : Base {
 struct foo_iface {
     virtual void foo() const = 0;
 
-    template <typename Base, typename Holder, typename T>
-    using impl = foo_iface_impl<Base, Holder, T>;
+    template <typename Base, typename T>
+    using impl = foo_iface_impl<Base, T>;
 };
 
 struct f1 {

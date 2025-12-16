@@ -25,7 +25,7 @@ template <typename R, typename... Args>
 struct is_any_function<std::function<R(Args...)>> : std::true_type {
 };
 
-template <typename Base, typename Holder, typename T, typename R, typename... Args>
+template <typename Base, typename T, typename R, typename... Args>
 struct func_iface_impl {
 };
 
@@ -35,35 +35,35 @@ struct func_iface {
     virtual R operator()(Args... args) const = 0;
     virtual explicit operator bool() const noexcept = 0;
 
-    template <typename Base, typename Holder, typename T>
-    using impl = func_iface_impl<Base, Holder, T, R, Args...>;
+    template <typename Base, typename T>
+    using impl = func_iface_impl<Base, T, R, Args...>;
 };
 
-template <typename Base, typename Holder, typename T, typename R, typename... Args>
+template <typename Base, typename T, typename R, typename... Args>
     requires std::is_invocable_r_v<R, const tanuki::unwrap_cvref_t<T> &, Args...>
-struct func_iface_impl<Base, Holder, T, R, Args...> : Base {
+struct func_iface_impl<Base, T, R, Args...> : Base {
     R operator()(Args... args) const final
     {
         using uT = tanuki::unwrap_cvref_t<T>;
 
         if constexpr (std::is_pointer_v<uT> || std::is_member_pointer_v<uT>) {
-            if (getval<Holder>(this) == nullptr) {
+            if (getval(this) == nullptr) {
                 throw std::bad_function_call{};
             }
         } else if constexpr (tanuki::any_wrap<uT>) {
-            if (is_invalid(getval<Holder>(this))) {
+            if (is_invalid(getval(this))) {
                 throw std::bad_function_call{};
             }
         } else if constexpr (is_any_function<uT>::value) {
-            if (!getval<Holder>(this)) {
+            if (!getval(this)) {
                 throw std::bad_function_call{};
             }
         }
 
         if constexpr (std::same_as<R, void>) {
-            static_cast<void>(std::invoke(getval<Holder>(this), std::forward<Args>(args)...));
+            static_cast<void>(std::invoke(getval(this), std::forward<Args>(args)...));
         } else {
-            return std::invoke(getval<Holder>(this), std::forward<Args>(args)...);
+            return std::invoke(getval(this), std::forward<Args>(args)...);
         }
     }
     explicit operator bool() const noexcept final
@@ -71,11 +71,11 @@ struct func_iface_impl<Base, Holder, T, R, Args...> : Base {
         using uT = tanuki::unwrap_cvref_t<T>;
 
         if constexpr (std::is_pointer_v<uT> || std::is_member_pointer_v<uT>) {
-            return getval<Holder>(this) != nullptr;
+            return getval(this) != nullptr;
         } else if constexpr (tanuki::any_wrap<uT>) {
-            return !is_invalid(getval<Holder>(this));
+            return !is_invalid(getval(this));
         } else if constexpr (is_any_function<uT>::value) {
-            return static_cast<bool>(getval<Holder>(this));
+            return static_cast<bool>(getval(this));
         } else {
             return true;
         }

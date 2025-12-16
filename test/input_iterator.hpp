@@ -47,16 +47,16 @@ concept minimal_input_iterator = minimal_io_iterator<T, R> && with_iter_move<T, 
                                  && std::common_reference_with<RR &&, const V &>;
 
 // Definition of the interface implementation.
-template <typename Base, typename Holder, typename T, typename V, typename R, typename RR>
+template <typename Base, typename T, typename V, typename R, typename RR>
     requires minimal_input_iterator<T, V, R, RR>
-struct input_iterator_iface_impl : io_iterator_iface_impl<Base, Holder, T, R> {
+struct input_iterator_iface_impl : io_iterator_iface_impl<Base, T, R> {
     R const_deref() const final
     {
-        return *getval<Holder>(this);
+        return *getval(this);
     }
     RR iter_move() const final
     {
-        return std::ranges::iter_move(getval<Holder>(this));
+        return std::ranges::iter_move(getval(this));
     }
 };
 
@@ -65,8 +65,8 @@ struct input_iterator_iface : io_iterator_iface<R> {
     virtual R const_deref() const = 0;
     virtual RR iter_move() const = 0;
 
-    template <typename Base, typename Holder, typename T>
-    using impl = input_iterator_iface_impl<Base, Holder, T, V, R, RR>;
+    template <typename Base, typename T>
+    using impl = input_iterator_iface_impl<Base, T, V, R, RR>;
 };
 
 // Helper struct to assign a value_type

@@ -2,11 +2,11 @@
 
 #include <tanuki/tanuki.hpp>
 
-template <typename Base, typename Holder, typename T>
+template <typename Base, typename T>
 struct foo_iface_impl : public Base {
     void foo() const final
     {
-        getval<Holder>(this).foo();
+        getval(this).foo();
     }
 };
 
@@ -14,15 +14,15 @@ struct foo_iface_impl : public Base {
 struct foo_iface {
     virtual void foo() const = 0;
 
-    template <typename Base, typename Holder, typename T>
-    using impl = foo_iface_impl<Base, Holder, T>;
+    template <typename Base, typename T>
+    using impl = foo_iface_impl<Base, T>;
 };
 
-template <typename Base, typename Holder, typename T>
+template <typename Base, typename T>
 struct bar_iface_impl : public Base {
     void bar() const final
     {
-        getval<Holder>(this).bar();
+        getval(this).bar();
     }
 };
 
@@ -30,8 +30,8 @@ struct bar_iface_impl : public Base {
 struct bar_iface {
     virtual void bar() const = 0;
 
-    template <typename Base, typename Holder, typename T>
-    using impl = bar_iface_impl<Base, Holder, T>;
+    template <typename Base, typename T>
+    using impl = bar_iface_impl<Base, T>;
 };
 
 struct foobar_model {

@@ -25,14 +25,14 @@
 
 // LCOV_EXCL_START
 
-template <typename Base, typename, typename>
+template <typename Base, typename>
 struct any_iface_impl : public Base {
 };
 
 // NOLINTNEXTLINE
 struct any_iface {
-    template <typename Base, typename Holder, typename T>
-    using impl = any_iface_impl<Base, Holder, T>;
+    template <typename Base, typename T>
+    using impl = any_iface_impl<Base, T>;
 };
 
 struct over {

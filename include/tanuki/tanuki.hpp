@@ -186,6 +186,7 @@ enum class TANUKI_VISIBLE wrap_semantics { value, reference };
 // Helper to unwrap a std::reference_wrapper and remove reference and cv qualifiers from the result.
 template <typename T>
 using unwrap_cvref_t = std::remove_cvref_t<std::unwrap_reference_t<T>>;
+
 namespace detail
 {
 

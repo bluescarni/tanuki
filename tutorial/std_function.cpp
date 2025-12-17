@@ -20,7 +20,7 @@ template <typename>
 struct is_any_callable : std::false_type {
 };
 
-template <typename Base, typename Holder, typename T, typename R, typename... Args>
+template <typename Base, typename T, typename R, typename... Args>
 struct callable_iface_impl {
 };
 
@@ -29,28 +29,28 @@ struct callable_iface {
     virtual R operator()(Args... args) const = 0;
     virtual explicit operator bool() const noexcept = 0;
 
-    template <typename Base, typename Holder, typename T>
-    using impl = callable_iface_impl<Base, Holder, T, R, Args...>;
+    template <typename Base, typename T>
+    using impl = callable_iface_impl<Base, T, R, Args...>;
 };
 
-template <typename Base, typename Holder, typename T, typename R, typename... Args>
+template <typename Base, typename T, typename R, typename... Args>
     requires std::is_invocable_r_v<R, const tanuki::unwrap_cvref_t<T> &, Args...> && std::copy_constructible<T>
-struct callable_iface_impl<Base, Holder, T, R, Args...> : public Base {
+struct callable_iface_impl<Base, T, R, Args...> : public Base {
     R operator()(Args... args) const final
     {
         using unrefT = tanuki::unwrap_cvref_t<T>;
 
         // Check for null function pointer.
         if constexpr (std::is_pointer_v<unrefT> || std::is_member_pointer_v<unrefT>) {
-            if (getval<Holder>(this) == nullptr) {
+            if (getval(this) == nullptr) {
                 throw std::bad_function_call{};
             }
         }
 
         if constexpr (std::is_same_v<R, void>) {
-            static_cast<void>(std::invoke(getval<Holder>(this), std::forward<Args>(args)...));
+            static_cast<void>(std::invoke(getval(this), std::forward<Args>(args)...));
         } else {
-            return std::invoke(getval<Holder>(this), std::forward<Args>(args)...);
+            return std::invoke(getval(this), std::forward<Args>(args)...);
         }
     }
 
@@ -59,9 +59,9 @@ struct callable_iface_impl<Base, Holder, T, R, Args...> : public Base {
         using unrefT = tanuki::unwrap_cvref_t<T>;
 
         if constexpr (std::is_pointer_v<unrefT> || std::is_member_pointer_v<unrefT>) {
-            return getval<Holder>(this) != nullptr;
+            return getval(this) != nullptr;
         } else if constexpr (is_any_callable<unrefT>::value || is_any_std_func<unrefT>::value) {
-            return static_cast<bool>(getval<Holder>(this));
+            return static_cast<bool>(getval(this));
         } else {
             return true;
         }

@@ -3,7 +3,7 @@
 
 #include <tanuki/tanuki.hpp>
 
-template <typename Base, typename Holder, typename T>
+template <typename Base, typename T>
 struct foobar_iface_impl {
 };
 
@@ -13,18 +13,18 @@ concept fooable = requires(const T &x) { x.foo(); };
 template <typename T>
 concept barable = requires(T &x) { x.bar(); };
 
-template <typename Base, typename Holder, typename T>
+template <typename Base, typename T>
     requires fooable<tanuki::unwrap_cvref_t<T>> && barable<tanuki::unwrap_cvref_t<T>>
-struct foobar_iface_impl<Base, Holder, T> : public Base {
+struct foobar_iface_impl<Base, T> : public Base {
     void foo() const override
     {
         std::cout << "foobar_iface_impl calling foo()\n";
-        getval<Holder>(this).foo();
+        getval(this).foo();
     }
     void bar() override
     {
         std::cout << "foobar_iface_impl calling bar()\n";
-        getval<Holder>(this).bar();
+        getval(this).bar();
     }
 };
 
@@ -32,8 +32,8 @@ struct foobar_iface {
     virtual void foo() const = 0;
     virtual void bar() = 0;
 
-    template <typename Base, typename Holder, typename T>
-    using impl = foobar_iface_impl<Base, Holder, T>;
+    template <typename Base, typename T>
+    using impl = foobar_iface_impl<Base, T>;
 };
 
 struct foobar_model {

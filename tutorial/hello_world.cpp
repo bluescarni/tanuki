@@ -4,15 +4,15 @@
 
 #include <tanuki/tanuki.hpp>
 
-template <typename Base, typename Holder, typename T>
+template <typename Base, typename T>
 struct any_iface_impl : public Base {
 };
 
 struct any_iface {
     virtual ~any_iface() = default;
 
-    template <typename Base, typename Holder, typename T>
-    using impl = any_iface_impl<Base, Holder, T>;
+    template <typename Base, typename T>
+    using impl = any_iface_impl<Base, T>;
 };
 
 // An empty implementation.

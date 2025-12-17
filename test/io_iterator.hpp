@@ -54,20 +54,20 @@ template <typename T, typename R>
 concept minimal_io_iterator = std::movable<T> && dereferenceable<T, R> && pre_incrementable<T>;
 
 // Definition of the interface implementation.
-template <typename Base, typename Holder, typename T, typename R>
+template <typename Base, typename T, typename R>
     requires minimal_io_iterator<T, R>
 struct io_iterator_iface_impl : public Base {
     void operator++() final
     {
-        static_cast<void>(++getval<Holder>(this));
+        static_cast<void>(++getval(this));
     }
     R deref() final
     {
-        return *getval<Holder>(this);
+        return *getval(this);
     }
     [[nodiscard]] bool equal_to_sentinel(const sentinel &s) const final
     {
-        return s->at_end(any_ref(std::ref(getval<Holder>(this))));
+        return s->at_end(any_ref(std::ref(getval(this))));
     }
 };
 
@@ -79,8 +79,8 @@ struct io_iterator_iface {
     virtual R deref() = 0;
     [[nodiscard]] virtual bool equal_to_sentinel(const sentinel &) const = 0;
 
-    template <typename Base, typename Holder, typename T>
-    using impl = io_iterator_iface_impl<Base, Holder, T, R>;
+    template <typename Base, typename T>
+    using impl = io_iterator_iface_impl<Base, T, R>;
 };
 
 // Implementation of the reference interface.

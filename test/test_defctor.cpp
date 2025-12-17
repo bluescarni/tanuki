@@ -30,19 +30,19 @@ struct baz {
     ~baz() = default;
 };
 
-template <typename, typename, typename>
+template <typename, typename>
 struct any_iface_impl {
 };
 
 // NOLINTNEXTLINE
 struct any_iface {
-    template <typename Base, typename Holder, typename T>
-    using impl = any_iface_impl<Base, Holder, T>;
+    template <typename Base, typename T>
+    using impl = any_iface_impl<Base, T>;
 };
 
-template <typename Base, typename Holder, typename T>
+template <typename Base, typename T>
     requires(!std::same_as<T, foo>)
-struct any_iface_impl<Base, Holder, T> : Base {
+struct any_iface_impl<Base, T> : Base {
 };
 
 TEST_CASE("def invalid")

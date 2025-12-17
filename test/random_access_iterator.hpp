@@ -47,13 +47,13 @@ concept minimal_random_access_iterator
     = minimal_bidirectional_iterator<T, V, R, RR> && minimal_less_than_comparable<T> && incrementable_by_ptrdiff_t<T>
       && decrementable_by_ptrdiff_t<T> && with_ptrdiff_t_difference<T>;
 
-template <typename Base, typename Holder, typename T, typename V, typename R, typename RR>
+template <typename Base, typename T, typename V, typename R, typename RR>
     requires minimal_random_access_iterator<T, V, R, RR>
-struct random_access_iterator_iface_impl : bidirectional_iterator_iface_impl<Base, Holder, T, V, R, RR> {
+struct random_access_iterator_iface_impl : bidirectional_iterator_iface_impl<Base, T, V, R, RR> {
     bool less_than(const random_access_iterator_iface<V, R, RR> &other) const final
     {
         if (typeid(T) == other.get_type_index()) {
-            return static_cast<bool>(getval<Holder>(this) < *static_cast<const T *>(other.get_ptr()));
+            return static_cast<bool>(getval(this) < *static_cast<const T *>(other.get_ptr()));
         } else {
             throw std::runtime_error("Unable to compare an iterator of type '" + tanuki::demangle(typeid(T).name())
                                      + "' to an iterator of type '" + tanuki::demangle(other.get_type_index().name())
@@ -62,18 +62,18 @@ struct random_access_iterator_iface_impl : bidirectional_iterator_iface_impl<Bas
     }
     void increment_by(std::ptrdiff_t n) final
     {
-        static_cast<void>(getval<Holder>(this) += n);
+        static_cast<void>(getval(this) += n);
     }
     void decrement_by(std::ptrdiff_t n) final
     {
-        static_cast<void>(getval<Holder>(this) -= n);
+        static_cast<void>(getval(this) -= n);
     }
     std::ptrdiff_t distance_from(const random_access_iterator_iface<V, R, RR> &other) const final
     {
         if (typeid(T) == other.get_type_index()) {
             const auto &other_val = *static_cast<const T *>(other.get_ptr());
 
-            return static_cast<std::ptrdiff_t>(getval<Holder>(this) - other_val);
+            return static_cast<std::ptrdiff_t>(getval(this) - other_val);
         } else {
             throw std::runtime_error("Unable to compute the distance of an iterator of type '"
                                      + tanuki::demangle(typeid(T).name()) + "' from an iterator of type '"
@@ -82,7 +82,7 @@ struct random_access_iterator_iface_impl : bidirectional_iterator_iface_impl<Bas
     }
     [[nodiscard]] std::ptrdiff_t distance_from_sentinel(const sentinel &s) const final
     {
-        return s->distance_to_iter(any_ref(std::ref(getval<Holder>(this))));
+        return s->distance_to_iter(any_ref(std::ref(getval(this))));
     }
 };
 
@@ -94,8 +94,8 @@ struct random_access_iterator_iface : bidirectional_iterator_iface<V, R, RR> {
     virtual std::ptrdiff_t distance_from(const random_access_iterator_iface &) const = 0;
     [[nodiscard]] virtual std::ptrdiff_t distance_from_sentinel(const sentinel &) const = 0;
 
-    template <typename Base, typename Holder, typename T>
-    using impl = random_access_iterator_iface_impl<Base, Holder, T, V, R, RR>;
+    template <typename Base, typename T>
+    using impl = random_access_iterator_iface_impl<Base, T, V, R, RR>;
 };
 
 // Implementation of the reference interface.

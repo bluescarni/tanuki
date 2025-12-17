@@ -36,14 +36,14 @@ struct foo {
     }
 };
 
-template <typename Base, typename Holder, typename T>
+template <typename Base, typename T>
 struct any_iface_impl : Base {
 };
 
 // NOLINTNEXTLINE
 struct any_iface {
-    template <typename Base, typename Holder, typename T>
-    using impl = any_iface_impl<Base, Holder, T>;
+    template <typename Base, typename T>
+    using impl = any_iface_impl<Base, T>;
 };
 
 #if defined(TANUKI_WITH_BOOST_S11N)

@@ -16,7 +16,7 @@
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance,bugprone-crtp-constructor-accessibility)
 
-template <typename Base, typename, typename>
+template <typename Base, typename>
 struct summary_iface_impl : Base {
 };
 
@@ -27,8 +27,8 @@ struct summary_iface {
         return "(Read more...)";
     }
 
-    template <typename Base, typename Holder, typename T>
-    using impl = summary_iface_impl<Base, Holder, T>;
+    template <typename Base, typename T>
+    using impl = summary_iface_impl<Base, T>;
 };
 
 struct news_article {
@@ -38,13 +38,12 @@ struct news_article {
     std::string content;
 };
 
-template <typename Base, typename Holder, typename T>
+template <typename Base, typename T>
     requires std::same_as<tanuki::unwrap_cvref_t<T>, news_article>
-struct summary_iface_impl<Base, Holder, T> : Base {
+struct summary_iface_impl<Base, T> : Base {
     [[nodiscard]] std::string summarize() const final
     {
-        return getval<Holder>(this).headline + ", by " + getval<Holder>(this).author + " ("
-               + getval<Holder>(this).location + ")";
+        return getval(this).headline + ", by " + getval(this).author + " (" + getval(this).location + ")";
     }
 };
 

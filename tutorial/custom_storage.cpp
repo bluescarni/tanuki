@@ -2,13 +2,13 @@
 
 #include <tanuki/tanuki.hpp>
 
-template <typename Base, typename Holder, typename T>
+template <typename Base, typename T>
 struct any_iface_impl : public Base {
 };
 
 struct any_iface {
-    template <typename Base, typename Holder, typename T>
-    using impl = any_iface_impl<Base, Holder, T>;
+    template <typename Base, typename T>
+    using impl = any_iface_impl<Base, T>;
 };
 
 inline constexpr auto custom_config1 = tanuki::config<>{.static_size = tanuki::holder_size<void *, any_iface>};

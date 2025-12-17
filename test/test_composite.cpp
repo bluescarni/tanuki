@@ -21,7 +21,7 @@
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance,bugprone-crtp-constructor-accessibility)
 
-template <typename, typename, typename>
+template <typename, typename>
 struct foo_iface_impl {
 };
 
@@ -29,8 +29,8 @@ struct foo_iface_impl {
 struct foo_iface {
     virtual void foo() const = 0;
 
-    template <typename Base, typename Holder, typename T>
-    using impl = foo_iface_impl<Base, Holder, T>;
+    template <typename Base, typename T>
+    using impl = foo_iface_impl<Base, T>;
 };
 
 template <typename T>
@@ -38,18 +38,18 @@ concept fooable = requires(const T &x) {
     { x.foo() } -> std::same_as<void>;
 };
 
-template <typename Base, typename Holder, typename T>
+template <typename Base, typename T>
     requires fooable<T>
-struct foo_iface_impl<Base, Holder, T> : Base {
+struct foo_iface_impl<Base, T> : Base {
     void foo() const final
     {
-        getval<Holder>(this).foo();
+        getval(this).foo();
     }
 };
 
 using foo_wrap = tanuki::wrap<foo_iface>;
 
-template <typename, typename, typename>
+template <typename, typename>
 struct bar_iface_impl {
 };
 
@@ -57,8 +57,8 @@ struct bar_iface_impl {
 struct bar_iface {
     virtual void bar() const = 0;
 
-    template <typename Base, typename Holder, typename T>
-    using impl = bar_iface_impl<Base, Holder, T>;
+    template <typename Base, typename T>
+    using impl = bar_iface_impl<Base, T>;
 };
 
 template <typename T>
@@ -66,12 +66,12 @@ concept barable = requires(const T &x) {
     { x.bar() } -> std::same_as<void>;
 };
 
-template <typename Base, typename Holder, typename T>
+template <typename Base, typename T>
     requires barable<T>
-struct bar_iface_impl<Base, Holder, T> : Base {
+struct bar_iface_impl<Base, T> : Base {
     void bar() const final
     {
-        getval<Holder>(this).bar();
+        getval(this).bar();
     }
 };
 
@@ -154,7 +154,7 @@ TEST_CASE("basic")
 #endif
 }
 
-template <typename, typename, typename, typename>
+template <typename, typename, typename>
 struct fooT_iface_impl {
 };
 
@@ -163,23 +163,23 @@ template <typename U>
 struct fooT_iface {
     virtual void foo() const = 0;
 
-    template <typename Base, typename Holder, typename T>
-    using impl = fooT_iface_impl<Base, Holder, T, U>;
+    template <typename Base, typename T>
+    using impl = fooT_iface_impl<Base, T, U>;
 };
 
-template <typename Base, typename Holder, typename T, typename U>
+template <typename Base, typename T, typename U>
     requires fooable<T>
-struct fooT_iface_impl<Base, Holder, T, U> : Base {
+struct fooT_iface_impl<Base, T, U> : Base {
     void foo() const final
     {
-        getval<Holder>(this).foo();
+        getval(this).foo();
     }
 };
 
 template <typename U>
 using fooT_wrap = tanuki::wrap<fooT_iface<U>, tanuki::default_config>;
 
-template <typename, typename, typename, typename>
+template <typename, typename, typename>
 struct barT_iface_impl {
 };
 
@@ -188,16 +188,16 @@ template <typename U>
 struct barT_iface {
     virtual void bar() const = 0;
 
-    template <typename Base, typename Holder, typename T>
-    using impl = barT_iface_impl<Base, Holder, T, U>;
+    template <typename Base, typename T>
+    using impl = barT_iface_impl<Base, T, U>;
 };
 
-template <typename Base, typename Holder, typename T, typename U>
+template <typename Base, typename T, typename U>
     requires barable<T>
-struct barT_iface_impl<Base, Holder, T, U> : Base {
+struct barT_iface_impl<Base, T, U> : Base {
     void bar() const final
     {
-        getval<Holder>(this).bar();
+        getval(this).bar();
     }
 };
 

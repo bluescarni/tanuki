@@ -19,7 +19,7 @@
 // Default implementation of the summary interface:
 // inherits from Base, thus using the default implementation
 // of the summarize() function.
-template <typename Base, typename, typename>
+template <typename Base, typename>
 struct summary_iface_impl : Base {
 };
 
@@ -31,8 +31,8 @@ struct summary_iface {
         return "(Read more...)";
     }
 
-    template <typename Base, typename Holder, typename T>
-    using impl = summary_iface_impl<Base, Holder, T>;
+    template <typename Base, typename T>
+    using impl = summary_iface_impl<Base, T>;
 };
 
 // A couple of classes for which we might want to
@@ -52,22 +52,21 @@ struct tweet {
 };
 
 // Implement the summary trait for news_article and tweet.
-template <typename Base, typename Holder, typename T>
+template <typename Base, typename T>
     requires std::same_as<tanuki::unwrap_cvref_t<T>, news_article>
-struct summary_iface_impl<Base, Holder, T> : Base {
+struct summary_iface_impl<Base, T> : Base {
     [[nodiscard]] std::string summarize() const final
     {
-        return getval<Holder>(this).headline + ", by " + getval<Holder>(this).author + " ("
-               + getval<Holder>(this).location + ")";
+        return getval(this).headline + ", by " + getval(this).author + " (" + getval(this).location + ")";
     }
 };
 
-template <typename Base, typename Holder, typename T>
+template <typename Base, typename T>
     requires std::same_as<tanuki::unwrap_cvref_t<T>, tweet>
-struct summary_iface_impl<Base, Holder, T> : Base {
+struct summary_iface_impl<Base, T> : Base {
     [[nodiscard]] std::string summarize() const final
     {
-        return getval<Holder>(this).username + ": " + getval<Holder>(this).content;
+        return getval(this).username + ": " + getval(this).content;
     }
 };
 
@@ -104,7 +103,7 @@ TEST_CASE("summary example")
     REQUIRE(&value_ref<std::reference_wrapper<foo>>(notify(std::ref(f))).get() == &f);
 }
 
-template <typename Base, typename, typename>
+template <typename Base, typename>
 struct fooable_iface_impl : Base {
 };
 
@@ -115,8 +114,8 @@ struct fooable_iface {
         return "default foo!";
     }
 
-    template <typename Base, typename Holder, typename T>
-    using impl = fooable_iface_impl<Base, Holder, T>;
+    template <typename Base, typename T>
+    using impl = fooable_iface_impl<Base, T>;
 };
 
 struct foo_capable {
@@ -124,12 +123,12 @@ struct foo_capable {
 };
 
 // Implement the fooable trait for foo_capable.
-template <typename Base, typename Holder, typename T>
+template <typename Base, typename T>
     requires std::same_as<tanuki::unwrap_cvref_t<T>, foo_capable>
-struct fooable_iface_impl<Base, Holder, T> : Base {
+struct fooable_iface_impl<Base, T> : Base {
     [[nodiscard]] std::string foo() const final
     {
-        return getval<Holder>(this).foo;
+        return getval(this).foo;
     }
 };
 

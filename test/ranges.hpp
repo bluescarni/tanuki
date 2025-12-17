@@ -30,7 +30,7 @@ namespace detail
 {
 
 // Default implementation of the interface.
-template <typename, typename, typename, typename, typename, typename, typename, typename,
+template <typename, typename, typename, typename, typename, typename, typename,
           template <typename, typename, typename> typename>
 struct generic_range_iface_impl {
 };
@@ -45,8 +45,8 @@ struct generic_range_iface {
     virtual It<V, CR, CRR> begin() const = 0;
     [[nodiscard]] virtual sentinel end() const = 0;
 
-    template <typename Base, typename Holder, typename T>
-    using impl = generic_range_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, It>;
+    template <typename Base, typename T>
+    using impl = generic_range_iface_impl<Base, T, V, R, RR, CR, CRR, It>;
 };
 
 // Helper to invoke make_*_iterator().
@@ -175,10 +175,10 @@ concept is_generic_range =
 
 // begin()/end() implementations for the range interface implementations. Defined
 // outside the class in order to avoid repetitions.
-template <typename Holder, typename V, typename R, typename RR, template <typename, typename, typename> typename It>
+template <typename V, typename R, typename RR, template <typename, typename, typename> typename It>
 auto range_begin_impl(auto *self)
 {
-    using ud_iter_t = decltype(begin_end_impl::b(getval<Holder>(self)));
+    using ud_iter_t = decltype(begin_end_impl::b(getval(self)));
 
     // NOTE: here we want to detect the case in which ud_iter_t is equal to It<V, R, RR>
     // (that is, ud_iter_t is already a type-erased iterator of exactly the correct type).
@@ -189,42 +189,41 @@ auto range_begin_impl(auto *self)
     // functions contains a user-defined iterator of type ud_iter_t (and that will not be
     // the case, leading to a runtime exception).
     if constexpr (std::same_as<ud_iter_t, It<V, R, RR>>) {
-        return It<V, R, RR>(std::in_place_type<It<V, R, RR>>, begin_end_impl::b(getval<Holder>(self)));
+        return It<V, R, RR>(std::in_place_type<It<V, R, RR>>, begin_end_impl::b(getval(self)));
     } else {
-        return make_generic_iterator<It>{}(begin_end_impl::b(getval<Holder>(self)));
+        return make_generic_iterator<It>{}(begin_end_impl::b(getval(self)));
     }
 }
 
-template <typename Holder>
 auto range_end_impl(auto *self)
 {
-    using ud_iter_t = decltype(begin_end_impl::b(getval<Holder>(self)));
-    using ud_sentinel_t = decltype(begin_end_impl::e(getval<Holder>(self)));
+    using ud_iter_t = decltype(begin_end_impl::b(getval(self)));
+    using ud_sentinel_t = decltype(begin_end_impl::e(getval(self)));
 
-    return sentinel(sentinel_box<ud_sentinel_t, ud_iter_t>{begin_end_impl::e(getval<Holder>(self))});
+    return sentinel(sentinel_box<ud_sentinel_t, ud_iter_t>{begin_end_impl::e(getval(self))});
 }
 
 // Default implementation of the interface.
-template <typename Base, typename Holder, typename T, typename V, typename R, typename RR, typename CR, typename CRR,
+template <typename Base, typename T, typename V, typename R, typename RR, typename CR, typename CRR,
           template <typename, typename, typename> typename It>
     requires std::derived_from<Base, generic_range_iface<V, R, RR, CR, CRR, It>>
              && is_generic_range<tanuki::unwrap_cvref_t<T>, V, R, RR, CR, CRR, It>
-struct generic_range_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, It> : public Base {
+struct generic_range_iface_impl<Base, T, V, R, RR, CR, CRR, It> : public Base {
     It<V, R, RR> begin() final
     {
-        return range_begin_impl<Holder, V, R, RR, It>(this);
+        return range_begin_impl<V, R, RR, It>(this);
     }
     sentinel end() final
     {
-        return range_end_impl<Holder>(this);
+        return range_end_impl(this);
     }
     It<V, CR, CRR> begin() const final
     {
-        return range_begin_impl<Holder, V, CR, CRR, It>(this);
+        return range_begin_impl<V, CR, CRR, It>(this);
     }
     [[nodiscard]] sentinel end() const final
     {
-        return range_end_impl<Holder>(this);
+        return range_end_impl(this);
     }
 };
 
@@ -234,18 +233,18 @@ struct generic_range_iface_impl<Base, Holder, T, V, R, RR, CR, CRR, It> : public
 // to avoid accessing a const range via a non-const access path (which would result
 // in std::runtime_error) when building nested type-erased ranges wrapping const
 // references.
-template <typename Base, typename Holder, typename T, typename V, typename CR, typename CRR,
+template <typename Base, typename T, typename V, typename CR, typename CRR,
           template <typename, typename, typename> typename It>
     requires std::derived_from<Base, generic_range_iface<V, CR, CRR, CR, CRR, It>>
              && is_generic_range<const T, V, CR, CRR, CR, CRR, It>
-struct generic_range_iface_impl<Base, Holder, std::reference_wrapper<const T>, V, CR, CRR, CR, CRR, It> : public Base {
+struct generic_range_iface_impl<Base, std::reference_wrapper<const T>, V, CR, CRR, CR, CRR, It> : public Base {
     It<V, CR, CRR> begin() const final
     {
-        return range_begin_impl<Holder, V, CR, CRR, It>(this);
+        return range_begin_impl<V, CR, CRR, It>(this);
     }
     [[nodiscard]] sentinel end() const final
     {
-        return range_end_impl<Holder>(this);
+        return range_end_impl(this);
     }
     It<V, CR, CRR> begin() final
     {

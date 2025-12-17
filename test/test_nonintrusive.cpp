@@ -34,26 +34,26 @@ namespace tanuki
 {
 
 // Empty default nonintrusive implementation.
-template <typename Base, typename Holder, typename T>
-struct iface_impl<ns::my_iface, Base, Holder, T> {
+template <typename Base, typename T>
+struct iface_impl<ns::my_iface, Base, T> {
 };
 
 // Specialisation for int value type.
-template <typename Base, typename Holder>
-struct iface_impl<ns::my_iface, Base, Holder, int> : public Base {
+template <typename Base>
+struct iface_impl<ns::my_iface, Base, int> : public Base {
     [[nodiscard]] int foo() const final
     {
         return 42;
     }
 };
 
-template <typename Base, typename Holder, typename T>
-struct iface_impl<ns::my_iface2, Base, Holder, T> {
+template <typename Base, typename T>
+struct iface_impl<ns::my_iface2, Base, T> {
 };
 
 // Specialisation for int value type.
-template <typename Base, typename Holder>
-struct iface_impl<ns::my_iface2, Base, Holder, int> : public Base {
+template <typename Base>
+struct iface_impl<ns::my_iface2, Base, int> : public Base {
     [[nodiscard]] int bar() const final
     {
         return 43;

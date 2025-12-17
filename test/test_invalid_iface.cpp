@@ -11,24 +11,24 @@
 template <typename T>
 concept ostreamable = requires(std::ostream &os, const T &x) { os << x; };
 
-template <typename Base, typename Holder, typename T>
+template <typename Base, typename T>
     requires ostreamable<T>
 struct print_iface_impl : Base {
     void print() const final
     {
-        std::cout << getval<Holder>(this) << '\n';
+        std::cout << getval(this) << '\n';
     }
 };
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static int counter = 0;
 
-template <typename Base, typename Holder>
-struct print_iface_impl<Base, Holder, int> : Base {
+template <typename Base>
+struct print_iface_impl<Base, int> : Base {
     void print() const final
     {
         ++counter;
-        std::cout << "int ostream: " << getval<Holder>(this) << '\n';
+        std::cout << "int ostream: " << getval(this) << '\n';
     }
 };
 
@@ -36,8 +36,8 @@ struct print_iface_impl<Base, Holder, int> : Base {
 struct print_iface {
     virtual void print() const = 0;
 
-    template <typename Base, typename Holder, typename T>
-    using impl = print_iface_impl<Base, Holder, T>;
+    template <typename Base, typename T>
+    using impl = print_iface_impl<Base, T>;
 };
 
 using print_wrap = tanuki::wrap<print_iface>;

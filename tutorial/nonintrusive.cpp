@@ -18,8 +18,8 @@ namespace tanuki
 {
 
 // Non-intrusive implementation for the ns::my_iface interface.
-template <typename Base, typename Holder, typename T>
-struct iface_impl<ns::my_iface, Base, Holder, T> : public Base {
+template <typename Base, typename T>
+struct iface_impl<ns::my_iface, Base, T> : public Base {
     int foo() const override
     {
         return 42;

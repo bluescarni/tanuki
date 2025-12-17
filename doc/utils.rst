@@ -13,26 +13,20 @@ Utilities
    This concept is satisfied if the interface :cpp:type:`IFace` has an implementation
    for the value type :cpp:type:`T`.
 
-.. cpp:function:: template <typename Holder, typename T> requires any_holder<Holder> && std::derived_from<Holder, T> [[nodiscard]] const auto &getval(const T *h) noexcept
-                  template <typename Holder, typename T> requires any_holder<Holder> && std::derived_from<Holder, T> [[nodiscard]] auto &getval(T *h)
-                  template <typename Holder, typename T> requires any_holder<Holder> && std::derived_from<Holder, T> [[nodiscard]] auto &getval(T &h)
+.. cpp:function:: template <typename T>  [[nodiscard]] auto &getval(T *impl)
 
-   Type-erased value getters.
+   Type-erased value getter.
 
-   These getters will return a reference to the type-erased value stored in a :cpp:class:`holder` of type
-   :cpp:type:`Holder` deriving from :cpp:type:`T`. They are meant to be used within the implementation of
-   an :ref:`interface <getval_intro>`. Internally, they will employ the
-   `curiously recurring template pattern (CRTP) <https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern>`__
-   to cast *h* to :cpp:type:`Holder` and fetch the type-erased value stored within.
+   This function is intended to be used in an interface implementation in order to access the type-erased value.
 
-   If the type-erased value stored in *h* is a ``std::reference_wrapper``, these getters will unwrap the reference
-   (i.e., they will return a reference to the referenced-to value).
+   If the type-erased value stored in *impl* is a ``std::reference_wrapper``, this function will unwrap the reference
+   (i.e., it will return a reference to the referenced-to value).
 
-   :param h: a pointer or reference to a :cpp:class:`holder`, cast to its base type :cpp:type:`T`.
+   :param impl: a pointer to an interface implementation.
 
-   :return: a reference to the type-erased value stored in *h*.
+   :return: a reference to the type-erased value stored in *impl*.
 
-   :throws std\:\:runtime_error: if *h* type-erases a const reference and *h* is not a const pointer/reference.
+   :throws std\:\:runtime_error: if *impl* type-erases a const reference and *impl* is not a const pointer.
 
 .. cpp:struct:: template <typename IFace0, typename IFace1, typename... IFaceN> composite_iface: public IFace0, public IFace1, public IFaceN...
 

@@ -1966,6 +1966,13 @@ public:
     }
 };
 
+// NOTE: let us add a getval() overload in the tanuki namespace, so that is it invocable also from non-ADL contexts.
+template <typename T>
+[[nodiscard]] auto getval(T *h) noexcept(noexcept(detail::getval(h))) -> decltype(detail::getval(h))
+{
+    return detail::getval(h);
+}
+
 namespace detail
 {
 

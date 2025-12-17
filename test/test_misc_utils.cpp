@@ -29,7 +29,7 @@ template <typename Base, typename>
 struct foo_iface_impl : Base {
     void foo() const final
     {
-        getval(this).foo();
+        tanuki::getval(this).foo();
     }
 };
 

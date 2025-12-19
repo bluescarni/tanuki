@@ -1,4 +1,5 @@
 #include <array>
+#include <boost/serialization/extended_type_info.hpp>
 #include <concepts>
 #include <functional>
 #include <mutex>
@@ -40,6 +41,10 @@ struct nonwrappable {
 template <typename, typename>
 struct any_iface_impl {
 };
+
+struct any_iface;
+
+TANUKI_S11N_WRAP_EXPORT_IFACE(any_iface)
 
 struct any_iface {
     template <typename Base, typename T>
@@ -105,6 +110,9 @@ TANUKI_S11N_WRAP_EXPORT(small, any_iface)
 TANUKI_S11N_WRAP_EXPORT2(small2, "small2", any_iface)
 
 #endif
+
+static_assert(boost::serialization::guid_defined<
+              tanuki::detail::_tanuki_value_iface<any_iface, tanuki::wrap_semantics::value>>::value);
 
 namespace
 {

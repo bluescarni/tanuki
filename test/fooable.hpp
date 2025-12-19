@@ -100,6 +100,8 @@ using foo_wrap = tanuki::wrap<foo_iface<U>, foo_wrap_config<U>>;
 
 TANUKI_S11N_WRAP_EXPORT_KEY(fooable::foo_model, fooable::foo_iface<int>)
 
+TANUKI_S11N_WRAP_EXPORT_IFACE(fooable::foo_iface<int>)
+
 // LCOV_EXCL_STOP
 
 #endif

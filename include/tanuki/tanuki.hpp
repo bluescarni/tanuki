@@ -10,6 +10,7 @@
 #define TANUKI_TANUKI_HPP
 
 #include <algorithm>
+#include <boost/serialization/extended_type_info.hpp>
 #include <cassert>
 #include <concepts>
 #include <cstddef>
@@ -38,9 +39,11 @@
 #include <boost/serialization/access.hpp>
 #include <boost/serialization/base_object.hpp>
 #include <boost/serialization/export.hpp>
+#include <boost/serialization/extended_type_info_no_rtti.hpp>
 #include <boost/serialization/shared_ptr.hpp>
 #include <boost/serialization/split_member.hpp>
 #include <boost/serialization/tracking.hpp>
+#include <boost/serialization/type_info_implementation.hpp>
 
 #if !defined(NDEBUG)
 
@@ -346,6 +349,10 @@ struct TANUKI_VISIBLE _tanuki_value_iface : public IFace {
         unreachable();
     }
     [[nodiscard]] virtual bool _tanuki_value_is_move_constructible() const noexcept
+    {
+        unreachable();
+    }
+    [[nodiscard]] virtual const char *get_key() const
     {
         unreachable();
     }
@@ -764,6 +771,8 @@ struct TANUKI_VISIBLE _tanuki_holder final : public impl_from_iface<IFace, T, Se
     {
         return std::is_move_constructible_v<T>;
     }
+
+    [[nodiscard]] const char *get_key() const final;
 
 #endif
 };
@@ -2127,6 +2136,26 @@ struct tracking_level<tanuki::detail::_tanuki_value_iface<IFace, tanuki::wrap_se
                       mpl::int_<primitive_type>>::value));
 };
 
+template <typename IFace, tanuki::wrap_semantics Sem>
+struct type_info_implementation<tanuki::detail::_tanuki_value_iface<IFace, Sem>> {
+    using type = extended_type_info_no_rtti<tanuki::detail::_tanuki_value_iface<IFace, Sem>>;
+};
+
+template <typename IFace, tanuki::wrap_semantics Sem>
+struct type_info_implementation<const tanuki::detail::_tanuki_value_iface<IFace, Sem>> {
+    using type = extended_type_info_no_rtti<tanuki::detail::_tanuki_value_iface<IFace, Sem>>;
+};
+
+template <typename T, typename IFace, tanuki::wrap_semantics Sem>
+struct type_info_implementation<tanuki::detail::_tanuki_holder<T, IFace, Sem>> {
+    using type = extended_type_info_no_rtti<tanuki::detail::_tanuki_holder<T, IFace, Sem>>;
+};
+
+template <typename T, typename IFace, tanuki::wrap_semantics Sem>
+struct type_info_implementation<const tanuki::detail::_tanuki_holder<T, IFace, Sem>> {
+    using type = extended_type_info_no_rtti<tanuki::detail::_tanuki_holder<T, IFace, Sem>>;
+};
+
 } // namespace boost::serialization
 
 // NOTE: these are verbatim re-implementations of the BOOST_CLASS_EXPORT_KEY(2) and BOOST_CLASS_EXPORT_IMPLEMENT macros,
@@ -2151,6 +2180,24 @@ struct tracking_level<tanuki::detail::_tanuki_value_iface<IFace, tanuki::wrap_se
     inline const char *guid<tanuki::detail::_tanuki_holder<ud_type, __VA_ARGS__, tanuki::wrap_semantics::reference>>() \
     {                                                                                                                  \
         return "tanuki::wrap<" #__VA_ARGS__ ">@" #ud_type "#ref";                                                      \
+    }                                                                                                                  \
+    }
+
+#define TANUKI_S11N_WRAP_EXPORT_IFACE(...)                                                                             \
+    namespace boost::serialization                                                                                     \
+    {                                                                                                                  \
+    template <tanuki::wrap_semantics Sem>                                                                              \
+    struct guid_defined<tanuki::detail::_tanuki_value_iface<__VA_ARGS__, Sem>> : boost::mpl::true_ {                   \
+    };                                                                                                                 \
+    template <>                                                                                                        \
+    inline const char *guid<tanuki::detail::_tanuki_value_iface<__VA_ARGS__, tanuki::wrap_semantics::value>>()         \
+    {                                                                                                                  \
+        return "tanuki::value_iface<" #__VA_ARGS__ ">#val";                                                            \
+    }                                                                                                                  \
+    template <>                                                                                                        \
+    inline const char *guid<tanuki::detail::_tanuki_value_iface<__VA_ARGS__, tanuki::wrap_semantics::reference>>()     \
+    {                                                                                                                  \
+        return "tanuki::value_iface<" #__VA_ARGS__ ">#ref";                                                            \
     }                                                                                                                  \
     }
 
@@ -2206,6 +2253,22 @@ struct tracking_level<tanuki::detail::_tanuki_value_iface<IFace, tanuki::wrap_se
     TANUKI_S11N_WRAP_EXPORT_IMPLEMENT(ud_type, __VA_ARGS__)
 
 #endif
+
+TANUKI_BEGIN_NAMESPACE
+
+namespace detail
+{
+
+template <typename T, typename IFace, wrap_semantics Sem>
+    requires iface_has_impl<IFace, T, Sem>
+const char *_tanuki_holder<T, IFace, Sem>::get_key() const
+{
+    return boost::serialization::guid<_tanuki_holder>();
+}
+
+} // namespace detail
+
+TANUKI_END_NAMESPACE
 
 #undef TANUKI_ABI_TAG_ATTR
 #undef TANUKI_VISIBLE

@@ -91,17 +91,14 @@ TEST_CASE("def value type")
 
     REQUIRE(!std::default_initializable<wrap4_t>);
 
-    // Try with a default value type whose copy/move/swap-ability do not
-    // match the config settings.
-    using wrap5_t = tanuki::wrap<any_iface, tanuki::config<baz>{}>;
-
-    REQUIRE(!std::default_initializable<wrap5_t>);
-
-    using wrap6_t = tanuki::wrap<any_iface, tanuki::config<baz>{.copyable = false}>;
+    using wrap6_t = tanuki::wrap<any_iface, tanuki::config<baz>{.copy_constructible = false, .copy_assignable = false}>;
 
     REQUIRE(std::default_initializable<wrap6_t>);
 
-    using wrap7_t = tanuki::wrap<any_iface, tanuki::config<baz>{.copyable = false, .movable = false}>;
+    using wrap7_t = tanuki::wrap<any_iface, tanuki::config<baz>{.copy_constructible = false,
+                                                                .copy_assignable = false,
+                                                                .move_constructible = false,
+                                                                .move_assignable = false}>;
 
     REQUIRE(std::default_initializable<wrap7_t>);
 }

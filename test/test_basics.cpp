@@ -198,8 +198,11 @@ TEST_CASE("basics")
     REQUIRE(has_dynamic_storage(w2));
 
     // Emplace test with class which is not copyable/movable/swappable.
-    wrap<any_iface, tanuki::config<>{.copyable = false, .movable = false, .swappable = false}> w_mut(
-        std::in_place_type<std::mutex>);
+    wrap<any_iface, tanuki::config<>{.copy_constructible = false,
+                                     .copy_assignable = false,
+                                     .move_constructible = false,
+                                     .move_assignable = false}>
+        w_mut(std::in_place_type<std::mutex>);
     REQUIRE(noexcept(wrap_t(std::in_place_type<int>)));
 
     // Check throwing in value_ref.
@@ -513,7 +516,10 @@ TEST_CASE("s11n nodef")
     using Catch::Matchers::MessageMatches;
     using Catch::Matchers::StartsWith;
 
-    using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{.copyable = false, .movable = false, .swappable = false}>;
+    using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{.copy_constructible = false,
+                                                            .copy_assignable = false,
+                                                            .move_constructible = false,
+                                                            .move_assignable = false}>;
 
     const wrap_t w(nodefctor{3});
 
@@ -540,7 +546,10 @@ TEST_CASE("s11n nomove")
     using Catch::Matchers::MessageMatches;
     using Catch::Matchers::StartsWith;
 
-    using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{.copyable = false, .movable = false, .swappable = false}>;
+    using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{.copy_constructible = false,
+                                                            .copy_assignable = false,
+                                                            .move_constructible = false,
+                                                            .move_assignable = false}>;
 
     const wrap_t w(std::in_place_type<nomovector>);
 

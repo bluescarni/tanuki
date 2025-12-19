@@ -136,7 +136,8 @@ inline constexpr auto io_iterator_config = tanuki::config<void, io_iterator_ref_
     .static_size = tanuki::holder_size<io_iterator_mock<R>, io_iterator_iface<R>>,
     .static_align = tanuki::holder_align<io_iterator_mock<R>, io_iterator_iface<R>>,
     .pointer_interface = false,
-    .copyable = false};
+    .copy_constructible = false,
+    .copy_assignable = false};
 
 } // namespace detail
 

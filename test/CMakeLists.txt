@@ -68,8 +68,8 @@ ADD_TANUKI_TESTCASE(test_subrange)
 
 if(TANUKI_WITH_BOOST_S11N)
   add_library(fooable SHARED fooable.cpp)
-  set_target_properties(fooable PROPERTIES CXX_VISIBILITY_PRESET hidden)
-  set_target_properties(fooable PROPERTIES VISIBILITY_INLINES_HIDDEN TRUE)
+  # set_target_properties(fooable PROPERTIES CXX_VISIBILITY_PRESET hidden)
+  # set_target_properties(fooable PROPERTIES VISIBILITY_INLINES_HIDDEN TRUE)
   target_compile_options(fooable PRIVATE
     "$<$<CONFIG:Debug>:${TANUKI_CXX_FLAGS_DEBUG}>"
     "$<$<CONFIG:Release>:${TANUKI_CXX_FLAGS_RELEASE}>"

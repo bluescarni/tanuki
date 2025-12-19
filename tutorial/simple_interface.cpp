@@ -3,6 +3,7 @@
 #include <tanuki/tanuki.hpp>
 
 struct foo_model {
+    // NOLINTNEXTLINE
     void foo() const
     {
         std::cout << "foo_model calling foo()\n";
@@ -22,6 +23,7 @@ struct foo3_iface_impl : public Base {
     }
 };
 
+// NOLINTNEXTLINE
 struct foo3_iface {
     virtual void foo() const = 0;
 
@@ -51,6 +53,7 @@ struct foo4_iface_impl<Base, int> : public Base {
     }
 };
 
+// NOLINTNEXTLINE
 struct foo4_iface {
     virtual void foo() const = 0;
 

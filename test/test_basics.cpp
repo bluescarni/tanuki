@@ -109,6 +109,7 @@ TANUKI_S11N_WRAP_EXPORT2(small2, "small2", any_iface)
 namespace
 {
 
+// NOLINTNEXTLINE
 void my_func(int) {}
 
 } // namespace
@@ -261,6 +262,7 @@ TEST_CASE("assignment")
     wrap_t w(42);
 
     // Self assign, copy and move.
+    // NOLINTNEXTLINE
     REQUIRE_NOTHROW(w = *&w);
     // NOLINTNEXTLINE
     REQUIRE_NOTHROW(w = std::move(*&w));

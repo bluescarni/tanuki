@@ -11,7 +11,10 @@
 #include "io_iterator.hpp"
 #include "sentinel.hpp"
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOTE: the ArrayBound nolint is necessary because clang-tidy apparently gets confused in the test involving a
+// statically-allocated array.
+//
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,clang-analyzer-security.ArrayBound)
 
 template <typename T>
 concept can_make_io_iterator = requires(T it) { facade::make_io_iterator(it); };
@@ -36,9 +39,12 @@ TEST_CASE("basic")
         int_iter it(std::begin(arr));
         REQUIRE(has_static_storage(it));
         REQUIRE(*it == 1);
+        REQUIRE(&*it == arr);
         REQUIRE(*++it == 2);
+        REQUIRE(&*it == arr + 1);
         it++;
         REQUIRE(*it == 3);
+        REQUIRE(&*it == arr + 2);
 
         // Check that make_io_iterator() on an io_iterator
         // returns a copy.
@@ -55,6 +61,20 @@ TEST_CASE("basic")
         REQUIRE(*++it == 2);
         it++;
         REQUIRE(*it == 3);
+        REQUIRE(std::sentinel_for<facade::sentinel, int_iter>);
+    }
+
+    {
+        std::vector<int> vec = {1, 2, 3};
+        auto it = facade::make_io_iterator(vec.data());
+        REQUIRE(std::same_as<decltype(it), int_iter>);
+        REQUIRE(*it == 1);
+        REQUIRE(&*it == vec.data());
+        REQUIRE(*++it == 2);
+        REQUIRE(&*it == vec.data() + 1);
+        it++;
+        REQUIRE(*it == 3);
+        REQUIRE(&*it == vec.data() + 2);
         REQUIRE(std::sentinel_for<facade::sentinel, int_iter>);
     }
 
@@ -118,4 +138,4 @@ TEST_CASE("noniter")
     REQUIRE(std::same_as<iter_t, decltype(facade::make_io_iterator(noniter2{}))>);
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,clang-analyzer-security.ArrayBound)

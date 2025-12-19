@@ -17,7 +17,7 @@ int main()
 {
     using wrap1_t = tanuki::wrap<any_iface, custom_config1>;
 
-    wrap1_t w1(nullptr);
+    const wrap1_t w1(nullptr);
 
     std::cout << std::boolalpha;
     std::cout << "Is w1 using static storage? " << has_static_storage(w1) << '\n';
@@ -27,7 +27,7 @@ int main()
         void *p2 = nullptr;
     };
 
-    wrap1_t w2(two_ptrs{});
+    const wrap1_t w2(two_ptrs{});
 
     std::cout << "Is w2 using static storage? " << has_static_storage(w2) << '\n';
 
@@ -36,7 +36,7 @@ int main()
 
     using wrap2_t = tanuki::wrap<any_iface, custom_config2>;
 
-    wrap2_t w3(nullptr);
+    const wrap2_t w3(nullptr);
 
     std::cout << "Is w3 using static storage? " << has_static_storage(w3) << '\n';
 

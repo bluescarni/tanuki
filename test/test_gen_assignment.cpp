@@ -56,6 +56,8 @@ struct cm_throw {
     {
         throw std::invalid_argument("copy assignment");
     }
+    cm_throw &operator=(cm_throw &&) noexcept = default;
+    friend void swap(cm_throw &, cm_throw &) noexcept {}
 };
 
 static void my_func1(int) {}

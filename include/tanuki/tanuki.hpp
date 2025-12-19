@@ -932,7 +932,7 @@ struct TANUKI_VISIBLE composite_ref_iface {
 // Enum to select the explicitness of the generic wrap ctors.
 //
 // NOLINTNEXTLINE(performance-enum-size)
-enum class wrap_ctor { always_explicit, ref_implicit, always_implicit };
+enum class TANUKI_VISIBLE wrap_ctor { always_explicit, ref_implicit, always_implicit };
 
 namespace detail
 {
@@ -1101,7 +1101,7 @@ inline constexpr bool is_in_place_type_v<std::in_place_type_t<T>> = true;
 
 // Implementation of the pointer interface for the wrap class, conditionally-enabled depending on the configuration.
 template <bool Enable, typename Wrap, typename IFace>
-struct wrap_pointer_iface {
+struct TANUKI_VISIBLE wrap_pointer_iface {
     const IFace *operator->() const noexcept
     {
         return iface_ptr(*static_cast<const Wrap *>(this));
@@ -1122,7 +1122,7 @@ struct wrap_pointer_iface {
 };
 
 template <typename Wrap, typename IFace>
-struct wrap_pointer_iface<false, Wrap, IFace> {
+struct TANUKI_VISIBLE wrap_pointer_iface<false, Wrap, IFace> {
 };
 
 } // namespace detail

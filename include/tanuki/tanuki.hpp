@@ -420,7 +420,7 @@ struct iface_impl_base {
 // NOTE: prohibit the definition of an external implementation for the composite interface.
 template <typename IFace, typename Base, typename T>
     requires(!detail::is_composite_interface_v<IFace>)
-struct iface_impl final : detail::iface_impl_base {
+struct TANUKI_VISIBLE iface_impl final : detail::iface_impl_base {
 };
 
 namespace detail
@@ -475,7 +475,7 @@ struct impl_from_iface_impl {
 // which in turn allows us - in the implementation of getval() - to static_cast a pointer to an implementation to the
 // holder for that implementation. We would not be able to perform this static_cast without the information about T.
 template <typename T, typename IFace, wrap_semantics Sem>
-struct _tanuki_typed_value_iface : _tanuki_value_iface<IFace, Sem> {
+struct TANUKI_VISIBLE _tanuki_typed_value_iface : _tanuki_value_iface<IFace, Sem> {
 };
 
 // For non-composite interfaces, the Base for the interface implementation is _tanuki_typed_value_iface<T, IFace, Sem>

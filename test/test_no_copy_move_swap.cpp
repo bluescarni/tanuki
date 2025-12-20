@@ -43,8 +43,8 @@ TEST_CASE("noncopyable")
     using wrap_t = tanuki::wrap<any_iface>;
 
     REQUIRE(!std::constructible_from<wrap_t, const noncopyable &>);
-    REQUIRE(std::constructible_from<wrap_t, std::in_place_type_t<noncopyable>>);
-    REQUIRE(emplaceable<wrap_t, noncopyable>);
+    REQUIRE(!std::constructible_from<wrap_t, std::in_place_type_t<noncopyable>>);
+    REQUIRE(!emplaceable<wrap_t, noncopyable>);
 
     REQUIRE(!tanuki::valid_config<tanuki::config<>{.move_constructible = false, .move_assignable = true}>);
     REQUIRE(!tanuki::valid_config<tanuki::config<>{.copy_constructible = false, .copy_assignable = true}>);
@@ -84,8 +84,8 @@ TEST_CASE("nonmovable")
     using wrap_t = tanuki::wrap<any_iface>;
 
     REQUIRE(!std::constructible_from<wrap_t, nonmovable>);
-    REQUIRE(std::constructible_from<wrap_t, std::in_place_type_t<nonmovable>>);
-    REQUIRE(emplaceable<wrap_t, nonmovable>);
+    REQUIRE(!std::constructible_from<wrap_t, std::in_place_type_t<nonmovable>>);
+    REQUIRE(!emplaceable<wrap_t, nonmovable>);
 
     using wrap2_t = tanuki::wrap<any_iface, tanuki::config<>{.copy_constructible = false,
                                                              .copy_assignable = false,

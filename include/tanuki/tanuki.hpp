@@ -1527,7 +1527,7 @@ public:
     }
 
 private:
-    void copy_init_from(const wrap &other) noexcept
+    void copy_init_from(const wrap &other)
     {
         static_assert(Cfg.semantics == wrap_semantics::value);
 
@@ -1860,8 +1860,7 @@ public:
             try {
                 w.template ctor_impl<T>(std::forward<Args>(args)...);
             } catch (...) {
-                // NOTE: if ctor_impl fails there's no cleanup required.
-                // Invalidate this before rethrowing.
+                // NOTE: if ctor_impl fails there's no cleanup required, except to invalidate this before rethrowing.
                 w.m_pv_iface = nullptr;
 
                 throw;

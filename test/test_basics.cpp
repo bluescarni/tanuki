@@ -372,6 +372,44 @@ TEST_CASE("assignment")
     }
 }
 
+// NOTE: a small test to check the cleanup logic in the copy assignment operator of wrap when the assignment is
+// implemented via destroy + copy init and copy init throws.
+TEST_CASE("throwing copy assignment")
+{
+    using tanuki::wrap;
+    using wrap_t = wrap<any_iface>;
+
+    // NOLINTNEXTLINE
+    struct throw_copy {
+        throw_copy() = default;
+        throw_copy(const throw_copy &)
+        {
+            throw std::invalid_argument("");
+        }
+        throw_copy(throw_copy &&) = default;
+        throw_copy &operator=(const throw_copy &) = default;
+        throw_copy &operator=(throw_copy &&) = default;
+    };
+
+    {
+        wrap_t w1(
+            large{.str = "bsadsadasdsadsadsadsadsadsadsadasdkjsadkldjlsakdsjaljdklajdlksajdlkajdkljsakldjakllif"}),
+            w2(throw_copy{});
+
+        REQUIRE_THROWS_AS((w1 = w2), std::invalid_argument);
+
+        REQUIRE(!is_valid(w1));
+    }
+
+    {
+        wrap_t w1(small{}), w2(throw_copy{});
+
+        REQUIRE_THROWS_AS((w1 = w2), std::invalid_argument);
+
+        REQUIRE(!is_valid(w1));
+    }
+}
+
 #if defined(TANUKI_WITH_BOOST_S11N)
 
 TEST_CASE("s11n nostatic")

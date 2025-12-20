@@ -282,7 +282,8 @@ struct TANUKI_VISIBLE _tanuki_value_iface : public IFace {
     virtual ~_tanuki_value_iface() noexcept = default;
 
     // NOTE: we want to provide an implementation for the virtual functions (instead of keeping them pure virtual). This
-    // allows us to check for correct interface implementations through their default-constructibility.
+    // allows us to check for correct interface implementations through their default-constructibility, and to determine
+    // the noexcept-ness of the _tanuki_holder constructors.
 
     // LCOV_EXCL_START
 

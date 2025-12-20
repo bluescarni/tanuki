@@ -115,6 +115,9 @@ TEST_CASE("basics")
     REQUIRE(value_isa<int>(w6));
     REQUIRE(value_ref<int>(w6) == 11);
     REQUIRE(tanuki::value_ptr<int>(w5) == tanuki::value_ptr<int>(w6));
+    // NOLINTNEXTLINE
+    auto w6a(w1);
+    REQUIRE(is_invalid(w6a));
 
     // Move construction.
     REQUIRE(std::is_nothrow_copy_constructible_v<wrap2_t>);
@@ -123,6 +126,7 @@ TEST_CASE("basics")
     REQUIRE(value_isa<int>(w7));
     REQUIRE(value_ref<int>(w7) == 11);
     REQUIRE(tanuki::value_ptr<int>(w5) == tanuki::value_ptr<int>(w7));
+    REQUIRE(is_invalid(wrap1_t(wrap1_t(tanuki::invalid_wrap))));
 
     // Move assignment.
     REQUIRE(std::is_nothrow_move_assignable_v<wrap2_t>);
@@ -132,6 +136,13 @@ TEST_CASE("basics")
     REQUIRE(value_isa<int>(w8));
     REQUIRE(value_ref<int>(w8) == 11);
     REQUIRE(tanuki::value_ptr<int>(w5) == tanuki::value_ptr<int>(w8));
+    // Move assignment between invalid objects.
+    {
+        wrap2_t w1{tanuki::invalid_wrap}, w2{tanuki::invalid_wrap};
+        w1 = std::move(w2);
+        REQUIRE(is_invalid(w1));
+        REQUIRE(is_invalid(w2));
+    }
 
     // Copy assignment.
     REQUIRE(std::is_nothrow_copy_assignable_v<wrap2_t>);
@@ -141,6 +152,13 @@ TEST_CASE("basics")
     REQUIRE(value_isa<int>(w9));
     REQUIRE(value_ref<int>(w9) == 11);
     REQUIRE(tanuki::value_ptr<int>(w5) == tanuki::value_ptr<int>(w9));
+    // Copy assignment between invalid objects.
+    {
+        wrap2_t w1{tanuki::invalid_wrap}, w2{tanuki::invalid_wrap};
+        w1 = w2;
+        REQUIRE(is_invalid(w1));
+        REQUIRE(is_invalid(w2));
+    }
 
     // Generic assignment.
     wrap2_t w10;
@@ -222,6 +240,10 @@ TEST_CASE("basics")
 
     const wrap2_t w13(noncopyable{});
     REQUIRE_THROWS_MATCHES(copy(w13), std::invalid_argument, Message("Attempting to clone a non-copyable value type"));
+
+    // Deep copy of invalid wrap.
+    wrap2_t w14(tanuki::invalid_wrap);
+    REQUIRE(is_invalid(copy(w14)));
 }
 
 #if defined(TANUKI_WITH_BOOST_S11N)

@@ -49,21 +49,27 @@ Configuration options
 
       This option selects the semantics for the :cpp:class:`wrap` class.
 
-   .. cpp:var:: bool copyable = true
+   .. cpp:var:: bool copy_constructible = true
 
-      This option selects whether or not the :cpp:class:`wrap` class is copy constructible/assignable.
-
-      This option is ignored when employing :ref:`reference semantics <ref_semantics>`.
-
-   .. cpp:var:: bool movable = true
-
-      This option selects whether or not the :cpp:class:`wrap` class is move constructible/assignable.
+      This option selects whether or not the :cpp:class:`wrap` class is copy-constructible.
 
       This option is ignored when employing :ref:`reference semantics <ref_semantics>`.
 
-   .. cpp:var:: bool swappable = true
+   .. cpp:var:: bool copy_assignable = true
 
-      This option selects whether or not the :cpp:class:`wrap` class is swappable.
+      This option selects whether or not the :cpp:class:`wrap` class is copy-assignable.
+
+      This option is ignored when employing :ref:`reference semantics <ref_semantics>`.
+
+   .. cpp:var:: bool move_constructible = true
+
+      This option selects whether or not the :cpp:class:`wrap` class is move-constructible.
+
+      This option is ignored when employing :ref:`reference semantics <ref_semantics>`.
+
+   .. cpp:var:: bool move_assignable = true
+
+      This option selects whether or not the :cpp:class:`wrap` class is move-assignable.
 
       This option is ignored when employing :ref:`reference semantics <ref_semantics>`.
 
@@ -132,7 +138,7 @@ Configuration options
    - :cpp:var:`config::static_align` is a power of two,
    - :cpp:var:`config::explicit_ctor` is one of the enumerators defined in :cpp:enum:`wrap_ctor`,
    - :cpp:var:`config::semantics` is one of the enumerators defined in :cpp:enum:`wrap_semantics`,
-   - if :cpp:var:`config::copyable` is set to ``true``, so is :cpp:var:`config::movable` (that is,
-     a copyable :cpp:class:`wrap` must also be movable),
-   - if :cpp:var:`config::movable` is set to ``true``, so is :cpp:var:`config::swappable` (that is,
-     a movable :cpp:class:`wrap` must also be swappable).
+   - if :cpp:var:`config::copy_assignable` is set to ``true``, so is :cpp:var:`config::copy_constructible` (that is,
+     copy-assignability requires copy-constructibility),
+   - if :cpp:var:`config::move_assignable` is set to ``true``, so is :cpp:var:`config::move_constructible` (that is,
+     move-assignability requires move-constructibility).

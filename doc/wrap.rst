@@ -17,7 +17,7 @@ The ``wrap`` class
       - a non-``void`` default-initialisable :cpp:type:`~config::DefaultValueType` with a valid, default-initialisable
         interface implementation for :cpp:type:`IFace` has been specified as first template argument in :cpp:var:`Cfg`.
         In this case, the default constructor value-initialises an instance of :cpp:type:`~config::DefaultValueType` as
-        the internal type-erased value. When employing value semantics, the copyability, movability and swappability of
+        the internal type-erased value. When employing value semantics, the copyability and movability of
         :cpp:type:`~config::DefaultValueType` must be consistent with the corresponding settings
         in :cpp:var:`Cfg` in order for this constructor to be enabled.
 
@@ -63,7 +63,7 @@ The ``wrap`` class
       - the interface :cpp:type:`IFace` has a valid, default-initialisable implementation for the value type :cpp:type:`T`
         (see the :cpp:concept:`iface_with_impl` concept);
       - :cpp:var:`x` can be perfectly-forwarded to construct an instance of the value type;
-      - when employing value semantics, the copyability, movability and swappability of the value type
+      - when employing value semantics, the copyability and movability of the value type
         are consistent with the corresponding settings in :cpp:var:`Cfg`.
 
       This constructor is marked ``explicit`` if either:
@@ -98,7 +98,7 @@ The ``wrap`` class
       - the interface :cpp:type:`IFace` has a valid, default-initialisable implementation for the value type :cpp:type:`T`
         (see the :cpp:concept:`iface_with_impl` concept);
       - :cpp:var:`args` can be perfectly-forwarded to construct an instance of the value type :cpp:type:`T`;
-      - when employing value semantics, the copyability, movability and swappability of the value type :cpp:type:`T`
+      - when employing value semantics, the copyability and movability of the value type :cpp:type:`T`
         are consistent with the corresponding settings in :cpp:var:`Cfg`.
 
       :param args: the input construction arguments.
@@ -167,7 +167,7 @@ The ``wrap`` class
       - an instance of :cpp:type:`T` can be constructed from :cpp:type:`Args`;
       - the interface :cpp:type:`IFace` has a valid, default-initialisable implementation for the value type :cpp:type:`T`
         (see the :cpp:concept:`iface_with_impl` concept);
-      - when employing value semantics, the copyability, movability and swappability of the value type :cpp:type:`T`
+      - when employing value semantics, the copyability and movability of the value type :cpp:type:`T`
         are consistent with the corresponding settings in :cpp:var:`Cfg`.
 
       Passing :cpp:var:`w` as an argument in :cpp:var:`args` (e.g., attempting to emplace :cpp:var:`w` into itself) will lead to

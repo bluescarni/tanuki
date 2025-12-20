@@ -182,6 +182,13 @@ TEST_CASE("basics")
     // Large one.
     auto w2copy = w2;
     REQUIRE(value_ref<large>(w2copy).buffer[0] == 2);
+    // Construction from invalid wrap.
+    {
+        const wrap_t inv_wrap(tanuki::invalid_wrap);
+        // NOLINTNEXTLINE
+        const auto inv_wrap_copy(inv_wrap);
+        REQUIRE(!is_valid(inv_wrap_copy));
+    }
 
     // Move constructing.
     // Small one.
@@ -197,6 +204,8 @@ TEST_CASE("basics")
     REQUIRE(is_invalid(w2));
     // NOLINTEND
     REQUIRE(has_dynamic_storage(w2));
+    // Construction from invalid wrap.
+    REQUIRE(!is_valid(wrap_t(wrap_t(tanuki::invalid_wrap))));
 
     // Emplace test with class which is not copyable/movable/swappable.
     wrap<any_iface, tanuki::config<>{.copy_constructible = false,
@@ -369,6 +378,36 @@ TEST_CASE("assignment")
         REQUIRE(value_ref<small>(w1).s == "blaf");
         // NOLINTNEXTLINE
         REQUIRE(!is_invalid(w2));
+    }
+
+    // Move assignment between invalid objects.
+    {
+        wrap_t w1{tanuki::invalid_wrap}, w2{tanuki::invalid_wrap};
+        w1 = std::move(w2);
+        REQUIRE(is_invalid(w1));
+        // NOLINTNEXTLINE
+        REQUIRE(is_invalid(w2));
+    }
+    {
+        wrap_t w1{large{.str = "blif"}}, w2{tanuki::invalid_wrap};
+        w1 = std::move(w2);
+        REQUIRE(is_invalid(w1));
+        // NOLINTNEXTLINE
+        REQUIRE(is_invalid(w2));
+    }
+
+    // Copy assignment between invalid objects.
+    {
+        wrap_t w1{tanuki::invalid_wrap}, w2{tanuki::invalid_wrap};
+        w1 = w2;
+        REQUIRE(is_invalid(w1));
+        REQUIRE(is_invalid(w2));
+    }
+    {
+        wrap_t w1{large{.str = "blif"}}, w2{tanuki::invalid_wrap};
+        w1 = w2;
+        REQUIRE(is_invalid(w1));
+        REQUIRE(is_invalid(w2));
     }
 }
 

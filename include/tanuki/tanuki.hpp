@@ -1527,21 +1527,27 @@ public:
     }
 
 private:
+    // Implementation of copy-initialisation for value semantics.
     void copy_init_from(const wrap &other)
     {
         static_assert(Cfg.semantics == wrap_semantics::value);
 
-        if constexpr (Cfg.static_size == 0u) {
-            // Static storage disabled.
-            this->m_pv_iface = other.m_pv_iface->_tanuki_clone_holder();
-        } else {
-            if (other.stype()) {
-                // Other has static storage.
-                this->m_pv_iface = other.m_pv_iface->_tanuki_copy_init_holder(this->static_storage);
-            } else {
-                // Other has dynamic storage.
+        if (is_valid(other)) {
+            if constexpr (Cfg.static_size == 0u) {
+                // Static storage disabled.
                 this->m_pv_iface = other.m_pv_iface->_tanuki_clone_holder();
+            } else {
+                if (other.stype()) {
+                    // Other has static storage.
+                    this->m_pv_iface = other.m_pv_iface->_tanuki_copy_init_holder(this->static_storage);
+                } else {
+                    // Other has dynamic storage.
+                    this->m_pv_iface = other.m_pv_iface->_tanuki_clone_holder();
+                }
             }
+        } else {
+            // Handle initialisation from an invalid wrap.
+            this->m_pv_iface = nullptr;
         }
     }
 
@@ -1560,34 +1566,42 @@ public:
     }
 
 private:
+    // Implementation of move-initialisation for value semantics.
+    //
     // NOLINTNEXTLINE(cppcoreguidelines-rvalue-reference-param-not-moved)
     void move_init_from(wrap &&other) noexcept
     {
         static_assert(Cfg.semantics == wrap_semantics::value);
 
-        if constexpr (Cfg.static_size == 0u) {
-            // Static storage disabled. Shallow copy the pointer.
-            this->m_pv_iface = other.m_pv_iface;
-
-            // Invalidate other.
-            other.m_pv_iface = nullptr;
-        } else {
-            auto *pv_iface = other.m_pv_iface;
-
-            if (other.stype()) {
-                // Other has static storage.
-                this->m_pv_iface = std::move(*pv_iface)._tanuki_move_init_holder(this->static_storage);
-            } else {
-                // Other has dynamic storage.
-                this->m_pv_iface = pv_iface;
+        if (is_valid(other)) {
+            if constexpr (Cfg.static_size == 0u) {
+                // Static storage disabled. Shallow copy the pointer.
+                this->m_pv_iface = other.m_pv_iface;
 
                 // Invalidate other.
                 other.m_pv_iface = nullptr;
+            } else {
+                auto *pv_iface = other.m_pv_iface;
+
+                if (other.stype()) {
+                    // Other has static storage.
+                    this->m_pv_iface = std::move(*pv_iface)._tanuki_move_init_holder(this->static_storage);
+                } else {
+                    // Other has dynamic storage.
+                    this->m_pv_iface = pv_iface;
+
+                    // Invalidate other.
+                    other.m_pv_iface = nullptr;
+                }
             }
+        } else {
+            // Handle initialisation from an invalid wrap.
+            this->m_pv_iface = nullptr;
         }
     }
 
 public:
+    // Move constructor.
     wrap(wrap &&other) noexcept
         requires(Cfg.move_constructible || Cfg.semantics == wrap_semantics::reference)
                 && std::default_initializable<ref_iface_t>
@@ -1635,10 +1649,19 @@ public:
                 return *this;
             }
 
-            // Handle invalid object.
+            // Handle invalid this.
             if (is_invalid(*this)) {
                 // No need to destroy, just move-init from other is sufficient.
+                //
+                // NOTE: move_init_from() will work fine if other is invalid.
                 move_init_from(std::move(other));
+                return *this;
+            }
+
+            // this is valid, handle invalid other.
+            if (is_invalid(other)) {
+                destroy();
+                this->m_pv_iface = nullptr;
                 return *this;
             }
 
@@ -1696,12 +1719,21 @@ public:
                 return *this;
             }
 
-            // Handle invalid object.
+            // Handle invalid this.
             if (is_invalid(*this)) {
                 // No need to destroy, just copy-init from other is sufficient.
                 //
                 // NOTE: copy_init_from() either succeeds or fails, no intermediate state is possible.
+                //
+                // NOTE: copy_init_from() will work fine if other is invalid.
                 copy_init_from(other);
+                return *this;
+            }
+
+            // this is valid, handle invalid other.
+            if (is_invalid(other)) {
+                destroy();
+                this->m_pv_iface = nullptr;
                 return *this;
             }
 
@@ -1734,7 +1766,7 @@ public:
         return *this;
     }
 
-    // Assignment to the invalid state.
+    // Assignment from the invalid state.
     wrap &operator=(invalid_wrap_t) noexcept
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
@@ -2036,7 +2068,12 @@ public:
         requires(Cfg.semantics == wrap_semantics::reference)
     {
         wrap retval(invalid_wrap);
-        retval.m_pv_iface = w.m_pv_iface->_tanuki_shared_clone_holder();
+        // NOTE: perform the deep copy only if w is valid. Otherwise, return an invalid wrap.
+        if (is_valid(w)) {
+            retval.m_pv_iface = w.m_pv_iface->_tanuki_shared_clone_holder();
+        } else {
+            ;
+        }
         return retval;
     }
 

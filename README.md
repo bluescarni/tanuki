@@ -10,7 +10,7 @@ tanuki
 <br />
 <p align="center">
   <p align="center">
-    A type-erasure toolkit for C++20
+    A type-erasure toolkit for C++20/23
     <br />
     <a href="https://bluescarni.github.io/tanuki/index.html"><strong>Explore the docs »</strong></a>
     <br />

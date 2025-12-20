@@ -1766,7 +1766,7 @@ public:
         return *this;
     }
 
-    // Assignment to the invalid state.
+    // Assignment from the invalid state.
     wrap &operator=(invalid_wrap_t) noexcept
     {
         if constexpr (Cfg.semantics == wrap_semantics::value) {
@@ -2071,6 +2071,8 @@ public:
         // NOTE: perform the deep copy only if w is valid. Otherwise, return an invalid wrap.
         if (is_valid(w)) {
             retval.m_pv_iface = w.m_pv_iface->_tanuki_shared_clone_holder();
+        } else {
+            ;
         }
         return retval;
     }

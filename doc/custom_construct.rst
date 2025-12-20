@@ -49,9 +49,8 @@ A :cpp:class:`wrap` object can become invalid in a variety of circumstances:
 
 The only allowed operations on an invalid :cpp:class:`wrap` are:
 
-- destruction,
+- copy/move construction/assignment (including via :cpp:func:`wrap::copy()`), swapping and destruction,
 - the invocation of :cpp:func:`~wrap::is_invalid()` and :cpp:func:`is_valid()`,
-- copy/move assignment from, and swapping with, a valid :cpp:class:`wrap`,
 - :ref:`emplacement <emplacement>`,
 - generic assignment.
 

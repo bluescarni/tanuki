@@ -138,10 +138,11 @@ TEST_CASE("basics")
     REQUIRE(tanuki::value_ptr<int>(w5) == tanuki::value_ptr<int>(w8));
     // Move assignment between invalid objects.
     {
-        wrap2_t w1{tanuki::invalid_wrap}, w2{tanuki::invalid_wrap};
-        w1 = std::move(w2);
-        REQUIRE(is_invalid(w1));
-        REQUIRE(is_invalid(w2));
+        wrap2_t winv1{tanuki::invalid_wrap}, winv2{tanuki::invalid_wrap};
+        winv1 = std::move(winv2);
+        REQUIRE(is_invalid(winv1));
+        // NOLINTNEXTLINE
+        REQUIRE(is_invalid(winv2));
     }
 
     // Copy assignment.
@@ -154,10 +155,10 @@ TEST_CASE("basics")
     REQUIRE(tanuki::value_ptr<int>(w5) == tanuki::value_ptr<int>(w9));
     // Copy assignment between invalid objects.
     {
-        wrap2_t w1{tanuki::invalid_wrap}, w2{tanuki::invalid_wrap};
-        w1 = w2;
-        REQUIRE(is_invalid(w1));
-        REQUIRE(is_invalid(w2));
+        wrap2_t winv1{tanuki::invalid_wrap}, winv2{tanuki::invalid_wrap};
+        winv1 = winv2;
+        REQUIRE(is_invalid(winv1));
+        REQUIRE(is_invalid(winv2));
     }
 
     // Generic assignment.
@@ -242,7 +243,7 @@ TEST_CASE("basics")
     REQUIRE_THROWS_MATCHES(copy(w13), std::invalid_argument, Message("Attempting to clone a non-copyable value type"));
 
     // Deep copy of invalid wrap.
-    wrap2_t w14(tanuki::invalid_wrap);
+    const wrap2_t w14(tanuki::invalid_wrap);
     REQUIRE(is_invalid(copy(w14)));
 }
 

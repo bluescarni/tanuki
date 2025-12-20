@@ -184,7 +184,7 @@ TEST_CASE("basics")
     REQUIRE(value_ref<large>(w2copy).buffer[0] == 2);
     // Construction from invalid wrap.
     {
-        wrap_t inv_wrap(tanuki::invalid_wrap);
+        const wrap_t inv_wrap(tanuki::invalid_wrap);
         // NOLINTNEXTLINE
         const auto inv_wrap_copy(inv_wrap);
         REQUIRE(!is_valid(inv_wrap_copy));
@@ -385,12 +385,14 @@ TEST_CASE("assignment")
         wrap_t w1{tanuki::invalid_wrap}, w2{tanuki::invalid_wrap};
         w1 = std::move(w2);
         REQUIRE(is_invalid(w1));
+        // NOLINTNEXTLINE
         REQUIRE(is_invalid(w2));
     }
     {
         wrap_t w1{large{.str = "blif"}}, w2{tanuki::invalid_wrap};
         w1 = std::move(w2);
         REQUIRE(is_invalid(w1));
+        // NOLINTNEXTLINE
         REQUIRE(is_invalid(w2));
     }
 

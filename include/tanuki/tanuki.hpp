@@ -759,7 +759,12 @@ struct TANUKI_VISIBLE _tanuki_holder final : public impl_from_iface<IFace, T, Se
 
             return true;
         } else {
-            return false;
+            // NOTE: at the moment I cannot find a way to trigger this, because we end up here only if a swappable wrap
+            // contains a non-swappable value. But: a wrap is marked as swappable only if it is move ctible/assignable,
+            // which requires a move ctible/assignable value, which (almost?) always means that the value is swappable
+            // as well. There may be some way to construct a pathological type that triggers this branch, but so far I
+            // have not found it.
+            return false; // LCOV_EXCL_LINE
         }
     }
 
@@ -1982,7 +1987,13 @@ public:
                     // For static storage, attempt to directly swap the internal values.
                     if (!w2.m_pv_iface->_tanuki_swap_value(w1.m_pv_iface)) {
                         // The internal value does not support swapping. Resort to the canonical implementation.
-                        canonical_swap();
+                        //
+                        // NOTE: at the moment I cannot find a way to trigger this, because we end up here only if a
+                        // swappable wrap contains a non-swappable value. But: a wrap is marked as swappable only if it
+                        // is move ctible/assignable, which requires a move ctible/assignable value, which (almost?)
+                        // always means that the value is swappable as well. There may be some way to construct a
+                        // pathological type that triggers this branch, but so far I have not found it.
+                        canonical_swap(); // LCOV_EXCL_LINE
                     }
                 } else {
                     // For dynamic storage, swap the pointers.

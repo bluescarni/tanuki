@@ -4,7 +4,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-// NOLINTBEGIN(misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
 
 // NOTE: these are tests for value type which do not support assignment/swap. We want to check that the wrap
 // assignment/swap primitives keep on working ok.
@@ -64,4 +64,4 @@ TEST_CASE("move_assignment")
     REQUIRE(value_ref<non_move_assignable>(w1).n == 123);
 }
 
-// NOLINTEND(misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)

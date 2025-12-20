@@ -25,6 +25,7 @@ struct callable_iface_impl {
 };
 
 template <typename R, typename... Args>
+// NOLINTNEXTLINE
 struct callable_iface {
     virtual R operator()(Args... args) const = 0;
     virtual explicit operator bool() const noexcept = 0;
@@ -130,11 +131,13 @@ template <typename T>
     requires(requires() { typename callable_impl<T>::type; })
 using callable = typename callable_impl<T>::type;
 
+// NOLINTNEXTLINE
 int doubler(int n)
 {
     return n * 2;
 }
 
+// NOLINTNEXTLINE
 int main()
 {
     assert(!callable<void() const>{});
@@ -143,7 +146,7 @@ int main()
     assert(!callable<void() const>{callable<int() const>{}});
 
     auto lambda_double = [](int n) { return n * 2; };
-    callable<int(int) const> c0 = lambda_double;
+    const callable<int(int) const> c0 = lambda_double;
     assert(c0(2) == 4);
 
     callable<int(int) const> c0_ref = std::ref(lambda_double);
@@ -154,8 +157,9 @@ int main()
         m = m + n;
         return n * 2;
     };
+    // NOLINTNEXTLINE
     assert((!std::constructible_from<callable<int(int) const>, decltype(mutable_lambda)>));
 
-    callable<int(int) const> c1 = doubler;
+    const callable<int(int) const> c1 = doubler;
     assert(c1(2) == 4);
 }

@@ -9,7 +9,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "sqlite3.h"
+#include "sqlite/sqlite3.h"
 #include "time_series.hpp"
 
 using sqlite_val_t = std::variant<std::int64_t, double, std::string, std::vector<std::byte>, std::nullptr_t>;

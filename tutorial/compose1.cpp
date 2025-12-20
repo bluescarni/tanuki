@@ -11,6 +11,7 @@ struct foo_iface_impl : public Base {
 };
 
 // The foo() interface.
+// NOLINTNEXTLINE
 struct foo_iface {
     virtual void foo() const = 0;
 
@@ -27,6 +28,7 @@ struct bar_iface_impl : public Base {
 };
 
 // The bar() interface.
+// NOLINTNEXTLINE
 struct bar_iface {
     virtual void bar() const = 0;
 
@@ -35,10 +37,12 @@ struct bar_iface {
 };
 
 struct foobar_model {
+    // NOLINTNEXTLINE
     void foo() const
     {
         std::cout << "Invoking foobar_model::foo()" << '\n';
     }
+    // NOLINTNEXTLINE
     void bar() const
     {
         std::cout << "Invoking foobar_model::bar()" << '\n';

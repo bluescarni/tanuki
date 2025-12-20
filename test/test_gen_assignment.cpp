@@ -15,7 +15,7 @@
 
 #endif
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility,bugprone-exception-escape)
 
 template <typename Base, typename>
 struct any_iface_impl : Base {
@@ -56,6 +56,8 @@ struct cm_throw {
     {
         throw std::invalid_argument("copy assignment");
     }
+    cm_throw &operator=(cm_throw &&) noexcept = default;
+    friend void swap(cm_throw &, cm_throw &) noexcept {}
 };
 
 static void my_func1(int) {}
@@ -137,7 +139,7 @@ TEST_CASE("gen assignment")
     }
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility,bugprone-exception-escape)
 
 #if defined(__GNUC__)
 

@@ -8,6 +8,7 @@ template <typename Base, typename T>
 struct any_iface_impl : public Base {
 };
 
+// NOLINTNEXTLINE
 struct any_iface {
     virtual ~any_iface() = default;
 
@@ -29,20 +30,20 @@ struct any2 : any_iface {
 int main()
 {
     // Traditional OO-style.
-    std::unique_ptr<any_iface> ptr1 = std::make_unique<any1>();
-    std::unique_ptr<any_iface> ptr2 = std::make_unique<any2>("hello world");
+    const std::unique_ptr<any_iface> ptr1 = std::make_unique<any1>();
+    const std::unique_ptr<any_iface> ptr2 = std::make_unique<any2>("hello world");
 
     // Type-erasure approach.
     using any_wrap = tanuki::wrap<any_iface>;
 
     // Store an integer.
-    any_wrap w1(42);
+    const any_wrap w1(42);
 
     // Store a string.
-    any_wrap w2(std::string("hello world"));
+    const any_wrap w2(std::string("hello world"));
 
     // Store anything...
     struct foo {
     };
-    any_wrap w3(foo{});
+    const any_wrap w3(foo{});
 }

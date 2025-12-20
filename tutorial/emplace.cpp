@@ -14,7 +14,10 @@ struct any_iface {
 
 int main()
 {
-    using any_wrap = tanuki::wrap<any_iface, tanuki::config<>{.copyable = false, .movable = false, .swappable = false}>;
+    using any_wrap = tanuki::wrap<any_iface, tanuki::config<>{.copy_constructible = false,
+                                                              .copy_assignable = false,
+                                                              .move_constructible = false,
+                                                              .move_assignable = false}>;
 
     // Emplace-construct with std::mutex.
     any_wrap w(std::in_place_type<std::mutex>);

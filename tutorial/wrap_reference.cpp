@@ -28,6 +28,7 @@ struct foobar_iface_impl<Base, T> : public Base {
     }
 };
 
+// NOLINTNEXTLINE
 struct foobar_iface {
     virtual void foo() const = 0;
     virtual void bar() = 0;
@@ -37,10 +38,12 @@ struct foobar_iface {
 };
 
 struct foobar_model {
+    // NOLINTNEXTLINE
     void foo() const
     {
         std::cout << "foobar_model calling foo()\n";
     }
+    // NOLINTNEXTLINE
     void bar()
     {
         std::cout << "foobar_model calling bar()\n";
@@ -65,7 +68,7 @@ int main()
     std::cout << "The value in w2 points to: " << &value_ref<std::reference_wrapper<foobar_model>>(w2).get() << '\n';
 
     // Store a const reference to f.
-    wrap_t w3{std::cref(f)};
+    const wrap_t w3{std::cref(f)};
     // WARNING: this will throw an exception!
     // w3->bar();
 

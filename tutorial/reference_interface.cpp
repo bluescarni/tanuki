@@ -11,6 +11,7 @@ struct foo_iface_impl : public Base {
     }
 };
 
+// NOLINTNEXTLINE
 struct foo_iface {
     virtual void foo() const = 0;
 
@@ -24,6 +25,7 @@ struct foo_model {
 
 struct foo_ref_iface1 {
     template <typename Wrap>
+    // NOLINTNEXTLINE
     struct impl {
         TANUKI_REF_IFACE_MEMFUN(foo)
     };
@@ -31,6 +33,7 @@ struct foo_ref_iface1 {
 
 struct foo_ref_iface2 {
     template <typename Wrap>
+    // NOLINTNEXTLINE
     struct impl {
         void foo() const
         {
@@ -72,7 +75,7 @@ int main()
 
     using foo_wrap2 = tanuki::wrap<foo_iface, foo_config2>;
 
-    foo_wrap2 w2(foo_model{});
+    const foo_wrap2 w2(foo_model{});
     w2.foo();
 
 #if defined(TANUKI_HAVE_EXPLICIT_THIS)

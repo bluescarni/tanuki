@@ -387,6 +387,7 @@ concept noncv_rvalue_reference
 
 // Composite interface.
 template <typename IFace0, typename IFace1, typename... IFaceN>
+// NOLINTNEXTLINE(misc-multiple-inheritance,cppcoreguidelines-virtual-class-destructor)
 struct TANUKI_VISIBLE composite_iface : public IFace0, public IFace1, public IFaceN... {
 };
 
@@ -680,6 +681,12 @@ struct TANUKI_VISIBLE _tanuki_holder final : public impl_from_iface<IFace, T, Se
     }
     // Move-init a new holder from this into the storage beginning at ptr. Then cast the result to the value interface
     // and return.
+    //
+    // NOTE: currently we mark this as noexcept, which will lead to clang-tidy warnings if the type-erased value throws
+    // on move construction. We do not want to handle the complexity of types with throwing move constructors, hence we
+    // silence the warning.
+    //
+    // NOLINTNEXTLINE(bugprone-exception-escape)
     [[nodiscard]] _tanuki_value_iface<IFace, Sem> *_tanuki_move_init_holder(void *ptr) && noexcept final
     {
         if constexpr (std::is_move_constructible_v<T>) {
@@ -1842,13 +1849,14 @@ public:
                 // need to bother with moving) and 2) avoid checking the return value of
                 // _tanuki_copy_assign_value_from() - we know the assignment must succeed.
                 auto *fptr = std::addressof(x);
-                [[maybe_unused]] const auto ret = this->m_pv_iface->_tanuki_copy_assign_value_from(&fptr);
+                [[maybe_unused]] const auto ret
+                    = this->m_pv_iface->_tanuki_copy_assign_value_from(static_cast<const void *>(&fptr));
                 assert(ret);
             } else {
                 // The internal types are the same, attempt to directly copy/move assign.
                 bool ret = false;
                 if constexpr (detail::noncv_rvalue_reference<T &&>) {
-                    ret = this->m_pv_iface->_tanuki_move_assign_value_from(std::addressof(x));
+                    ret = this->m_pv_iface->_tanuki_move_assign_value_from(static_cast<void *>(std::addressof(x)));
                 } else {
                     ret = this->m_pv_iface->_tanuki_copy_assign_value_from(std::addressof(x));
                 }

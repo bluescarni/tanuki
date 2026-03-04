@@ -3,6 +3,9 @@ Checks:          'clang-diagnostic-*,clang-analyzer-*,*,-hicpp-uppercase-literal
 WarningsAsErrors: '*'
 FormatStyle:     none
 User:            yardbird
+# NOTE: use this to consider only errors coming from the tanuki headers. Without this,
+# we get several warnings/errors from the catch headers in the test suite.
+HeaderFilterRegex: 'tanuki/*.hpp'
 CheckOptions:
   - key:             abseil-string-find-startswith.AbseilStringsMatchHeader
     value:           'absl/strings/match.h'

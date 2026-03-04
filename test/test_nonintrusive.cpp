@@ -4,7 +4,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility,bugprone-throwing-static-initialization)
 
 namespace ns
 {
@@ -88,4 +88,4 @@ TEST_CASE("basics")
     REQUIRE(!std::constructible_from<wrap3_t, long>);
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility,bugprone-throwing-static-initialization)

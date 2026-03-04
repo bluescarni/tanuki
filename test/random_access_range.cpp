@@ -16,7 +16,7 @@
 
 #include "ranges.hpp"
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,misc-use-internal-linkage,bugprone-throwing-static-initialization)
 
 // LCOV_EXCL_START
 
@@ -272,4 +272,4 @@ TEST_CASE("sentinel")
                            MessageMatches(ContainsSubstring("' and a sentinel of type '")));
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,misc-use-internal-linkage,bugprone-throwing-static-initialization)

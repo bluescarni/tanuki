@@ -279,6 +279,8 @@ struct TANUKI_VISIBLE _tanuki_value_iface : public IFace {
     _tanuki_value_iface &operator=(_tanuki_value_iface &&) noexcept = delete;
     // NOTE: it is important that this is virtual because we will be deleting through pointers to _tanuki_value_iface.
     // Mark it also as noexcept as we do not want to bother supporting values/interfaces which may throw on destruction.
+    //
+    // NOLINTNEXTLINE(hicpp-use-override,modernize-use-override)
     virtual ~_tanuki_value_iface() noexcept = default;
 
     // NOTE: we want to provide an implementation for the virtual functions (instead of keeping them pure virtual). This
@@ -1630,10 +1632,14 @@ private:
         if constexpr (Cfg.static_size == 0u) {
             delete this->m_pv_iface;
         } else {
+            // NOTE: the clang-analyzer-cplusplus.NewDelete suppressions are for a clang-tidy false positive emerging
+            // from some tests. clang-tidy complains about double delete/destruction in the random_access_range.cpp
+            // test, but we checked that this is not actually happening.
             if (stype()) {
+                // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDelete)
                 this->m_pv_iface->~value_iface_t();
             } else {
-                // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+                // NOLINTNEXTLINE(cppcoreguidelines-owning-memory,clang-analyzer-cplusplus.NewDelete)
                 delete this->m_pv_iface;
             }
         }
@@ -1719,6 +1725,10 @@ public:
     //
     // NOTE: if the internal types differ or the internal type does not support copy-assignment, this will be left in
     // the invalid state if an exception is thrown during the copy operation.
+    //
+    // NOTE: clang-tidy does not see that we are handling self-assignment properly.
+    //
+    // NOLINTNEXTLINE(cert-oop54-cpp)
     wrap &operator=(const wrap &other) noexcept(Cfg.semantics == wrap_semantics::reference)
         requires(Cfg.copy_assignable || Cfg.semantics == wrap_semantics::reference)
     {

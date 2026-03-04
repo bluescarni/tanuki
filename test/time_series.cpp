@@ -14,7 +14,7 @@
 
 #include "time_series.hpp"
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility,misc-use-internal-linkage,bugprone-throwing-static-initialization,cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
 
 struct minimal_forward_ts {
     std::vector<std::pair<double, double>> m_container;
@@ -260,4 +260,4 @@ TEST_CASE("lagrange interpolation")
     }
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility,misc-use-internal-linkage,bugprone-throwing-static-initialization,cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)

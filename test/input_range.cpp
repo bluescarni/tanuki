@@ -17,7 +17,7 @@
 #include "ranges.hpp"
 #include "sentinel.hpp"
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,misc-use-internal-linkage,bugprone-throwing-static-initialization)
 
 // LCOV_EXCL_START
 
@@ -160,4 +160,4 @@ TEST_CASE("sentinel")
                            MessageMatches(ContainsSubstring("' is not a sized sentinel")));
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,misc-use-internal-linkage,bugprone-throwing-static-initialization)

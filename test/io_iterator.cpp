@@ -14,7 +14,7 @@
 // NOTE: the ArrayBound nolint is necessary because clang-tidy apparently gets confused in the test involving a
 // statically-allocated array.
 //
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,clang-analyzer-security.ArrayBound)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,clang-analyzer-security.ArrayBound,misc-use-internal-linkage,bugprone-throwing-static-initialization)
 
 template <typename T>
 concept can_make_io_iterator = requires(T it) { facade::make_io_iterator(it); };
@@ -138,4 +138,4 @@ TEST_CASE("noniter")
     REQUIRE(std::same_as<iter_t, decltype(facade::make_io_iterator(noniter2{}))>);
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,clang-analyzer-security.ArrayBound)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,clang-analyzer-security.ArrayBound,misc-use-internal-linkage,bugprone-throwing-static-initialization)

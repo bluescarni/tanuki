@@ -10,7 +10,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-throwing-static-initialization)
 
 // NOTE: the purpose of this test is to check that
 // the range type erasure machinery works properly
@@ -60,4 +60,4 @@ TEST_CASE("type erased subranges")
     }
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-throwing-static-initialization)

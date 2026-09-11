@@ -87,10 +87,12 @@ TEST_CASE("nonmovable")
     REQUIRE(!std::constructible_from<wrap_t, std::in_place_type_t<nonmovable>>);
     REQUIRE(!emplaceable<wrap_t, nonmovable>);
 
-    using wrap2_t = tanuki::wrap<any_iface, tanuki::config<>{.copy_constructible = false,
-                                                             .copy_assignable = false,
-                                                             .move_constructible = false,
-                                                             .move_assignable = false}>;
+    using wrap2_t = tanuki::wrap<any_iface, tanuki::config<>{
+                                                .copy_constructible = false,
+                                                .copy_assignable = false,
+                                                .move_constructible = false,
+                                                .move_assignable = false,
+                                            }>;
 
     REQUIRE(!std::constructible_from<wrap2_t, nonmovable>);
     REQUIRE(std::constructible_from<wrap2_t, std::in_place_type_t<nonmovable>>);

@@ -208,10 +208,13 @@ TEST_CASE("basics")
     REQUIRE(!is_valid(wrap_t(wrap_t(tanuki::invalid_wrap))));
 
     // Emplace test with class which is not copyable/movable/swappable.
-    wrap<any_iface, tanuki::config<>{.copy_constructible = false,
-                                     .copy_assignable = false,
-                                     .move_constructible = false,
-                                     .move_assignable = false}>
+    wrap<any_iface,
+         tanuki::config<>{
+             .copy_constructible = false,
+             .copy_assignable = false,
+             .move_constructible = false,
+             .move_assignable = false,
+         }>
         w_mut(std::in_place_type<std::mutex>);
     REQUIRE(noexcept(wrap_t(std::in_place_type<int>)));
 
@@ -279,7 +282,7 @@ TEST_CASE("assignment")
     // Object revival via copy assignment.
     {
         wrap_t wl1(large{});
-        auto wl2 = std::move(wl1);
+        const auto wl2 = std::move(wl1);
         // NOLINTNEXTLINE
         REQUIRE(is_invalid(wl1));
         REQUIRE(has_dynamic_storage(wl1));
@@ -291,7 +294,7 @@ TEST_CASE("assignment")
 
     {
         wrap_t wl1(small{});
-        auto wl2 = std::move(wl1);
+        const auto wl2 = std::move(wl1);
         // NOLINTNEXTLINE
         REQUIRE(!is_invalid(wl1));
         REQUIRE(has_static_storage(wl1));
@@ -304,7 +307,7 @@ TEST_CASE("assignment")
     // Object revival via move assignment.
     {
         wrap_t wl1(large{});
-        auto wl2 = std::move(wl1);
+        const auto wl2 = std::move(wl1);
         // NOLINTNEXTLINE
         REQUIRE(is_invalid(wl1));
         wrap_t wl3(large{.buffer = {}, .str = "briffo"});
@@ -317,7 +320,7 @@ TEST_CASE("assignment")
 
     {
         wrap_t wl1(small{});
-        auto wl2 = std::move(wl1);
+        const auto wl2 = std::move(wl1);
         // NOLINTNEXTLINE
         REQUIRE(!is_invalid(wl1));
         wrap_t wl3(small{"briffo"});
@@ -559,7 +562,7 @@ TEST_CASE("s11n invalid")
 
     wrap_t w(large{});
     value_ptr<large>(w)->buffer[0] = 42;
-    auto w_move = std::move(w);
+    const auto w_move = std::move(w);
     // NOLINTNEXTLINE
     REQUIRE(is_invalid(w));
 
@@ -595,10 +598,12 @@ TEST_CASE("s11n nodef")
     using Catch::Matchers::MessageMatches;
     using Catch::Matchers::StartsWith;
 
-    using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{.copy_constructible = false,
-                                                            .copy_assignable = false,
-                                                            .move_constructible = false,
-                                                            .move_assignable = false}>;
+    using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{
+                                               .copy_constructible = false,
+                                               .copy_assignable = false,
+                                               .move_constructible = false,
+                                               .move_assignable = false,
+                                           }>;
 
     const wrap_t w(nodefctor{3});
 
@@ -625,10 +630,12 @@ TEST_CASE("s11n nomove")
     using Catch::Matchers::MessageMatches;
     using Catch::Matchers::StartsWith;
 
-    using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{.copy_constructible = false,
-                                                            .copy_assignable = false,
-                                                            .move_constructible = false,
-                                                            .move_assignable = false}>;
+    using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{
+                                               .copy_constructible = false,
+                                               .copy_assignable = false,
+                                               .move_constructible = false,
+                                               .move_assignable = false,
+                                           }>;
 
     const wrap_t w(std::in_place_type<nomovector>);
 

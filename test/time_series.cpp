@@ -253,6 +253,7 @@ TEST_CASE("lagrange interpolation")
         // NOTE: post C++20 rvalue ranges can be used to construct views pipelines. See:
         // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p2415r2.html
 
+        // NOLINTNEXTLINE(misc-const-correctness)
         [[maybe_unused]] auto tmp_rvalue = make_random_access_ts(v) | std::ranges::views::transform([](const auto &p) {
                                                return std::make_pair(p.first, p.second[0]);
                                            });

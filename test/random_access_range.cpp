@@ -89,10 +89,12 @@ TEST_CASE("basic random_access")
     {
         std::vector vec = {1, 2, 3};
 
+        // NOLINTNEXTLINE(misc-const-correctness)
         auto r1 = facade::make_random_access_range(vec);
         REQUIRE(std::ranges::random_access_range<decltype(r1)>);
         REQUIRE(std::same_as<decltype(r1), facade::random_access_range<int, int &, int &&, const int &, const int &&>>);
 
+        // NOLINTNEXTLINE(misc-const-correctness)
         auto r2 = facade::make_random_access_range(std::as_const(vec));
         REQUIRE(std::ranges::random_access_range<decltype(r2)>);
         REQUIRE(std::same_as<decltype(r2), facade::random_access_range<int, int &, int &&, const int &, const int &&>>);
@@ -251,7 +253,9 @@ TEST_CASE("counted iterator")
 {
     const std::vector vec = {1, 2, 3};
 
+    // NOLINTNEXTLINE(misc-const-correctness)
     auto sr = std::ranges::subrange(std::counted_iterator{std::cbegin(vec), 3}, std::default_sentinel);
+    // NOLINTNEXTLINE(misc-const-correctness)
     auto tmp = facade::make_random_access_range(sr);
 
     REQUIRE(*std::ranges::lower_bound(tmp, 1) == 1);

@@ -48,7 +48,7 @@ TEST_CASE("basic")
 
         // Check that make_io_iterator() on an io_iterator
         // returns a copy.
-        auto it2 = facade::make_io_iterator(facade::make_io_iterator(std::begin(arr)));
+        const auto it2 = facade::make_io_iterator(facade::make_io_iterator(std::begin(arr)));
         REQUIRE(value_isa<int *>(it2));
         REQUIRE(std::sentinel_for<facade::sentinel, int_iter>);
     }

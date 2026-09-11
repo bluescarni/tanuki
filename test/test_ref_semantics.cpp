@@ -71,8 +71,10 @@ TEST_CASE("basics")
     using Catch::Matchers::Message;
 
     // Default init in the invalid state.
-    using wrap1_t = tanuki::wrap<any_iface, tanuki::config<>{.invalid_default_ctor = true,
-                                                             .semantics = tanuki::wrap_semantics::reference}>;
+    using wrap1_t = tanuki::wrap<any_iface, tanuki::config<>{
+                                                .invalid_default_ctor = true,
+                                                .semantics = tanuki::wrap_semantics::reference,
+                                            }>;
 
     REQUIRE(std::default_initializable<wrap1_t>);
     REQUIRE(noexcept(wrap1_t{}));
@@ -81,7 +83,9 @@ TEST_CASE("basics")
     REQUIRE(is_invalid(w1));
 
     // Default init into the default value type.
-    using wrap2_t = tanuki::wrap<any_iface, tanuki::config<int>{.semantics = tanuki::wrap_semantics::reference}>;
+    using wrap2_t = tanuki::wrap<any_iface, tanuki::config<int>{
+                                                .semantics = tanuki::wrap_semantics::reference,
+                                            }>;
 
     const wrap2_t w2;
     REQUIRE(!is_invalid(w2));
@@ -189,7 +193,7 @@ TEST_CASE("basics")
     REQUIRE(!same_value(w10, w9));
     REQUIRE(same_value(w10, w10a));
     REQUIRE(same_value(w10a, w10));
-    auto w10b = std::move(w10a);
+    const auto w10b = std::move(w10a);
     REQUIRE(same_value(w10, w10b));
     REQUIRE(same_value(w10b, w10));
 
@@ -276,8 +280,10 @@ TEST_CASE("s11n")
 
 TEST_CASE("s11n invalid")
 {
-    using wrap_t = tanuki::wrap<any_iface, tanuki::config<int>{.invalid_default_ctor = true,
-                                                               .semantics = tanuki::wrap_semantics::reference}>;
+    using wrap_t = tanuki::wrap<any_iface, tanuki::config<int>{
+                                               .invalid_default_ctor = true,
+                                               .semantics = tanuki::wrap_semantics::reference,
+                                           }>;
 
     wrap_t w;
     REQUIRE(is_invalid(w));

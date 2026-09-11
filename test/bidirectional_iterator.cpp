@@ -3,6 +3,7 @@
 #include <iterator>
 #include <list>
 #include <stdexcept>
+#include <type_traits>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
@@ -65,7 +66,7 @@ TEST_CASE("basic")
 
         // Check that make_bidirectional_iterator() on an io_iterator
         // returns a copy.
-        auto it2 = facade::make_bidirectional_iterator(facade::make_bidirectional_iterator(std::begin(arr)));
+        const auto it2 = facade::make_bidirectional_iterator(facade::make_bidirectional_iterator(std::begin(arr)));
         REQUIRE(value_isa<int *>(it2));
 
         REQUIRE(std::sentinel_for<facade::sentinel, int_iter>);
@@ -190,8 +191,8 @@ TEST_CASE("noniter")
     {
         using iter_t = facade::bidirectional_iterator<double, double, double>;
 
-        auto nit = facade::make_bidirectional_iterator(noniter1{});
-        REQUIRE(std::same_as<iter_t, decltype(nit)>);
+        const auto nit = facade::make_bidirectional_iterator(noniter1{});
+        REQUIRE(std::same_as<iter_t, std::remove_const_t<decltype(nit)>>);
 
         REQUIRE(std::bidirectional_iterator<iter_t>);
         REQUIRE(std::default_initializable<iter_t>);
@@ -201,8 +202,8 @@ TEST_CASE("noniter")
     {
         using iter_t = facade::bidirectional_iterator<double, double &, double &&>;
 
-        auto nit = facade::make_bidirectional_iterator(noniter2{});
-        REQUIRE(std::same_as<iter_t, decltype(nit)>);
+        const auto nit = facade::make_bidirectional_iterator(noniter2{});
+        REQUIRE(std::same_as<iter_t, std::remove_const_t<decltype(nit)>>);
 
         REQUIRE(std::bidirectional_iterator<iter_t>);
         REQUIRE(std::default_initializable<iter_t>);
@@ -212,8 +213,8 @@ TEST_CASE("noniter")
     {
         using iter_t = facade::bidirectional_iterator<double, const double &, const double &&>;
 
-        auto nit = facade::make_bidirectional_iterator(noniter3{});
-        REQUIRE(std::same_as<iter_t, decltype(nit)>);
+        const auto nit = facade::make_bidirectional_iterator(noniter3{});
+        REQUIRE(std::same_as<iter_t, std::remove_const_t<decltype(nit)>>);
 
         REQUIRE(std::bidirectional_iterator<iter_t>);
         REQUIRE(std::default_initializable<iter_t>);
@@ -223,8 +224,8 @@ TEST_CASE("noniter")
     {
         using iter_t = facade::bidirectional_iterator<double, double &&, double &&>;
 
-        auto nit = facade::make_bidirectional_iterator(noniter4{});
-        REQUIRE(std::same_as<iter_t, decltype(nit)>);
+        const auto nit = facade::make_bidirectional_iterator(noniter4{});
+        REQUIRE(std::same_as<iter_t, std::remove_const_t<decltype(nit)>>);
 
         REQUIRE(std::bidirectional_iterator<iter_t>);
         REQUIRE(std::default_initializable<iter_t>);
@@ -234,8 +235,8 @@ TEST_CASE("noniter")
     {
         using iter_t = facade::bidirectional_iterator<double, const double &&, const double &&>;
 
-        auto nit = facade::make_bidirectional_iterator(noniter5{});
-        REQUIRE(std::same_as<iter_t, decltype(nit)>);
+        const auto nit = facade::make_bidirectional_iterator(noniter5{});
+        REQUIRE(std::same_as<iter_t, std::remove_const_t<decltype(nit)>>);
 
         REQUIRE(std::bidirectional_iterator<iter_t>);
         REQUIRE(std::default_initializable<iter_t>);

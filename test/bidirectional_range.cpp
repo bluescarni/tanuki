@@ -69,10 +69,12 @@ TEST_CASE("basic bidirectional")
     {
         std::vector vec = {1, 2, 3};
 
+        // NOLINTNEXTLINE(misc-const-correctness)
         auto r1 = facade::make_bidirectional_range(vec);
         REQUIRE(std::ranges::bidirectional_range<decltype(r1)>);
         REQUIRE(std::same_as<decltype(r1), facade::bidirectional_range<int, int &, int &&, const int &, const int &&>>);
 
+        // NOLINTNEXTLINE(misc-const-correctness)
         auto r2 = facade::make_bidirectional_range(std::as_const(vec));
         REQUIRE(std::ranges::bidirectional_range<decltype(r2)>);
         REQUIRE(std::same_as<decltype(r2), facade::bidirectional_range<int, int &, int &&, const int &, const int &&>>);
@@ -110,6 +112,7 @@ TEST_CASE("basic bidirectional")
         min_bd_range vec{{1, 2, 3}};
 
         REQUIRE(!std::ranges::range<min_bd_range>);
+        // NOLINTNEXTLINE(misc-const-correctness)
         auto r1 = facade::make_bidirectional_range(vec);
         REQUIRE(std::ranges::bidirectional_range<decltype(r1)>);
         REQUIRE(std::same_as<decltype(r1), facade::bidirectional_range<int, int &, int &&, const int &, const int &&>>);

@@ -47,6 +47,7 @@ TEST_CASE("type erased subranges")
 
     {
         const auto r1 = facade::make_random_access_range(std::cref(v));
+        // NOLINTNEXTLINE(misc-const-correctness)
         auto r2 = std::ranges::subrange(r1.begin(), r1.begin() + 2);
         const auto r3 = facade::make_random_access_range(std::cref(r2));
         REQUIRE(std::ranges::equal(r3, r2));
@@ -54,6 +55,7 @@ TEST_CASE("type erased subranges")
 
     {
         const auto r1 = facade::make_random_access_range(std::cref(v));
+        // NOLINTNEXTLINE(misc-const-correctness)
         auto r2 = std::ranges::subrange(r1.begin(), r1.end());
         const auto r3 = facade::make_random_access_range(std::cref(r2));
         REQUIRE(std::ranges::equal(r3, v));

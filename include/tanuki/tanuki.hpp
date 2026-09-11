@@ -1706,6 +1706,8 @@ public:
             }
 
             // Helper to implement move-assignment via destruction + move-initialisation.
+            //
+            // NOLINTNEXTLINE(readability-redundant-lambda-parameter-list)
             const auto destroy_and_move_init = [this, &other]() noexcept {
                 destroy();
                 move_init_from(std::move(other));

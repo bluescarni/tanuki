@@ -28,14 +28,14 @@ cmake -G Ninja ../ -DCMAKE_PREFIX_PATH=$deps_dir \
     -DTANUKI_BUILD_TESTS=yes \
     -DTANUKI_BUILD_TUTORIALS=yes \
     -DTANUKI_WITH_BOOST_S11N=yes \
-    -DCMAKE_CXX_FLAGS="--coverage"
+    -DCMAKE_CXX_FLAGS="--coverage -fprofile-update=atomic"
 ninja
 ctest -V -j4
 
 # Create lcov report.
 # NOTE: this is apparently picked up automatically
 # by the codecov action.
-lcov --capture --directory . --output-file coverage.info
+lcov --capture --directory . --output-file coverage.info --ignore-errors inconsistent,inconsistent
 
 set +e
 set +x

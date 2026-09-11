@@ -1,3 +1,6 @@
+# NOTE: Catch2 compiles its sources with -ffile-prefix-map by default, which also rewrites the
+# source paths recorded in the coverage data and makes lcov fail to find them.
+set(CATCH_ENABLE_REPRODUCIBLE_BUILD OFF)
 add_subdirectory(catch)
 
 function(ADD_TANUKI_TESTCASE arg1)

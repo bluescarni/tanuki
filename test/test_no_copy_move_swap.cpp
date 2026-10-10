@@ -15,8 +15,7 @@
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility,misc-use-internal-linkage,bugprone-throwing-static-initialization)
 
 template <typename Base, typename>
-struct any_iface_impl : Base {
-};
+struct any_iface_impl : Base {};
 
 // NOLINTNEXTLINE
 struct any_iface {

@@ -1,5 +1,6 @@
 #include <array>
 #include <concepts>
+#include <cstddef>
 #include <functional>
 #include <mutex>
 #include <sstream>
@@ -34,12 +35,10 @@
 
 // NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility,misc-use-internal-linkage,bugprone-throwing-static-initialization,cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
 
-struct nonwrappable {
-};
+struct nonwrappable {};
 
 template <typename, typename>
-struct any_iface_impl {
-};
+struct any_iface_impl {};
 
 struct any_iface {
     template <typename Base, typename T>
@@ -48,13 +47,11 @@ struct any_iface {
 
 template <typename Base, typename T>
     requires(!std::same_as<T, nonwrappable>)
-struct any_iface_impl<Base, T> : Base {
-};
+struct any_iface_impl<Base, T> : Base {};
 
 struct any_iface2 {
     template <typename Base, typename>
-    struct impl : Base {
-    };
+    struct impl : Base {};
 };
 
 template <typename T, typename IFace>
@@ -450,6 +447,34 @@ TEST_CASE("throwing copy assignment")
 
         REQUIRE(!is_valid(w1));
     }
+}
+
+// Config with valid data members, but not an instantiation of the primary template.
+struct fake_config_00 {
+    std::size_t static_size = 48;
+    std::size_t static_align = alignof(std::max_align_t);
+    bool invalid_default_ctor = false;
+    bool pointer_interface = true;
+    tanuki::wrap_ctor explicit_ctor = tanuki::wrap_ctor::always_explicit;
+    tanuki::wrap_semantics semantics = tanuki::wrap_semantics::value;
+    bool copy_constructible = true, copy_assignable = true, move_constructible = true, move_assignable = true;
+};
+
+// Invalid config: partial specialisation of the primary template.
+struct foobar {};
+
+namespace tanuki
+{
+
+template <typename RefIFace>
+struct config<foobar, RefIFace> : fake_config_00 {};
+
+} // namespace tanuki
+
+TEST_CASE("invalid config")
+{
+    REQUIRE(!tanuki::valid_config<fake_config_00{}>);
+    REQUIRE(!tanuki::valid_config<tanuki::config<foobar, tanuki::no_ref_iface>{}>);
 }
 
 #if defined(TANUKI_WITH_BOOST_S11N)

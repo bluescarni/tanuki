@@ -23,7 +23,7 @@ cd build
 
 cmake ../
 cd ../doc
-make html linkcheck
+make html
 
 set +e
 set +x

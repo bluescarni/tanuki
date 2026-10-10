@@ -7,7 +7,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'tanuki'
-copyright = '2024, Francesco Biscani'
+copyright = '2023, 2024, 2025, 2026, Francesco Biscani'
 author = 'Francesco Biscani'
 release = '@tanuki_VERSION@'
 

@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <iterator>
 #include <list>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -13,7 +14,7 @@
 // NOTE: the ArrayBound nolint is necessary because clang-tidy apparently gets confused in the test involving a
 // statically-allocated array.
 //
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,clang-analyzer-security.ArrayBound)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,clang-analyzer-security.ArrayBound,misc-use-internal-linkage,bugprone-throwing-static-initialization)
 
 template <typename T>
 concept can_make_input_iterator = requires(T it) { facade::make_input_iterator(it); };
@@ -46,7 +47,7 @@ TEST_CASE("basic")
 
         // Check that make_input_iterator() on an io_iterator
         // returns a copy.
-        auto it2 = facade::make_input_iterator(facade::make_input_iterator(std::begin(arr)));
+        const auto it2 = facade::make_input_iterator(facade::make_input_iterator(std::begin(arr)));
         REQUIRE(value_isa<int *>(it2));
         REQUIRE(std::sentinel_for<facade::sentinel, int_iter>);
     }
@@ -137,8 +138,8 @@ TEST_CASE("noniter")
     {
         using iter_t = facade::input_iterator<double, double, double>;
 
-        auto nit = facade::make_input_iterator(noniter1{});
-        REQUIRE(std::same_as<iter_t, decltype(nit)>);
+        const auto nit = facade::make_input_iterator(noniter1{});
+        REQUIRE(std::same_as<iter_t, std::remove_const_t<decltype(nit)>>);
 
         REQUIRE(std::input_iterator<iter_t>);
         REQUIRE(!std::default_initializable<iter_t>);
@@ -148,8 +149,8 @@ TEST_CASE("noniter")
     {
         using iter_t = facade::input_iterator<double, double &, double &&>;
 
-        auto nit = facade::make_input_iterator(noniter2{});
-        REQUIRE(std::same_as<iter_t, decltype(nit)>);
+        const auto nit = facade::make_input_iterator(noniter2{});
+        REQUIRE(std::same_as<iter_t, std::remove_const_t<decltype(nit)>>);
 
         REQUIRE(std::input_iterator<iter_t>);
         REQUIRE(!std::default_initializable<iter_t>);
@@ -159,8 +160,8 @@ TEST_CASE("noniter")
     {
         using iter_t = facade::input_iterator<double, const double &, const double &&>;
 
-        auto nit = facade::make_input_iterator(noniter3{});
-        REQUIRE(std::same_as<iter_t, decltype(nit)>);
+        const auto nit = facade::make_input_iterator(noniter3{});
+        REQUIRE(std::same_as<iter_t, std::remove_const_t<decltype(nit)>>);
 
         REQUIRE(std::input_iterator<iter_t>);
         REQUIRE(!std::default_initializable<iter_t>);
@@ -170,8 +171,8 @@ TEST_CASE("noniter")
     {
         using iter_t = facade::input_iterator<double, double &&, double &&>;
 
-        auto nit = facade::make_input_iterator(noniter4{});
-        REQUIRE(std::same_as<iter_t, decltype(nit)>);
+        const auto nit = facade::make_input_iterator(noniter4{});
+        REQUIRE(std::same_as<iter_t, std::remove_const_t<decltype(nit)>>);
 
         REQUIRE(std::input_iterator<iter_t>);
         REQUIRE(!std::default_initializable<iter_t>);
@@ -181,8 +182,8 @@ TEST_CASE("noniter")
     {
         using iter_t = facade::input_iterator<double, const double &&, const double &&>;
 
-        auto nit = facade::make_input_iterator(noniter5{});
-        REQUIRE(std::same_as<iter_t, decltype(nit)>);
+        const auto nit = facade::make_input_iterator(noniter5{});
+        REQUIRE(std::same_as<iter_t, std::remove_const_t<decltype(nit)>>);
 
         REQUIRE(std::input_iterator<iter_t>);
         REQUIRE(!std::default_initializable<iter_t>);
@@ -229,4 +230,4 @@ TEST_CASE("iter_move")
     REQUIRE(ns::iter_move1_counter == 3);
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,clang-analyzer-security.ArrayBound)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,clang-analyzer-security.ArrayBound,misc-use-internal-linkage,bugprone-throwing-static-initialization)

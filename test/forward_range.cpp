@@ -12,7 +12,7 @@
 
 #include "ranges.hpp"
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,misc-use-internal-linkage,bugprone-throwing-static-initialization)
 
 // LCOV_EXCL_START
 
@@ -65,10 +65,12 @@ TEST_CASE("basic forward")
     {
         std::vector vec = {1, 2, 3};
 
+        // NOLINTNEXTLINE(misc-const-correctness)
         auto r1 = facade::make_forward_range(vec);
         REQUIRE(std::ranges::forward_range<decltype(r1)>);
         REQUIRE(std::same_as<decltype(r1), facade::forward_range<int, int &, int &&, const int &, const int &&>>);
 
+        // NOLINTNEXTLINE(misc-const-correctness)
         auto r2 = facade::make_forward_range(std::as_const(vec));
         REQUIRE(std::ranges::forward_range<decltype(r2)>);
         REQUIRE(std::same_as<decltype(r2), facade::forward_range<int, int &, int &&, const int &, const int &&>>);
@@ -105,6 +107,7 @@ TEST_CASE("basic forward")
         min_fw_range vec{{1, 2, 3}};
 
         REQUIRE(!std::ranges::range<min_fw_range>);
+        // NOLINTNEXTLINE(misc-const-correctness)
         auto r1 = facade::make_forward_range(vec);
         REQUIRE(std::ranges::forward_range<decltype(r1)>);
         REQUIRE(std::same_as<decltype(r1), facade::forward_range<int, int &, int &&, const int &, const int &&>>);
@@ -135,4 +138,4 @@ TEST_CASE("nested type erasure")
     REQUIRE(std::ranges::begin(r1) != std::ranges::end(r1));
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,misc-use-internal-linkage,bugprone-throwing-static-initialization)

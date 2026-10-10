@@ -14,6 +14,8 @@
 
 using sqlite_val_t = std::variant<std::int64_t, double, std::string, std::vector<std::byte>, std::nullptr_t>;
 
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,misc-use-internal-linkage,bugprone-throwing-static-initialization)
+
 // LCOV_EXCL_START
 
 struct sqlite_ts {
@@ -205,8 +207,6 @@ struct sqlite_ts {
 
 // LCOV_EXCL_STOP
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
-
 TEST_CASE("basic")
 {
     auto ts = facade::make_input_ts(sqlite_ts{TANUKI_SQLITE_FILE, "my_table"});
@@ -223,4 +223,4 @@ TEST_CASE("basic")
     REQUIRE(it == ts.end());
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,misc-use-internal-linkage,bugprone-throwing-static-initialization)

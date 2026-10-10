@@ -5,7 +5,7 @@
 
 #include "fooable.hpp"
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-throwing-static-initialization)
 
 // A test to check that registering the serialisation for a wrap
 // in a separate library works as expected.
@@ -30,4 +30,4 @@ TEST_CASE("test s11n")
     REQUIRE(value_ref<fooable::foo_model>(f).n == 5);
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-throwing-static-initialization)

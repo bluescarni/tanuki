@@ -1,5 +1,6 @@
 #include <array>
 #include <concepts>
+#include <cstddef>
 #include <functional>
 #include <mutex>
 #include <sstream>
@@ -32,14 +33,12 @@
 
 #endif
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility,misc-use-internal-linkage,bugprone-throwing-static-initialization,cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
 
-struct nonwrappable {
-};
+struct nonwrappable {};
 
 template <typename, typename>
-struct any_iface_impl {
-};
+struct any_iface_impl {};
 
 struct any_iface {
     template <typename Base, typename T>
@@ -48,13 +47,11 @@ struct any_iface {
 
 template <typename Base, typename T>
     requires(!std::same_as<T, nonwrappable>)
-struct any_iface_impl<Base, T> : Base {
-};
+struct any_iface_impl<Base, T> : Base {};
 
 struct any_iface2 {
     template <typename Base, typename>
-    struct impl : Base {
-    };
+    struct impl : Base {};
 };
 
 template <typename T, typename IFace>
@@ -208,10 +205,13 @@ TEST_CASE("basics")
     REQUIRE(!is_valid(wrap_t(wrap_t(tanuki::invalid_wrap))));
 
     // Emplace test with class which is not copyable/movable/swappable.
-    wrap<any_iface, tanuki::config<>{.copy_constructible = false,
-                                     .copy_assignable = false,
-                                     .move_constructible = false,
-                                     .move_assignable = false}>
+    wrap<any_iface,
+         tanuki::config<>{
+             .copy_constructible = false,
+             .copy_assignable = false,
+             .move_constructible = false,
+             .move_assignable = false,
+         }>
         w_mut(std::in_place_type<std::mutex>);
     REQUIRE(noexcept(wrap_t(std::in_place_type<int>)));
 
@@ -279,7 +279,7 @@ TEST_CASE("assignment")
     // Object revival via copy assignment.
     {
         wrap_t wl1(large{});
-        auto wl2 = std::move(wl1);
+        const auto wl2 = std::move(wl1);
         // NOLINTNEXTLINE
         REQUIRE(is_invalid(wl1));
         REQUIRE(has_dynamic_storage(wl1));
@@ -291,7 +291,7 @@ TEST_CASE("assignment")
 
     {
         wrap_t wl1(small{});
-        auto wl2 = std::move(wl1);
+        const auto wl2 = std::move(wl1);
         // NOLINTNEXTLINE
         REQUIRE(!is_invalid(wl1));
         REQUIRE(has_static_storage(wl1));
@@ -304,7 +304,7 @@ TEST_CASE("assignment")
     // Object revival via move assignment.
     {
         wrap_t wl1(large{});
-        auto wl2 = std::move(wl1);
+        const auto wl2 = std::move(wl1);
         // NOLINTNEXTLINE
         REQUIRE(is_invalid(wl1));
         wrap_t wl3(large{.buffer = {}, .str = "briffo"});
@@ -317,7 +317,7 @@ TEST_CASE("assignment")
 
     {
         wrap_t wl1(small{});
-        auto wl2 = std::move(wl1);
+        const auto wl2 = std::move(wl1);
         // NOLINTNEXTLINE
         REQUIRE(!is_invalid(wl1));
         wrap_t wl3(small{"briffo"});
@@ -449,6 +449,34 @@ TEST_CASE("throwing copy assignment")
     }
 }
 
+// Config with valid data members, but not an instantiation of the primary template.
+struct fake_config_00 {
+    std::size_t static_size = 48;
+    std::size_t static_align = alignof(std::max_align_t);
+    bool invalid_default_ctor = false;
+    bool pointer_interface = true;
+    tanuki::wrap_ctor explicit_ctor = tanuki::wrap_ctor::always_explicit;
+    tanuki::wrap_semantics semantics = tanuki::wrap_semantics::value;
+    bool copy_constructible = true, copy_assignable = true, move_constructible = true, move_assignable = true;
+};
+
+// Invalid config: partial specialisation of the primary template.
+struct foobar {};
+
+namespace tanuki
+{
+
+template <typename RefIFace>
+struct config<foobar, RefIFace> : fake_config_00 {};
+
+} // namespace tanuki
+
+TEST_CASE("invalid config")
+{
+    REQUIRE(!tanuki::valid_config<fake_config_00{}>);
+    REQUIRE(!tanuki::valid_config<tanuki::config<foobar, tanuki::no_ref_iface>{}>);
+}
+
 #if defined(TANUKI_WITH_BOOST_S11N)
 
 TEST_CASE("s11n nostatic")
@@ -559,7 +587,7 @@ TEST_CASE("s11n invalid")
 
     wrap_t w(large{});
     value_ptr<large>(w)->buffer[0] = 42;
-    auto w_move = std::move(w);
+    const auto w_move = std::move(w);
     // NOLINTNEXTLINE
     REQUIRE(is_invalid(w));
 
@@ -595,10 +623,12 @@ TEST_CASE("s11n nodef")
     using Catch::Matchers::MessageMatches;
     using Catch::Matchers::StartsWith;
 
-    using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{.copy_constructible = false,
-                                                            .copy_assignable = false,
-                                                            .move_constructible = false,
-                                                            .move_assignable = false}>;
+    using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{
+                                               .copy_constructible = false,
+                                               .copy_assignable = false,
+                                               .move_constructible = false,
+                                               .move_assignable = false,
+                                           }>;
 
     const wrap_t w(nodefctor{3});
 
@@ -625,10 +655,12 @@ TEST_CASE("s11n nomove")
     using Catch::Matchers::MessageMatches;
     using Catch::Matchers::StartsWith;
 
-    using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{.copy_constructible = false,
-                                                            .copy_assignable = false,
-                                                            .move_constructible = false,
-                                                            .move_assignable = false}>;
+    using wrap_t = tanuki::wrap<any_iface, tanuki::config<>{
+                                               .copy_constructible = false,
+                                               .copy_assignable = false,
+                                               .move_constructible = false,
+                                               .move_assignable = false,
+                                           }>;
 
     const wrap_t w(std::in_place_type<nomovector>);
 
@@ -644,7 +676,7 @@ TEST_CASE("s11n nomove")
 
 #endif
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility,misc-use-internal-linkage,bugprone-throwing-static-initialization,cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
 
 #if defined(__GNUC__)
 

@@ -1,4 +1,4 @@
-// Copyright 2023 Francesco Biscani (bluescarni@gmail.com)
+// Copyright 2023, 2024, 2025, 2026 Francesco Biscani (bluescarni@gmail.com)
 //
 // This file is part of the tanuki library.
 //
@@ -21,5 +21,5 @@ void foo_model::foo() const {}
 
 } // namespace fooable
 
-// NOLINTNEXTLINE(cert-err58-cpp)
+// NOLINTNEXTLINE(cert-err58-cpp,bugprone-throwing-static-initialization)
 TANUKI_S11N_WRAP_EXPORT_IMPLEMENT(fooable::foo_model, fooable::foo_iface<int>)

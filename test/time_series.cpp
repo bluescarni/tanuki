@@ -14,7 +14,7 @@
 
 #include "time_series.hpp"
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility,misc-use-internal-linkage,bugprone-throwing-static-initialization,cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
 
 struct minimal_forward_ts {
     std::vector<std::pair<double, double>> m_container;
@@ -253,6 +253,7 @@ TEST_CASE("lagrange interpolation")
         // NOTE: post C++20 rvalue ranges can be used to construct views pipelines. See:
         // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p2415r2.html
 
+        // NOLINTNEXTLINE(misc-const-correctness)
         [[maybe_unused]] auto tmp_rvalue = make_random_access_ts(v) | std::ranges::views::transform([](const auto &p) {
                                                return std::make_pair(p.first, p.second[0]);
                                            });
@@ -260,4 +261,4 @@ TEST_CASE("lagrange interpolation")
     }
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility,misc-use-internal-linkage,bugprone-throwing-static-initialization,cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)

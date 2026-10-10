@@ -19,7 +19,7 @@
 
 #endif
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance,bugprone-crtp-constructor-accessibility)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance,bugprone-crtp-constructor-accessibility,misc-use-internal-linkage,bugprone-throwing-static-initialization)
 
 template <typename, typename>
 struct foo_iface_impl {
@@ -93,7 +93,8 @@ struct bar_ref_iface {
 
 using foobar_wrap = tanuki::wrap<tanuki::composite_iface<foo_iface, bar_iface>,
                                  tanuki::config<void, tanuki::composite_ref_iface<foo_ref_iface, bar_ref_iface>>{
-                                     .pointer_interface = false}>;
+                                     .pointer_interface = false,
+                                 }>;
 
 struct foobar_model {
     mutable int n_foo = 0;
@@ -227,7 +228,8 @@ using foobarT_wrap
                        // Test passing a custom static size.
                        .static_size
                        = tanuki::holder_size<foobar_model, tanuki::composite_iface<fooT_iface<U>, barT_iface<U>>>,
-                       .pointer_interface = false}>;
+                       .pointer_interface = false,
+                   }>;
 
 #if defined(TANUKI_WITH_BOOST_S11N)
 
@@ -267,7 +269,7 @@ TEST_CASE("template")
 #endif
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance,bugprone-crtp-constructor-accessibility)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,fuchsia-virtual-inheritance,bugprone-crtp-constructor-accessibility,misc-use-internal-linkage,bugprone-throwing-static-initialization)
 
 #if defined(__GNUC__)
 

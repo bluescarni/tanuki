@@ -11,7 +11,7 @@
 
 #endif
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility,misc-use-internal-linkage,bugprone-throwing-static-initialization)
 
 struct foo {
 };
@@ -95,15 +95,17 @@ TEST_CASE("def value type")
 
     REQUIRE(std::default_initializable<wrap6_t>);
 
-    using wrap7_t = tanuki::wrap<any_iface, tanuki::config<baz>{.copy_constructible = false,
-                                                                .copy_assignable = false,
-                                                                .move_constructible = false,
-                                                                .move_assignable = false}>;
+    using wrap7_t = tanuki::wrap<any_iface, tanuki::config<baz>{
+                                                .copy_constructible = false,
+                                                .copy_assignable = false,
+                                                .move_constructible = false,
+                                                .move_assignable = false,
+                                            }>;
 
     REQUIRE(std::default_initializable<wrap7_t>);
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility,misc-use-internal-linkage,bugprone-throwing-static-initialization)
 
 #if defined(__GNUC__)
 

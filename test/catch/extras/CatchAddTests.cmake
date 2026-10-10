@@ -136,13 +136,19 @@ function(catch_discover_tests_impl)
 
   # Parse JSON output for list of tests/class names/tags
   string(JSON version GET "${listing_output}" "version")
-  if (NOT version STREQUAL "1")
+  if(NOT version STREQUAL "1")
     message(FATAL_ERROR "Unsupported catch output version: '${version}'")
   endif()
 
   # Speed-up reparsing by cutting away unneeded parts of JSON.
   string(JSON test_listing GET "${listing_output}" "listings" "tests")
   string(JSON num_tests LENGTH "${test_listing}")
+
+  # Exit early if no tests are detected
+  if(num_tests STREQUAL "0")
+    return()
+  endif()
+
   # CMake's foreach-RANGE is inclusive, so we have to subtract 1
   math(EXPR num_tests "${num_tests} - 1")
 
@@ -180,11 +186,11 @@ function(catch_discover_tests_impl)
       ${properties}
     )
 
-    if (add_tags)
+    if(add_tags)
       string(JSON num_tags LENGTH "${test_tags}")
       math(EXPR num_tags "${num_tags} - 1")
       set(tag_list "")
-      if (num_tags GREATER_EQUAL "0")
+      if(num_tags GREATER_EQUAL "0")
         foreach(tag_idx RANGE ${num_tags})
           string(JSON a_tag GET "${test_tags}" "${tag_idx}")
           # Catch2's tags can contain semicolons, which are list element separators

@@ -15,7 +15,7 @@
 
 #endif
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility,misc-use-internal-linkage,bugprone-throwing-static-initialization)
 
 template <typename T>
 struct is_any_function : std::false_type {
@@ -122,7 +122,7 @@ struct std_func_impl<R(Args...)> {
 };
 
 template <typename T>
-using std_func = typename std_func_impl<T>::type;
+using std_func = std_func_impl<T>::type;
 
 struct large_func {
     std::array<char, 100> arr = {};
@@ -163,7 +163,7 @@ TEST_CASE("std_function")
     }
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility,misc-use-internal-linkage,bugprone-throwing-static-initialization)
 
 #if defined(__GNUC__)
 

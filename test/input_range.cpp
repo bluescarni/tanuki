@@ -17,7 +17,7 @@
 #include "ranges.hpp"
 #include "sentinel.hpp"
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,misc-use-internal-linkage,bugprone-throwing-static-initialization)
 
 // LCOV_EXCL_START
 
@@ -75,10 +75,12 @@ TEST_CASE("basic input")
     {
         std::vector vec = {1, 2, 3};
 
+        // NOLINTNEXTLINE(misc-const-correctness)
         auto r1 = facade::make_input_range(vec);
         REQUIRE(std::ranges::input_range<decltype(r1)>);
         REQUIRE(std::same_as<decltype(r1), facade::input_range<int, int &, int &&, const int &, const int &&>>);
 
+        // NOLINTNEXTLINE(misc-const-correctness)
         auto r2 = facade::make_input_range(std::as_const(vec));
         REQUIRE(std::ranges::input_range<decltype(r2)>);
         REQUIRE(std::same_as<decltype(r2), facade::input_range<int, int &, int &&, const int &, const int &&>>);
@@ -115,6 +117,7 @@ TEST_CASE("basic input")
         min_input_range vec{{1, 2, 3}};
 
         REQUIRE(!std::ranges::range<min_input_range>);
+        // NOLINTNEXTLINE(misc-const-correctness)
         auto r1 = facade::make_input_range(vec);
         REQUIRE(std::ranges::input_range<decltype(r1)>);
         REQUIRE(std::same_as<decltype(r1), facade::input_range<int, int &, int &&, const int &, const int &&>>);
@@ -153,11 +156,11 @@ TEST_CASE("sentinel")
     auto s
         = facade::sentinel(facade::detail::sentinel_box<std::list<int>::iterator, std::list<int>::iterator>{l.begin()});
 
-    auto it = l.begin();
+    const auto it = l.begin();
     REQUIRE_THROWS_MATCHES(s->distance_to_iter(facade::detail::any_ref{std::cref(it)}), std::runtime_error,
                            MessageMatches(StartsWith("The sentinel type '")));
     REQUIRE_THROWS_MATCHES(s->distance_to_iter(facade::detail::any_ref{std::cref(it)}), std::runtime_error,
                            MessageMatches(ContainsSubstring("' is not a sized sentinel")));
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,misc-use-internal-linkage,bugprone-throwing-static-initialization)

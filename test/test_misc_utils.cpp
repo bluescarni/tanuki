@@ -13,7 +13,7 @@
 
 #endif
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility,misc-use-internal-linkage,bugprone-throwing-static-initialization)
 
 template <typename Base, typename>
 struct any_iface_impl : Base {
@@ -93,8 +93,10 @@ TEST_CASE("misc utils")
     REQUIRE(tanuki::any_wrap<wrap2_t>);
     REQUIRE(!tanuki::any_wrap<int>);
 
-    using wrap3_t = tanuki::wrap<any_iface, tanuki::config<>{.static_size = tanuki::holder_size<large, any_iface>,
-                                                             .static_align = tanuki::holder_align<large, any_iface>}>;
+    using wrap3_t = tanuki::wrap<any_iface, tanuki::config<>{
+                                                .static_size = tanuki::holder_size<large, any_iface>,
+                                                .static_align = tanuki::holder_align<large, any_iface>,
+                                            }>;
 
     const wrap3_t w(large{});
 
@@ -125,7 +127,7 @@ TEST_CASE("misc utils")
     }
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility,misc-use-internal-linkage,bugprone-throwing-static-initialization)
 
 #if defined(__GNUC__)
 

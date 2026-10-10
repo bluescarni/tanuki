@@ -12,11 +12,10 @@
 
 #endif
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility,misc-use-internal-linkage,bugprone-throwing-static-initialization)
 
 template <typename Base, typename>
-struct any_iface_impl : Base {
-};
+struct any_iface_impl : Base {};
 
 // NOLINTNEXTLINE
 struct any_iface {
@@ -87,10 +86,12 @@ TEST_CASE("nonmovable")
     REQUIRE(!std::constructible_from<wrap_t, std::in_place_type_t<nonmovable>>);
     REQUIRE(!emplaceable<wrap_t, nonmovable>);
 
-    using wrap2_t = tanuki::wrap<any_iface, tanuki::config<>{.copy_constructible = false,
-                                                             .copy_assignable = false,
-                                                             .move_constructible = false,
-                                                             .move_assignable = false}>;
+    using wrap2_t = tanuki::wrap<any_iface, tanuki::config<>{
+                                                .copy_constructible = false,
+                                                .copy_assignable = false,
+                                                .move_constructible = false,
+                                                .move_assignable = false,
+                                            }>;
 
     REQUIRE(!std::constructible_from<wrap2_t, nonmovable>);
     REQUIRE(std::constructible_from<wrap2_t, std::in_place_type_t<nonmovable>>);
@@ -106,7 +107,7 @@ TEST_CASE("nonmovable")
     REQUIRE(std::swappable<wrap3_t>);
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility,misc-use-internal-linkage,bugprone-throwing-static-initialization)
 
 #if defined(__GNUC__)
 

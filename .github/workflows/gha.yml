@@ -11,52 +11,50 @@ jobs:
   conda_gcc_10:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build
         run: bash tools/gha_conda_gcc_10.sh
   conda_tidy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build
         run: bash tools/gha_conda_tidy.sh
   conda_asan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build
         run: bash tools/gha_conda_asan.sh
   conda_ubsan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build
         run: bash tools/gha_conda_ubsan.sh
   conda_docs:
     runs-on: ubuntu-latest
     if: github.ref != 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build
         run: bash tools/gha_conda_docs.sh
   osx:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build
         run: bash tools/gha_osx.sh
   windows_vs2022_cpp20:
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
-      - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v2
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: actions/checkout@v6
+      - uses: conda-incubator/setup-miniconda@v4
         with:
-          auto-update-conda: true
-          python-version: "3.10"
-          channels: conda-forge
-          channel-priority: strict
+          miniforge-version: latest
+          # See: https://github.com/conda-incubator/setup-miniconda?tab=readme-ov-file#example-14-remove-defaults-channel
+          conda-remove-defaults: "true"
+      - uses: ilammy/msvc-dev-cmd@v1
       - name: Build
         shell: pwsh
         run: |
@@ -69,15 +67,13 @@ jobs:
   windows_vs2022_cpp23:
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
-      - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v2
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: actions/checkout@v6
+      - uses: conda-incubator/setup-miniconda@v4
         with:
-          auto-update-conda: true
-          python-version: "3.10"
-          channels: conda-forge
-          channel-priority: strict
+          miniforge-version: latest
+          # See: https://github.com/conda-incubator/setup-miniconda?tab=readme-ov-file#example-14-remove-defaults-channel
+          conda-remove-defaults: "true"
+      - uses: ilammy/msvc-dev-cmd@v1
       - name: Build
         shell: pwsh
         run: |
@@ -90,10 +86,10 @@ jobs:
   conda_coverage:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build
         run: bash tools/gha_conda_coverage.sh
-      - uses: codecov/codecov-action@v4
+      - uses: codecov/codecov-action@v7
         with:
           fail_ci_if_error: true # optional (default = false)
           token: ${{ secrets.CODECOV_TOKEN }} # required

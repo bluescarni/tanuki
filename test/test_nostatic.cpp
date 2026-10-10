@@ -29,7 +29,7 @@
 
 #endif
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility,misc-use-internal-linkage,bugprone-throwing-static-initialization,cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
 
 struct nonwrappable {
 };
@@ -130,11 +130,14 @@ TEST_CASE("basics")
     // NOLINTEND
 
     // Emplace test with class which is not copyable/movable.
-    tanuki::wrap<any_iface, tanuki::config<>{.static_size = 0,
-                                             .copy_constructible = false,
-                                             .copy_assignable = false,
-                                             .move_constructible = false,
-                                             .move_assignable = false}>
+    tanuki::wrap<any_iface,
+                 tanuki::config<>{
+                     .static_size = 0,
+                     .copy_constructible = false,
+                     .copy_assignable = false,
+                     .move_constructible = false,
+                     .move_assignable = false,
+                 }>
         w_mut(std::in_place_type<std::mutex>);
     REQUIRE(!noexcept(wrap_t(std::in_place_type<int>)));
 
@@ -181,7 +184,7 @@ TEST_CASE("assignment")
     // Object revival via copy assignment.
     {
         wrap_t wl1(large{});
-        auto wl2 = std::move(wl1);
+        const auto wl2 = std::move(wl1);
         // NOLINTNEXTLINE
         REQUIRE(is_invalid(wl1));
         const wrap_t wl3(large{.buffer = {}, .str = "briffo"});
@@ -192,7 +195,7 @@ TEST_CASE("assignment")
 
     {
         wrap_t wl1(small{});
-        auto wl2 = std::move(wl1);
+        const auto wl2 = std::move(wl1);
         // NOLINTNEXTLINE
         REQUIRE(is_invalid(wl1));
         const wrap_t wl3(small{"briffo"});
@@ -204,7 +207,7 @@ TEST_CASE("assignment")
     // Object revival via move assignment.
     {
         wrap_t wl1(large{});
-        auto wl2 = std::move(wl1);
+        const auto wl2 = std::move(wl1);
         // NOLINTNEXTLINE
         REQUIRE(is_invalid(wl1));
         wrap_t wl3(large{.buffer = {}, .str = "briffo"});
@@ -217,7 +220,7 @@ TEST_CASE("assignment")
 
     {
         wrap_t wl1(small{});
-        auto wl2 = std::move(wl1);
+        const auto wl2 = std::move(wl1);
         // NOLINTNEXTLINE
         REQUIRE(is_invalid(wl1));
         wrap_t wl3(small{"briffo"});
@@ -369,7 +372,7 @@ TEST_CASE("s11n invalid")
 
     wrap_t w(large{});
     value_ptr<large>(w)->buffer[0] = 42;
-    auto w_move = std::move(w);
+    const auto w_move = std::move(w);
     // NOLINTNEXTLINE
     REQUIRE(is_invalid(w));
 
@@ -393,7 +396,7 @@ TEST_CASE("s11n invalid")
 
 #endif
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-crtp-constructor-accessibility,misc-use-internal-linkage,bugprone-throwing-static-initialization,cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
 
 #if defined(__GNUC__)
 

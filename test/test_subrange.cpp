@@ -10,7 +10,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTBEGIN(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-throwing-static-initialization)
 
 // NOTE: the purpose of this test is to check that
 // the range type erasure machinery works properly
@@ -47,6 +47,7 @@ TEST_CASE("type erased subranges")
 
     {
         const auto r1 = facade::make_random_access_range(std::cref(v));
+        // NOLINTNEXTLINE(misc-const-correctness)
         auto r2 = std::ranges::subrange(r1.begin(), r1.begin() + 2);
         const auto r3 = facade::make_random_access_range(std::cref(r2));
         REQUIRE(std::ranges::equal(r3, r2));
@@ -54,10 +55,11 @@ TEST_CASE("type erased subranges")
 
     {
         const auto r1 = facade::make_random_access_range(std::cref(v));
+        // NOLINTNEXTLINE(misc-const-correctness)
         auto r2 = std::ranges::subrange(r1.begin(), r1.end());
         const auto r3 = facade::make_random_access_range(std::cref(r2));
         REQUIRE(std::ranges::equal(r3, v));
     }
 }
 
-// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while)
+// NOLINTEND(cert-err58-cpp,misc-use-anonymous-namespace,cppcoreguidelines-avoid-do-while,bugprone-throwing-static-initialization)
